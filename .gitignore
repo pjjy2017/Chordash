@@ -1,0 +1,17 @@
+node_modules
+dist
+out
+coverage
+.DS_Store
+.eslintcache
+*.log*
+
+# 비밀 정보 — 절대 커밋하지 않음
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# 문서 세트 원본 압축본 (docs/, examples/ 와 동일)
+chordpad.zip

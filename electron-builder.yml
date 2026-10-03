@@ -1,0 +1,24 @@
+appId: com.chordpad.app
+productName: chordpad
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!docs/*'
+  - '!examples/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!vitest.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CLAUDE.md,README.md}'
+  - '!{.env,.env.*,.npmrc}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+win:
+  executableName: chordpad
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+npmRebuild: false
