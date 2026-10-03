@@ -34,6 +34,8 @@ export interface Bar {
   chords: ChordItem[]
   repeatStart: boolean
   repeatEnd: boolean
+  /** Final barline (`.`) after this bar. */
+  final: boolean
 }
 
 export const MEMO_COLORS = ['teal', 'red', 'blue', 'green', 'orange', 'purple', 'gray'] as const
@@ -98,7 +100,11 @@ export interface ParseResult {
 const SECTION = /^\[([^\]]*)\]/
 const HEADER = /^(title|key)\s*:\s*(.*)$/
 const MEMO = /^\{\s*([^:{}\s]*)\s*:\s*(.*?)\s*\}$/
-const ENDING = /^(\d)\.\s*(?=\|)/
+/** `|` and `,` are plain barlines, `.` is a final barline. */
+type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
+
+// `1.` / `2.` followed by more on the line. A lone `1.` is a bar of degree 1 with a final barline.
+const ENDING = /^(\d)\.(?=\s*\S)\s*/
 
 class Parser {
   readonly doc: ChordDocument = { title: null, key: null, sections: [] }
@@ -153,7 +159,6 @@ class Parser {
     this.headerOpen = false
 
     if (trimmed.startsWith('[')) return this.parseSection(raw, start)
-    if (trimmed.startsWith('|') || ENDING.test(trimmed)) return this.parseBarLine(raw, start, end)
     if (trimmed.startsWith('>')) return this.parseCue(trimmed.slice(1).trim(), start, end)
     if (trimmed.startsWith('{')) return this.parseMemo(trimmed, start, end)
     if (trimmed === '---') {
@@ -171,7 +176,8 @@ class Parser {
       })
       return
     }
-    this.report('error', start, end, '알 수 없는 줄')
+    // Anything else is a bar line: `| C | D |` or `C, D, E.`
+    this.parseBarLine(raw, start, end)
   }
 
   private parseHeader(name: string, value: string, start: number, end: number): void {
@@ -262,49 +268,46 @@ class Parser {
       pos += ending[0].length
     }
 
-    // `?` right after the final barline flags the whole line.
+    // A `?` after the last barline (or after a space) flags the whole line.
     let stop = end
-    const body = raw.slice(pos, end)
-    if (/\|\s*\?$/.test(body)) {
+    if (/(?:[|,.:]|\s)\?$/.test(raw.slice(pos, end))) {
       line.uncertain = true
       stop = end - 1
     }
 
-    // Split into barlines and the content between them.
-    type Barline = 'plain' | 'repeatStart' | 'repeatEnd'
+    // Split into barlines and the content between them. Commas inside `( )` belong to the chord.
     let left: Barline | null = null
     let contentStart = pos
-    let i = pos
+    let depth = 0
     const closeBar = (right: Barline | null, contentEnd: number): void => {
-      if (left === null) {
-        if (raw.slice(contentStart, contentEnd).trim())
-          this.report('error', contentStart, contentEnd, '마디 줄은 |로 시작해야 함')
-        return
-      }
-      line.bars.push(
-        this.parseBar(raw, contentStart, contentEnd, left === 'repeatStart', right === 'repeatEnd')
-      )
+      // The leading barline is optional: `C, D` = `| C | D`.
+      if (left === null && !raw.slice(contentStart, contentEnd).trim()) return
+      line.bars.push(this.parseBar(raw, contentStart, contentEnd, left, right))
     }
-    while (i < stop) {
+    for (let i = pos; i < stop;) {
       let barline: Barline | null = null
-      let width = 0
-      if (raw.startsWith(':||', i)) [barline, width] = ['repeatEnd', 3]
+      let width = 1
+      const c = raw[i]
+      if (c === '(') depth++
+      else if (c === ')') depth = Math.max(0, depth - 1)
+      else if (depth > 0) {
+        // inside an alteration list such as (b9,#11)
+      } else if (raw.startsWith(':||', i)) [barline, width] = ['repeatEnd', 3]
       else if (raw.startsWith('||:', i)) [barline, width] = ['repeatStart', 3]
       else if (raw.startsWith('||', i)) {
         this.report('error', i, i + 2, '알 수 없는 마디선 || (반복은 ||: 와 :||)')
         ;[barline, width] = ['plain', 2]
-      } else if (raw[i] === '|') [barline, width] = ['plain', 1]
+      } else if (c === '|' || c === ',') barline = 'plain'
+      else if (c === '.') barline = 'final'
 
-      if (barline === null) {
-        i++
-        continue
+      if (barline !== null) {
+        closeBar(barline, i)
+        left = barline
+        contentStart = i + width
       }
-      closeBar(barline, i)
-      left = barline
       i += width
-      contentStart = i
     }
-    // Content after the final barline (no closing `|`) still forms a bar.
+    // Content after the last barline (no closing `|` or `,`) still forms a bar.
     if (raw.slice(contentStart, stop).trim()) closeBar(null, stop)
 
     this.currentSection().items.push(line)
@@ -314,8 +317,8 @@ class Parser {
     raw: string,
     from: number,
     to: number,
-    repeatStart: boolean,
-    repeatEnd: boolean
+    left: Barline | null,
+    right: Barline | null
   ): Bar {
     const chords: ChordItem[] = []
     const token = /\S+/g
@@ -323,7 +326,12 @@ class Parser {
     for (let m = token.exec(content); m; m = token.exec(content)) {
       chords.push(this.parseChordToken(m[0], from + m.index))
     }
-    return { chords, repeatStart, repeatEnd }
+    return {
+      chords,
+      repeatStart: left === 'repeatStart',
+      repeatEnd: right === 'repeatEnd',
+      final: right === 'final'
+    }
   }
 
   private parseChordToken(text: string, at: number): ChordItem {

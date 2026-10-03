@@ -27,6 +27,8 @@ export interface ChordSpec {
   add: string | null
   /** Alterations as typed, normalized to `b`/`#` + number, e.g. `b9`, `#11`. */
   alterations: string[]
+  /** `alt` (altered dominant). */
+  altered: boolean
   bass: PitchSpec | null
 }
 
@@ -83,6 +85,7 @@ const SUS_TOKENS: [string, Quality][] = [
   ['sus2', 'sus2'],
   ['sus', 'sus4'],
   ['s2', 'sus2'],
+  ['s4', 'sus4'],
   ['s', 'sus4']
 ]
 
@@ -174,11 +177,17 @@ export function parseChordSpec(text: string): Result<ChordSpec> {
   let quality: Quality = c.eatAny(QUALITY_TOKENS) ?? 'major'
   let sus = quality === 'major' ? c.eatAny(SUS_TOKENS) : null
 
-  const extension = EXTENSIONS.find((e) => c.eat(e)) ?? null
+  let extension = EXTENSIONS.find((e) => c.eat(e)) ?? null
 
   // `c7s`, `C7sus4`: sus may follow the extension.
   if (quality === 'major' && sus === null) sus = c.eatAny(SUS_TOKENS)
   if (sus) quality = sus
+
+  // `B7alt`; a bare `Calt` means C7alt.
+  const altered = c.eat('alt')
+  if (altered && quality !== 'major')
+    return fail('unexpected', 'alt는 도미넌트 코드에만 (예: B7alt)')
+  if (altered && extension === null) extension = '7'
 
   let add: string | null = null
   if (c.eat('add')) {
@@ -211,7 +220,10 @@ export function parseChordSpec(text: string): Result<ChordSpec> {
     alterations.splice(alterations.indexOf('b5'), 1)
   }
 
-  return { ok: true, value: { root: root.value, quality, extension, add, alterations, bass } }
+  return {
+    ok: true,
+    value: { root: root.value, quality, extension, add, alterations, altered, bass }
+  }
 }
 
 function resolvePitch(spec: PitchSpec, key: Key | null): Result<Note> {
@@ -281,6 +293,7 @@ export function formatChord(chord: Chord): string {
   return (
     formatNote(chord.root) +
     quality +
+    (chord.altered ? 'alt' : '') +
     (chord.add ? 'add' + chord.add : '') +
     alterations +
     (chord.bass ? '/' + formatNote(chord.bass) : '')

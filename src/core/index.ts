@@ -2,3 +2,6 @@
 export * from './key'
 export * from './chord'
 export * from './document'
+export * from './theme'
+export * from './display'
+export * from './layout'

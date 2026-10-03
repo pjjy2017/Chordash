@@ -1,0 +1,99 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { parse } from './document'
+import { layout, type Page } from './layout'
+import { BOLD_GOTHIC, type LayoutMetrics } from './theme'
+
+// Round numbers so the tests are easy to follow.
+// Content height per page = 100 - 0 - 0 = 100; page 1 title 10, later headings 10.
+const M: LayoutMetrics = {
+  pageWidth: 100,
+  pageHeight: 100,
+  marginTop: 0,
+  marginBottom: 0,
+  marginX: 0,
+  titleHeight: 10,
+  headingHeight: 10,
+  sectionGap: 0,
+  sectionLabelHeight: 10,
+  rowHeight: 10,
+  cueHeight: 5,
+  minBarsPerRow: 4
+}
+
+const rows = (n: number): string => Array.from({ length: n }, () => '| C |').join('\n')
+
+/** Page summary: labels as `[Name]`, rows as `r`. */
+const summary = (pages: Page[]): string[] =>
+  pages.map((p) => p.blocks.map((b) => (b.type === 'label' ? `[${b.name}]` : 'r')).join(' '))
+
+const pagesOf = (text: string, m = M): Page[] => layout(parse(text).document, m).pages
+
+describe('layout', () => {
+  it('fills one page when everything fits', () => {
+    expect(summary(pagesOf(`title: T\n[A]\n${rows(3)}`))).toEqual(['[A] r r r'])
+  })
+
+  it('moves a whole section to the next page when it fits there', () => {
+    // Page 1: title 10 + A (10 + 50) = 70. B needs 10 + 30 = 40 > 30 left → whole B moves.
+    const pages = pagesOf(`[A]\n${rows(5)}\n[B]\n${rows(3)}`)
+    expect(summary(pages)).toEqual(['[A] r r r r r', '[B] r r r'])
+  })
+
+  it('splits a section longer than a page, keeping the label with its first row', () => {
+    // A: label + 10 rows = 110 > 90 on a fresh page → flows. Page 1 room 90 → label + 8 rows.
+    const pages = pagesOf(`[A]\n${rows(10)}`)
+    expect(summary(pages)).toEqual(['[A] r r r r r r r r', 'r r'])
+  })
+
+  it('never leaves a label alone at the bottom', () => {
+    // Page 1: title 10 + A (10 + 60) = 80, 20 left. B is too long to move whole, so it flows,
+    // but label + first row (20) fits → stays. With 10 left it must move.
+    const tight = pagesOf(`[A]\n${rows(6)}\n[B]\n${rows(12)}`)
+    expect(summary(tight)[0]).toBe('[A] r r r r r r [B] r')
+    const tighter = pagesOf(`[A]\n${rows(7)}\n[B]\n${rows(12)}`)
+    expect(summary(tighter)[0]).toBe('[A] r r r r r r r')
+    expect(summary(tighter)[1].startsWith('[B] r')).toBe(true)
+  })
+
+  it('starts a new page at ---', () => {
+    expect(summary(pagesOf(`[A]\n| C |\n---\n| D |\n[B]\n| E |`))).toEqual(['[A] r', 'r [B] r'])
+  })
+
+  it('ignores --- at the very top of a page', () => {
+    expect(summary(pagesOf(`---\n[A]\n| C |`))).toEqual(['[A] r'])
+  })
+
+  it('titles pages 2+ as "title N"', () => {
+    const pages = pagesOf(`title: 샴푸의 요정\n[A]\n${rows(5)}\n[B]\n${rows(5)}\n[C]\n${rows(5)}`)
+    expect(pages.map((p) => p.heading)).toEqual(['샴푸의 요정', '샴푸의 요정 2', '샴푸의 요정 3'])
+  })
+
+  it('counts lyric cues in the row height', () => {
+    const [page] = pagesOf('| C |\n> cue\n| D |')
+    expect(page.blocks.map((b) => b.height)).toEqual([15, 10])
+  })
+
+  it('gives short rows at least minBarsPerRow slots', () => {
+    const [page] = pagesOf('| C | D |\n| C | D | E | F | G |')
+    expect(page.blocks.map((b) => (b.type === 'row' ? b.slots : 0))).toEqual([4, 5])
+  })
+
+  it('lays out the example song without overflowing any page', () => {
+    const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
+    const m = BOLD_GOTHIC.metrics
+    const pages = layout(parse(text).document, m).pages
+    const room = m.pageHeight - m.marginTop - m.marginBottom
+    for (const page of pages) {
+      const used =
+        (page.number === 1 ? m.titleHeight : m.headingHeight) +
+        page.blocks.reduce(
+          (h, b, i) => h + b.height + (b.type === 'label' && i > 0 ? m.sectionGap : 0),
+          0
+        )
+      expect(used).toBeLessThanOrEqual(room)
+    }
+    expect(pages.flatMap((p) => p.blocks).filter((b) => b.type === 'row')).toHaveLength(27)
+  })
+})

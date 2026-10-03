@@ -90,6 +90,42 @@ describe('bar lines', () => {
       { line: 1, from: 6, to: 8, severity: 'error', message: '알 수 없는 루트' }
     ])
   })
+  it('reads sentence-style lines with commas and a final period', () => {
+    const line = barLines(parse("Bb^7, A-7, Bb^7, F B7*\nE-9, 'E-9.").document)
+    expect(chordNames(line[0])).toEqual([['B♭maj7'], ['Am7'], ['B♭maj7'], ['F', 'B7']])
+    expect(chordNames(line[1])).toEqual([['Em9'], ['Em9']])
+    expect(line[1].bars.map((b) => b.final)).toEqual([false, true])
+  })
+  it('treats a trailing comma and a leading comma as optional', () => {
+    const names = (t: string): string[][] => chordNames(barLines(parse(t).document)[0])
+    expect(names('C, D,')).toEqual([['C'], ['D']])
+    expect(names(', C , D ,')).toEqual([['C'], ['D']])
+    expect(names('C, , D')).toEqual([['C'], [], ['D']])
+  })
+  it('mixes | , and . in one line', () => {
+    const line = barLines(parse('| C , D | G7 .').document)[0]
+    expect(chordNames(line)).toEqual([['C'], ['D'], ['G7']])
+    expect(line.bars[2].final).toBe(true)
+  })
+  it('keeps commas inside parentheses as part of the chord', () => {
+    expect(chordNames(barLines(parse('C7(b9,#11), F').document)[0])).toEqual([['C7♭9♯11'], ['F']])
+  })
+  it('reads endings in sentence style', () => {
+    const lines = barLines(parse('1. C, A-, F, G7 :||\n2. C, F G, C.').document)
+    expect(lines.map((l) => l.ending)).toEqual([1, 2])
+    expect(lines[0].bars[3].repeatEnd).toBe(true)
+    expect(chordNames(lines[1])).toEqual([['C'], ['F', 'G'], ['C']])
+  })
+  it('reads a lone "1." as degree 1 with a final barline, not an ending', () => {
+    const line = barLines(parse('key: C\n1.').document)[0]
+    expect(line.ending).toBeNull()
+    expect(chordNames(line)).toEqual([['C']])
+    expect(line.bars[0].final).toBe(true)
+  })
+  it('flags a sentence-style line with a trailing ?', () => {
+    expect(barLines(parse('C, A- ?').document)[0].uncertain).toBe(true)
+    expect(barLines(parse('C, A-,?').document)[0].uncertain).toBe(true)
+  })
   it('hints that 6/9 is typed as 69', () => {
     expect(errors('| C6/9 |')).toEqual(['6/9 코드는 69로 입력 (예: C69)'])
   })
@@ -125,8 +161,8 @@ describe('cues, memos, directives, page breaks', () => {
       { type: 'pageBreak', line: 3 }
     ])
   })
-  it('rejects unknown lines', () => {
-    expect(errors('hello')).toEqual(['알 수 없는 줄'])
+  it('reads any other line as a bar line, so stray text shows up as chord errors', () => {
+    expect(errors('hello')).toEqual(['알 수 없는 루트'])
   })
 })
 
@@ -150,6 +186,12 @@ describe('examples/샴푸의요정.chord', () => {
       'Outro'
     ])
     expect(barLines(document)).toHaveLength(27)
+  })
+  it('keeps empty bars and ends with a final barline', () => {
+    const chorus = document.sections[2].items as BarLine[]
+    expect(chordNames(chorus[1])).toEqual([['B♭maj7'], ['E7♭9'], ['A7'], []])
+    const last = barLines(document).at(-1)!
+    expect(last.bars.map((b) => b.final)).toEqual([false, true])
   })
   it('reads the outro memos and breath mark', () => {
     const outro = document.sections.at(-1)!.items as BarLine[]

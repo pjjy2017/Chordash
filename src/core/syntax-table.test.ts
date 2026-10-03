@@ -37,7 +37,7 @@ function show(input: string, key: Key | null): string {
 }
 
 const chordTables: [string, string | null, number][] = [
-  ['7.1', null, 32],
+  ['7.1', null, 35],
   ['7.2', 'E', 15],
   ['7.3', 'F', 4]
 ]
