@@ -98,3 +98,19 @@
   - 좁은 화면(760px 이하)에서 "입력 / 악보" 탭.
   - **ESLint로 경계 강제:** `src/renderer`, `src/core`에서 `electron`·Node 모듈·`platform/electron` 직접 가져오기와 `window.chordashBridge` 사용을 금지. `src/core`는 `platform`도 금지.
   - 단축키(Ctrl+S 등)는 브라우저 표준 키 이벤트라 renderer에 그대로 둠(안드로이드 하드웨어 키보드에서도 동작).
+
+## 2026-10-04 (Phase 4)
+사용자 결정:
+- **테마는 곡마다 파일에 저장:** 머리말 `theme: bold | plain`(없으면 bold). 툴바에서 고르면 그 줄을 고치거나 머리말 끝에 추가(되돌리기 가능).
+- **기본 테마(굵은 고딕) 글꼴:** 영문·숫자는 **Geist**, 한글은 **Pretendard**.
+- **플레인 테마:** 보통 굵기, 한 줄 표기(Cmaj7, C−7♭5, Cdim7, C7♭9), 마이너는 `−`.
+
+구현:
+- **글꼴 3개 내장(모두 SIL OFL):** Geist(라틴), Pretendard(한글·△), Noto Music(♭♯♮𝄪𝄫만). 브라우저가 글자마다 있는 글꼴을 고름. 글리프 확인 결과: Pretendard에 ♭♯ 없음, Geist에 △♭♯ 없음, Noto Music에 ♭♯ 있음 → 이 조합으로 전부 덮음. `fonts.test.ts`가 필요한 기호가 글꼴 안에 실제로 있는지 자동 검사.
+- 글꼴 패키지: `@fontsource-variable/geist`, `pretendard`, `@fontsource/noto-music`. 앱과 PDF가 같은 글꼴 목록(`fonts.ts`)을 씀.
+- **♭♯ 위치:** 리드시트처럼 임시표 윗선을 글자 윗선(cap height)에 맞춤(♭ 0.1em, ♯ 0.2em 올림). 줄 높이에 영향 없게 `position`으로 올리고 line-height 0. 굵은 고딕에서는 Noto Music(한 굵기뿐)에 얇은 외곽선을 더해 굵게.
+- **한 마디 여러 코드:** 같은 몫으로 나누되 코드 폭보다 좁아지지 않게(`min-width: max-content`) — 겹침 방지.
+- **PDF:** `platform.exportPdf(html, 이름)` 추가. 렌더러가 미리보기와 같은 HTML에 CSS와 글꼴(data URL)을 넣은 독립 문서를 만들고, Electron 쪽은 숨은 창에서 `printToPDF`(A4, 여백 0, CSS 페이지 크기). 결과는 A4(595×842pt), 미리보기와 같은 쪽 나눔.
+- **내보내기 전 경고:** 오류나 `?`(확인 필요) 표시가 있으면 "그래도 내보낼까요?" 확인. 기본 파일 이름은 `title:` 또는 파일 이름 + `.pdf`. 단축키 Ctrl+P.
+- **명령 실패 표시:** 저장·PDF 등이 실패하면 상태 표시줄에 "실패: 이유".
+- **자동 점검용 환경 변수** `CHORDASH_TEST_PDF_PATH`: 설정하면 PDF 저장 대화상자를 건너뛰고 그 경로에 저장(자동 점검 전용, 평소에는 쓰지 않음).

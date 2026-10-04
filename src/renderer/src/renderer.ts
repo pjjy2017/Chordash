@@ -1,17 +1,27 @@
 // Renderer entry: toolbar, editor, live A4 preview. Device access only through `platform`.
-import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './preview.css'
 import './app.css'
-import { DEFAULT_THEME, layout } from '../../core'
+import {
+  countUncertain,
+  DEFAULT_THEME,
+  layout,
+  setHeaderLine,
+  themeFor,
+  type ThemeId
+} from '../../core'
 import { platform, type FileRef } from '../../platform'
 import { createEditor } from './editor'
-import { renderPages } from './preview'
+import { installFonts } from './fonts'
+import { buildPrintDocument, renderPages } from './preview'
+
+installFonts()
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
 
 const app = $<HTMLElement>('app')
 const preview = $<HTMLElement>('preview')
 const status = $<HTMLElement>('status')
+const themePicker = $<HTMLSelectElement>('theme')
 
 const UNTITLED = '제목 없음'
 let file: FileRef | null = null
@@ -30,7 +40,9 @@ let renderTimer: number | undefined
 
 function renderPreview(): void {
   const { document: doc, diagnostics } = editor.parsed()
-  preview.innerHTML = renderPages(layout(doc, DEFAULT_THEME.metrics), DEFAULT_THEME)
+  const theme = themeFor(doc.theme)
+  preview.innerHTML = renderPages(layout(doc, theme.metrics), theme)
+  themePicker.value = theme.id
   fitPreview()
   const errors = diagnostics.filter((d) => d.severity === 'error').length
   const warnings = diagnostics.length - errors
@@ -111,15 +123,55 @@ const commands: Record<string, () => Promise<unknown>> = {
     if (opened) load(opened.text, opened.file)
   },
   save,
-  saveAs
+  saveAs,
+  exportPdf
+}
+
+/** PDF of the current pages; warns first about errors and `?` marks. */
+async function exportPdf(): Promise<void> {
+  const { document: doc, diagnostics } = editor.parsed()
+  const errors = diagnostics.filter((d) => d.severity === 'error').length
+  const uncertain = countUncertain(doc)
+  if (errors + uncertain > 0) {
+    const problems = [errors && `오류 ${errors}개`, uncertain && `확인 필요(?) ${uncertain}개`]
+      .filter(Boolean)
+      .join(', ')
+    if (!window.confirm(`${problems}가 있어요. 그래도 PDF로 내보낼까요?`)) return
+  }
+  const title = doc.title || documentName().replace(/\.chord$/i, '')
+  const theme = themeFor(doc.theme)
+  const html = await buildPrintDocument(layout(doc, theme.metrics), theme, title)
+  const saved = await platform.exportPdf(html, `${title}.pdf`)
+  if (saved) status.textContent = `PDF 저장: ${saved.name}`
+}
+
+themePicker.addEventListener('change', () => {
+  const id = themePicker.value as ThemeId
+  editor.change(setHeaderLine(editor.getText(), 'theme', id))
+  editor.view.focus()
+})
+
+/** Runs a toolbar command; failures are shown in the status area instead of disappearing. */
+function run(command: string): void {
+  commands[command]().catch((error: unknown) => {
+    console.error(error)
+    status.textContent = `실패: ${error instanceof Error ? error.message : String(error)}`
+    status.classList.add('has-errors')
+  })
 }
 
 document.querySelectorAll<HTMLButtonElement>('[data-command]').forEach((button) => {
-  button.addEventListener('click', () => commands[button.dataset.command!]())
+  button.addEventListener('click', () => run(button.dataset.command!))
 })
 
 // Keyboard shortcuts (desktop, or Android with a hardware keyboard).
-const SHORTCUTS: Record<string, string> = { n: 'new', o: 'open', s: 'save', 'shift+s': 'saveAs' }
+const SHORTCUTS: Record<string, string> = {
+  n: 'new',
+  o: 'open',
+  s: 'save',
+  'shift+s': 'saveAs',
+  p: 'exportPdf'
+}
 window.addEventListener(
   'keydown',
   (e) => {
@@ -127,7 +179,7 @@ window.addEventListener(
     const command = SHORTCUTS[(e.shiftKey ? 'shift+' : '') + e.key.toLowerCase()]
     if (!command) return
     e.preventDefault()
-    commands[command]()
+    run(command)
   },
   { capture: true }
 )

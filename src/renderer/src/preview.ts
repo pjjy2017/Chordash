@@ -1,4 +1,4 @@
-// Page model → HTML. The preview and (later) the PDF use this same HTML.
+// Page model → HTML. The preview and the PDF use this same HTML.
 
 import {
   chordParts,
@@ -8,13 +8,18 @@ import {
   type PageModel,
   type Theme
 } from '../../core'
+import { embeddedFontCss } from './fonts'
+import previewCss from './preview.css?inline'
 
 const escapeHtml = (text: string): string =>
   text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 /** ♯/♭ get their own span so the theme can size and space them. */
 const withAccidentals = (text: string): string =>
-  escapeHtml(text).replace(/[♯♭]+/g, (a) => `<span class="acc">${a}</span>`)
+  escapeHtml(text).replace(
+    /[♯♭]/g,
+    (a) => `<span class="acc ${a === '♭' ? 'flat' : 'sharp'}">${a}</span>`
+  )
 
 function chordHtml(item: ChordItem, theme: Theme): string {
   if (!item.chord) return `<span class="chord chord-error">${escapeHtml(item.source)}</span>`
@@ -83,4 +88,21 @@ export function renderPages(model: PageModel, theme: Theme): string {
       `</section>`
   )
   return `<div class="pages theme-${theme.id}" style="${metricVars(theme)}">${pages.join('')}</div>`
+}
+
+/**
+ * A standalone HTML document of the pages — styles and fonts embedded — for platform.exportPdf.
+ * Same HTML as the preview, so the PDF matches what is on screen.
+ */
+export async function buildPrintDocument(
+  model: PageModel,
+  theme: Theme,
+  title: string
+): Promise<string> {
+  const fonts = await embeddedFontCss()
+  return (
+    `<!doctype html><html lang="ko" class="print"><head><meta charset="utf-8">` +
+    `<title>${escapeHtml(title)}</title><style>${fonts}\n${previewCss}</style></head>` +
+    `<body>${renderPages(model, theme)}</body></html>`
+  )
 }

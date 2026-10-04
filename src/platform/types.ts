@@ -28,6 +28,11 @@ export interface Platform {
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   /** Always asks where to save. Returns where it saved, null when cancelled. */
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
+  /**
+   * Turns a standalone HTML document (A4 pages, fonts embedded) into a PDF and asks where to
+   * save it. Returns where it saved, null when cancelled.
+   */
+  exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
   /** Asks whether to save unsaved changes to the named document. */
   confirmDiscard(name: string): Promise<DiscardChoice>
   /** Shows the document name and unsaved state where the platform can (desktop: window title). */

@@ -2,6 +2,7 @@
 
 import { parseChordSpec, resolveChord, type Chord, type ChordSpec } from './chord'
 import { parseKey, type Key } from './key'
+import { isThemeId, THEME_IDS, type ThemeId } from './theme'
 
 export interface Diagnostic {
   /** 1-based line number. */
@@ -89,6 +90,8 @@ export interface Section {
 export interface ChordDocument {
   title: string | null
   key: Key | null
+  /** `theme:` header; null means the default theme. */
+  theme: ThemeId | null
   sections: Section[]
 }
 
@@ -122,7 +125,7 @@ export interface SyntaxSpan {
 }
 
 const SECTION = /^\[([^\]]*)\]/
-const HEADER = /^(title|key)\s*:\s*(.*)$/
+const HEADER = /^(title|key|theme)\s*:\s*(.*)$/
 const MEMO = /^\{\s*([^:{}\s]*)\s*:\s*(.*?)\s*\}$/
 /** `|` and `,` are plain barlines, `.` is a final barline. */
 type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
@@ -131,7 +134,7 @@ type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
 const ENDING = /^(\d)\.(?=\s*\S)\s*/
 
 class Parser {
-  readonly doc: ChordDocument = { title: null, key: null, sections: [] }
+  readonly doc: ChordDocument = { title: null, key: null, theme: null, sections: [] }
   readonly diagnostics: Diagnostic[] = []
   readonly spans: SyntaxSpan[] = []
   private lineNo = 0
@@ -229,6 +232,14 @@ class Parser {
     if (name === 'title') {
       if (this.doc.title !== null) this.report('warning', start, end, 'title: 이 두 번 있음')
       this.doc.title = value.trim()
+      return
+    }
+    if (name === 'theme') {
+      const id = value.trim()
+      if (!isThemeId(id)) {
+        return this.report('error', start, end, `알 수 없는 테마: ${id} (${THEME_IDS.join(', ')})`)
+      }
+      this.doc.theme = id
       return
     }
     const key = parseKey(value)
@@ -460,4 +471,17 @@ export function parse(text: string): ParseResult {
   parser.parse(text)
   const spans = parser.spans.sort((a, b) => a.line - b.line || a.from - b.from)
   return { document: parser.doc, diagnostics: parser.diagnostics, spans }
+}
+
+/** Chords and lines marked `?` (needs checking); the PDF export warns about these. */
+export function countUncertain(doc: ChordDocument): number {
+  let count = 0
+  for (const section of doc.sections) {
+    for (const item of section.items) {
+      if (item.type !== 'bars') continue
+      if (item.uncertain) count++
+      for (const bar of item.bars) count += bar.chords.filter((c) => c.uncertain).length
+    }
+  }
+  return count
 }

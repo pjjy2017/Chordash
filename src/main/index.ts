@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { appTitle } from '../core/version'
 import { guardClose, registerFileHandlers } from './files'
+import { registerPdfHandlers } from './pdf'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -48,6 +49,7 @@ app.whenReady().then(() => {
   })
 
   registerFileHandlers()
+  registerPdfHandlers()
   createWindow()
 
   app.on('activate', () => {

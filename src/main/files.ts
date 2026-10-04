@@ -15,14 +15,14 @@ const FILTERS = [
 const dirtyWindows = new WeakSet<BrowserWindow>()
 const closing = new WeakSet<BrowserWindow>()
 
-const windowOf = (sender: WebContents): BrowserWindow => {
+export const windowOf = (sender: WebContents): BrowserWindow => {
   const win = BrowserWindow.fromWebContents(sender)
   if (!win) throw new Error('no window for sender')
   return win
 }
 
 /** On desktop a file's id is its path. */
-const refFor = (path: string): FileRef => ({ id: path, name: basename(path) })
+export const refFor = (path: string): FileRef => ({ id: path, name: basename(path) })
 
 async function saveAs(
   win: BrowserWindow,

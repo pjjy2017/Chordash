@@ -123,13 +123,14 @@ body {
   );
 }
 
-/* Two chords in a bar split it evenly, each starting at its own half. */
+/* Chords share the bar evenly, each starting at its own share; a long chord takes the room
+   it needs instead of running into its neighbour. */
 .chord {
   flex: 1 1 0;
-  min-width: 0;
+  min-width: max-content;
+  padding-right: 0.3em;
   white-space: nowrap;
   font-size: 6.2mm;
-  font-weight: 800;
   letter-spacing: -0.02em;
 }
 
@@ -141,20 +142,31 @@ body {
   margin-left: 0.04em;
 }
 
-/* Pretendard has no ♯/♭, so they come from a symbol font; keep them compact. */
+/* ♯/♭ come from Noto Music. Their tops are lifted to the letters' cap height, as on lead sheets
+   (measured: Geist cap 0.71em; Noto Music ♭ top 0.61em, ♯ top 0.51em at 1em). */
 .chord .acc {
-  display: inline-block;
-  font-family: 'Segoe UI Symbol', sans-serif;
-  font-size: 0.9em;
-  font-weight: 700;
-  vertical-align: 0.08em;
-  margin: 0 0.06em 0 0.02em;
+  /* Shifted with position, not vertical-align, so the line's baseline stays put. */
+  position: relative;
+  /* Noto Music has tall line metrics; keep them from growing the line. */
+  line-height: 0;
+  margin: 0 0.04em 0 0.02em;
+}
+
+.chord .acc.flat {
+  top: -0.1em;
+}
+
+.chord .acc.sharp {
+  top: -0.2em;
 }
 
 .chord sup .acc {
-  font-size: 1em;
-  vertical-align: 0;
-  margin: 0 0.02em;
+  margin: 0 0.08em;
+}
+
+/* Noto Music has one weight; thicken its strokes to match heavy letters. */
+.theme-bold .chord .acc {
+  -webkit-text-stroke: 0.018em currentColor;
 }
 
 .chord .bass {
@@ -176,6 +188,54 @@ body {
   text-overflow: ellipsis;
 }
 
-.theme-bold-gothic {
-  font-family: 'Pretendard Variable', 'Pretendard', 'Malgun Gothic', 'Segoe UI Symbol', sans-serif;
+/* --- Themes (ids match `theme:` in the file; chord notation comes from core/theme.ts) --- */
+
+.pages {
+  font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
+}
+
+/* 굵은 고딕: heavy weights, extensions as superscript. */
+.theme-bold .chord {
+  font-weight: 800;
+}
+
+/* 플레인: regular weights, everything on one line. */
+.theme-plain .title {
+  font-weight: 700;
+}
+.theme-plain .heading,
+.theme-plain .label {
+  font-weight: 600;
+}
+.theme-plain .chord {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* --- PDF: pages back to back, no screen decoration. --- */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+.print,
+.print body {
+  margin: 0;
+  background: #fff;
+}
+
+.print .pages {
+  display: block;
+  padding: 0;
+  zoom: 1 !important;
+}
+
+.print .page {
+  box-shadow: none;
+  break-after: page;
+}
+
+.print .page:last-child {
+  break-after: auto;
 }

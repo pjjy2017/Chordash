@@ -23,7 +23,7 @@ import {
   placeholder,
   type DecorationSet
 } from '@codemirror/view'
-import { chordHint, parse, type BarLine, type ParseResult } from '../../core'
+import { chordHint, parse, type BarLine, type ParseResult, type TextChange } from '../../core'
 
 const PLACEHOLDER = `title: 곡 제목
 key: F
@@ -116,7 +116,9 @@ const chordLint = linter(
 
 const theme = EditorView.theme({
   '&': { height: '100%', fontSize: '15px' },
-  '.cm-scroller': { fontFamily: "'D2Coding', 'Consolas', 'Pretendard Variable', monospace" },
+  '.cm-scroller': {
+    fontFamily: "'D2Coding', 'Consolas', 'Chordash Pretendard', 'Chordash Music', monospace"
+  },
   '.cm-content': { padding: '8px 0' }
 })
 
@@ -125,6 +127,8 @@ export interface ChordEditor {
   getText(): string
   /** Replaces the whole document and resets undo history. */
   setText(text: string): void
+  /** Applies one edit as a normal, undoable change. */
+  change(change: TextChange): void
   setHints(on: boolean): void
   parsed(): ParseResult
 }
@@ -164,6 +168,7 @@ export function createEditor(parent: HTMLElement, onChange: () => void): ChordEd
       view.setState(EditorState.create({ doc: text, extensions: extensions() }))
       onChange()
     },
+    change: (change) => view.dispatch({ changes: change }),
     setHints: (on) => {
       hintsOn = on
       view.dispatch({ effects: hintSlot.reconfigure(on ? hints : []) })

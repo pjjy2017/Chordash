@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { formatChord } from './chord'
-import { parse, type BarLine, type ChordDocument } from './document'
+import { countUncertain, parse, type BarLine, type ChordDocument } from './document'
 
 const barLines = (doc: ChordDocument): BarLine[] =>
   doc.sections.flatMap((s) => s.items.filter((i): i is BarLine => i.type === 'bars'))
@@ -233,5 +233,12 @@ describe('examples/샴푸의요정.chord', () => {
     const outro = document.sections.at(-1)!.items as BarLine[]
     expect(outro[0].memos[0]).toMatchObject({ color: 'teal', text: '스캣' })
     expect(outro[2].bars[1].chords[0]).toMatchObject({ source: 'E-9', breath: true })
+  })
+})
+
+describe('countUncertain', () => {
+  it('counts ? chords and ? lines', () => {
+    expect(countUncertain(parse('?C, D, ?E\nF, G ?').document)).toBe(3)
+    expect(countUncertain(parse('C, D').document)).toBe(0)
   })
 })

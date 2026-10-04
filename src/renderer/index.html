@@ -21,9 +21,17 @@
           <button data-command="saveAs" title="다른 이름으로 저장 (Ctrl+Shift+S)">
             다른 이름으로 저장
           </button>
+          <button data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">PDF</button>
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
+        <label class="theme-picker" title="이 곡의 테마 (파일의 theme: 줄)">
+          테마
+          <select id="theme">
+            <option value="bold">굵은 고딕</option>
+            <option value="plain">플레인</option>
+          </select>
+        </label>
         <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
       </header>
       <!-- Shown only on narrow screens, where one pane is visible at a time. -->

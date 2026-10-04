@@ -8,6 +8,7 @@ const bridge: ElectronBridge = {
   openFile: () => ipcRenderer.invoke(IPC.open),
   saveFile: (file, text) => ipcRenderer.invoke(IPC.save, file, text),
   saveFileAs: (file, text) => ipcRenderer.invoke(IPC.saveAs, file, text),
+  exportPdf: (html, suggestedName) => ipcRenderer.invoke(IPC.exportPdf, html, suggestedName),
   confirmDiscard: (name) => ipcRenderer.invoke(IPC.confirmDiscard, name),
   setDocumentState: (state) => ipcRenderer.send(IPC.documentState, state),
   onCloseRequested: (callback) => {

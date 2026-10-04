@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { parseChord } from './chord'
 import { chordHint, chordParts } from './display'
 import { parseKey } from './key'
-import { BOLD_GOTHIC, type ChordStyle } from './theme'
+import { BOLD_THEME, PLAIN_THEME, type ChordStyle } from './theme'
 
-function show(input: string, style: ChordStyle = BOLD_GOTHIC.chord): string {
+function show(input: string, style: ChordStyle = BOLD_THEME.chord): string {
   const r = parseChord(input, null)
   if (!r.ok) throw new Error(r.error.message)
   const p = chordParts(r.value, style)
@@ -48,6 +48,20 @@ describe('chordHint', () => {
     expect(hint('Bb7')).toBeNull()
     expect(hint('E7b9')).toBeNull()
   })
+})
+
+describe('plain theme (one line, minor as −)', () => {
+  it.each([
+    ['C-7', 'C−7'],
+    ['Bb^7', 'B♭maj7'],
+    ['c-^7', 'C−maj7'],
+    ['E%', 'E−7♭5'],
+    ['go7', 'Gdim7'],
+    ['c+7', 'Caug7'],
+    ['e7b9', 'E7♭9'],
+    ['c7s', 'C7sus4'],
+    ['A7/C#', 'A7/C♯']
+  ])('%s → %s', (input, expected) => expect(show(input, PLAIN_THEME.chord)).toBe(expected))
 })
 
 describe('style options', () => {

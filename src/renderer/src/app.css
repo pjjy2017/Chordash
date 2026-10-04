@@ -8,7 +8,7 @@ body,
 
 body {
   overflow: hidden;
-  font-family: 'Pretendard Variable', 'Malgun Gothic', sans-serif;
+  font-family: 'Chordash Geist', 'Chordash Pretendard', 'Malgun Gothic', sans-serif;
 }
 
 #app {
@@ -189,4 +189,19 @@ body {
   #app[data-view='preview'] .editor-pane {
     display: none;
   }
+}
+
+.theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.theme-picker select {
+  padding: 3px 4px;
+  font: inherit;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  background: #fff;
 }

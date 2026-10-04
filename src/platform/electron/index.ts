@@ -15,6 +15,7 @@ export function createElectronPlatform(): Platform {
     openFile: () => bridge.openFile(),
     saveFile: (file, text) => bridge.saveFile(file, text),
     saveFileAs: (file, text) => bridge.saveFileAs(file, text),
+    exportPdf: (html, suggestedName) => bridge.exportPdf(html, suggestedName),
     confirmDiscard: (name) => bridge.confirmDiscard(name),
     setDocumentState: (state) => bridge.setDocumentState(state),
     onBeforeClose: (handler) => {

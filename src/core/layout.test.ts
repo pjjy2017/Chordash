@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from './document'
 import { layout, type Page } from './layout'
-import { BOLD_GOTHIC, type LayoutMetrics } from './theme'
+import { BOLD_THEME, type LayoutMetrics } from './theme'
 
 // Round numbers so the tests are easy to follow.
 // Content height per page = 100 - 0 - 0 = 100; page 1 title 10, later headings 10.
@@ -82,7 +82,7 @@ describe('layout', () => {
 
   it('lays out the example song without overflowing any page', () => {
     const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
-    const m = BOLD_GOTHIC.metrics
+    const m = BOLD_THEME.metrics
     const pages = layout(parse(text).document, m).pages
     const room = m.pageHeight - m.marginTop - m.marginBottom
     for (const page of pages) {
