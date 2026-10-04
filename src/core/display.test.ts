@@ -3,16 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { parseChord } from './chord'
 import { chordHint, chordParts } from './display'
 import { parseKey } from './key'
-import { BOLD_THEME, PLAIN_THEME, type ChordStyle } from './theme'
+import { PLAIN_THEME, type ChordStyle } from './theme'
 
-function show(input: string, style: ChordStyle = BOLD_THEME.chord): string {
+// Symbol style with superscripts (△ ø °). No theme uses it now, but chordParts still supports it.
+const SYMBOLS: ChordStyle = { minorSymbol: '−', symbols: true, extensionStyle: 'superscript' }
+
+function show(input: string, style: ChordStyle = SYMBOLS): string {
   const r = parseChord(input, null)
   if (!r.ok) throw new Error(r.error.message)
   const p = chordParts(r.value, style)
   return p.root + p.inline + (p.sup ? `^(${p.sup})` : '') + p.bass
 }
 
-describe('bold gothic', () => {
+describe('symbol style', () => {
   it.each([
     ['C', 'C'],
     ['C7', 'C^(7)'],

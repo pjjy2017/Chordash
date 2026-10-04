@@ -56,16 +56,31 @@ export function degreeToNote(key: Key, degree: number, accidental: number): Note
   return spellOnLetter(mod12(pitch), letterIndex(key.tonic.letter) + degree - 1)
 }
 
-/** Parses a key name such as `F`, `Bb`, `C#`, `Am`, `F#m`. Returns null if invalid. */
+const MINOR_WORDS = ['m', '-', '−', 'mi', 'min', 'minor', '단조']
+const MAJOR_WORDS = ['', 'M', 'ma', 'maj', 'major', '장조']
+
+/**
+ * Parses a key the way musicians write it, leniently: `F`, `bb`, `F#m`, `c-`, `C minor`, `E♭`,
+ * `c단조`, `Bb major`. Any letter + accidental is allowed (`Cb`, `E#`). Returns null if unreadable.
+ */
 export function parseKey(text: string): Key | null {
-  const m = /^([A-Ga-g])([#b]?)(m?)$/.exec(text.trim())
+  const m = /^([A-Ga-g])([#b♯♭]?)\s*(.*)$/.exec(text.trim())
   if (!m) return null
+  const mode = m[3].trim()
+  // Uppercase `M` means major; every other word is compared ignoring case.
+  const minor =
+    mode !== 'M' && MINOR_WORDS.includes(mode.toLowerCase())
+      ? true
+      : MAJOR_WORDS.includes(mode) || MAJOR_WORDS.includes(mode.toLowerCase())
+        ? false
+        : null
+  if (minor === null) return null
   return {
     tonic: {
       letter: m[1].toUpperCase() as Letter,
-      accidental: m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0
+      accidental: m[2] === '#' || m[2] === '♯' ? 1 : m[2] === 'b' || m[2] === '♭' ? -1 : 0
     },
-    minor: m[3] === 'm'
+    minor
   }
 }
 

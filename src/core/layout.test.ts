@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from './document'
 import { layout, type Page } from './layout'
-import { BOLD_THEME, type LayoutMetrics } from './theme'
+import { PLAIN_THEME, type LayoutMetrics } from './theme'
 
 // Round numbers so the tests are easy to follow.
 // Content height per page = 100 - 0 - 0 = 100; page 1 title 10, later headings 10.
@@ -19,6 +19,7 @@ const M: LayoutMetrics = {
   sectionLabelHeight: 10,
   rowHeight: 10,
   cueHeight: 5,
+  formHeight: 10,
   minBarsPerRow: 4
 }
 
@@ -71,7 +72,7 @@ describe('layout', () => {
   })
 
   it('counts lyric cues in the row height', () => {
-    const [page] = pagesOf('| C |\n> cue\n| D |')
+    const [page] = pagesOf('| C |\nl: cue\n| D |')
     expect(page.blocks.map((b) => b.height)).toEqual([15, 10])
   })
 
@@ -82,7 +83,7 @@ describe('layout', () => {
 
   it('lays out the example song without overflowing any page', () => {
     const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
-    const m = BOLD_THEME.metrics
+    const m = PLAIN_THEME.metrics
     const pages = layout(parse(text).document, m).pages
     const room = m.pageHeight - m.marginTop - m.marginBottom
     for (const page of pages) {
@@ -95,5 +96,27 @@ describe('layout', () => {
       expect(used).toBeLessThanOrEqual(room)
     }
     expect(pages.flatMap((p) => p.blocks).filter((b) => b.type === 'row')).toHaveLength(27)
+  })
+})
+
+describe('key on the sheet', () => {
+  it('shows the song key on page 1 only', () => {
+    const pages = pagesOf(`key: F#m\n[A]\n${rows(8)}\n[B]\n${rows(8)}`)
+    expect(pages.map((p) => p.key)).toEqual(['F♯m', null])
+  })
+  it('marks key changes on section labels', () => {
+    const [page] = pagesOf('key: F\n[A]\n| C |\n[B] key: Bb\n| C |')
+    expect(page.blocks.flatMap((b) => (b.type === 'label' ? [b.keyChange] : []))).toEqual([
+      null,
+      'B♭'
+    ])
+  })
+})
+
+describe('song-form parts on the page', () => {
+  it('lays out a form line as its own block', () => {
+    const [page] = pagesOf('a) a) b) a)\n[A]\na) C, D')
+    expect(page.blocks.map((b) => b.type)).toEqual(['form', 'label', 'row'])
+    expect(page.blocks[0].height).toBe(10)
   })
 })

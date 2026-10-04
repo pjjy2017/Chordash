@@ -2,7 +2,6 @@
 
 import { parseChordSpec, resolveChord, type Chord, type ChordSpec } from './chord'
 import { parseKey, type Key } from './key'
-import { isThemeId, THEME_IDS, type ThemeId } from './theme'
 
 export interface Diagnostic {
   /** 1-based line number. */
@@ -37,6 +36,9 @@ export interface Bar {
   repeatEnd: boolean
   /** Final barline (`.`) after this bar. */
   final: boolean
+  /** 0-based column range of the bar's content (between its barlines). */
+  from: number
+  to: number
 }
 
 export const MEMO_COLORS = ['teal', 'red', 'blue', 'green', 'orange', 'purple', 'gray'] as const
@@ -56,10 +58,28 @@ export interface BarLine {
   bars: Bar[]
   /** `?` after the last barline: the whole line needs checking. */
   uncertain: boolean
-  /** Lyric cue (`>`) shown under this line. */
+  /** Lyric cue (`l:` / `lyric:`) shown under this line. */
   cue: string | null
   /** Colour memos shown above this line. */
   memos: ColorMemo[]
+  /** Song-form part marker at the start of the line (`a) Bb^7, ...`), drawn boxed in the margin. */
+  part: Part | null
+}
+
+/** A song-form part such as `a)`, `b2)`, `ㄱ4)`. */
+export interface Part {
+  /** Shown in the box: Latin letters uppercased (`a)` → `A`, `b2)` → `B2`). */
+  label: string
+  /** 0-based column range of the typed marker, `)` included. */
+  from: number
+  to: number
+}
+
+/** A line of part markers only (`a) a) b) a)`): the song form at a glance. */
+export interface FormLine {
+  type: 'form'
+  line: number
+  parts: Part[]
 }
 
 export interface Directive {
@@ -73,7 +93,7 @@ export interface PageBreak {
   line: number
 }
 
-export type SectionItem = BarLine | Directive | PageBreak
+export type SectionItem = BarLine | FormLine | Directive | PageBreak
 
 export interface Section {
   /** null for content before the first `[label]`. */
@@ -90,8 +110,6 @@ export interface Section {
 export interface ChordDocument {
   title: string | null
   key: Key | null
-  /** `theme:` header; null means the default theme. */
-  theme: ThemeId | null
   sections: Section[]
 }
 
@@ -104,6 +122,7 @@ export interface ParseResult {
 
 export type SyntaxKind =
   | 'comment'
+  | 'part'
   | 'meta'
   | 'section'
   | 'directive'
@@ -125,7 +144,11 @@ export interface SyntaxSpan {
 }
 
 const SECTION = /^\[([^\]]*)\]/
+/** Song-form part marker: one letter (or Hangul), optional digits, `)` — `a)`, `b2)`, `ㄱ4)`. */
+const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3])(\d*)\)$/
 const HEADER = /^(title|key|theme)\s*:\s*(.*)$/
+/** Lyric cue: `l: 첫 소절` or `lyric: 첫 소절`. (`>` is kept free for a later feature.) */
+const LYRIC = /^(?:l|lyric)\s*:\s*(.*)$/
 const MEMO = /^\{\s*([^:{}\s]*)\s*:\s*(.*?)\s*\}$/
 /** `|` and `,` are plain barlines, `.` is a final barline. */
 type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
@@ -134,7 +157,7 @@ type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
 const ENDING = /^(\d)\.(?=\s*\S)\s*/
 
 class Parser {
-  readonly doc: ChordDocument = { title: null, key: null, theme: null, sections: [] }
+  readonly doc: ChordDocument = { title: null, key: null, sections: [] }
   readonly diagnostics: Diagnostic[] = []
   readonly spans: SyntaxSpan[] = []
   private lineNo = 0
@@ -195,9 +218,13 @@ class Parser {
     this.headerOpen = false
 
     if (trimmed.startsWith('[')) return this.parseSection(raw, start)
-    if (trimmed.startsWith('>')) {
+    const lyric = LYRIC.exec(trimmed)
+    if (lyric) {
       this.mark('cue', start, end)
-      return this.parseCue(trimmed.slice(1).trim(), start, end)
+      return this.parseCue(lyric[1], start, end)
+    }
+    if (trimmed.startsWith('>')) {
+      return this.report('error', start, end, '>는 아직 쓰지 않는 기호예요. 가사 큐는 l: 로 쓰세요')
     }
     if (trimmed.startsWith('{')) {
       this.mark('memo', start, end)
@@ -220,8 +247,21 @@ class Parser {
       })
       return
     }
+    // A line of part markers only: `a) a) b) a)`.
+    const tokens = [...raw.matchAll(/\S+/g)]
+    if (tokens.every((t) => PART.test(t[0]))) {
+      const parts = tokens.map((t) => this.parsePart(t[0], t.index!))
+      this.currentSection().items.push({ type: 'form', line: this.lineNo, parts })
+      return
+    }
     // Anything else is a bar line: `| C | D |` or `C, D, E.`
     this.parseBarLine(raw, start, end)
+  }
+
+  private parsePart(text: string, at: number): Part {
+    const m = PART.exec(text)!
+    this.mark('part', at, at + text.length)
+    return { label: m[1].toUpperCase() + m[2], from: at, to: at + text.length }
   }
 
   private parseHeader(name: string, value: string, start: number, end: number): void {
@@ -235,12 +275,8 @@ class Parser {
       return
     }
     if (name === 'theme') {
-      const id = value.trim()
-      if (!isThemeId(id)) {
-        return this.report('error', start, end, `알 수 없는 테마: ${id} (${THEME_IDS.join(', ')})`)
-      }
-      this.doc.theme = id
-      return
+      // Older files may still have it; there is only one theme now.
+      return this.report('warning', start, end, 'theme: 줄은 이제 쓰지 않아요 (테마는 플레인 하나)')
     }
     const key = parseKey(value)
     if (!key) return this.report('error', start, end, `알 수 없는 키: ${value.trim()}`)
@@ -312,12 +348,19 @@ class Parser {
       bars: [],
       uncertain: false,
       cue: null,
-      memos: this.pendingMemos
+      memos: this.pendingMemos,
+      part: null
     }
     this.pendingMemos = []
 
     let pos = start
-    const ending = ENDING.exec(raw.slice(start))
+    const first = /^\S+/.exec(raw.slice(start))
+    if (first && PART.test(first[0])) {
+      line.part = this.parsePart(first[0], start)
+      pos += first[0].length
+      while (pos < end && /\s/.test(raw[pos])) pos++
+    }
+    const ending = ENDING.exec(raw.slice(pos))
     if (ending) {
       line.ending = Number(ending[1])
       this.mark('ending', pos, pos + 2)
@@ -388,11 +431,28 @@ class Parser {
       chords,
       repeatStart: left === 'repeatStart',
       repeatEnd: right === 'repeatEnd',
-      final: right === 'final'
+      final: right === 'final',
+      from,
+      to
     }
   }
 
   private parseChordToken(text: string, at: number): ChordItem {
+    if (PART.test(text)) {
+      const error = '파트 표시는 줄 맨 앞에만 쓸 수 있어요'
+      this.report('error', at, at + text.length, error)
+      return {
+        source: text,
+        from: at,
+        to: at + text.length,
+        accent: false,
+        breath: false,
+        uncertain: false,
+        spec: null,
+        chord: null,
+        error
+      }
+    }
     let breath = false
     let uncertain = false
     let s = 0

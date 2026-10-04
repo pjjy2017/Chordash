@@ -75,10 +75,26 @@ body {
 }
 
 .editor-pane {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   background: #fff;
   border-right: 1px solid #d8d8d8;
+}
+
+.editor-host {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Wide screens: the print preview can be hidden to give the editor the whole width. */
+#app.preview-hidden .split {
+  grid-template-columns: 1fr;
+}
+
+#app.preview-hidden .preview-pane {
+  display: none;
 }
 
 .preview-pane {
@@ -191,17 +207,155 @@ body {
   }
 }
 
-.theme-picker {
+/* --- Header fields: title / key / theme ------------------------------------------- */
+
+.header-fields {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e4e4;
+  background: #fbfbfb;
 }
 
-.theme-picker select {
-  padding: 3px 4px;
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+}
+
+.field-title {
+  flex: 1 1 220px;
+}
+
+.field input,
+.field select {
+  padding: 4px 6px;
   font: inherit;
+  font-size: 14px;
+  color: #111;
   border: 1px solid #c8c8c8;
   border-radius: 5px;
   background: #fff;
+}
+
+.field-title input {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.preview-toggle {
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.preview-toggle[aria-pressed='true'] {
+  background: #eef3ff;
+  border-color: #9bb2e8;
+  color: #1d3f9e;
+}
+
+/* --- Chords shown as sheet music inside the editor -------------------------------- */
+
+.cd-live-chord {
+  font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
+  font-size: 1.12em;
+  color: #111;
+  cursor: text;
+  letter-spacing: -0.01em;
+}
+
+.cd-live-chord {
+  font-weight: 500;
+}
+
+.cd-live-chord sup {
+  font-size: 0.6em;
+  vertical-align: 0.7em;
+  line-height: 0;
+  margin-left: 0.04em;
+}
+
+.cd-live-chord .bass {
+  font-size: 0.85em;
+}
+
+.cd-live-chord .acc {
+  position: relative;
+  line-height: 0;
+  margin: 0 0.04em 0 0.02em;
+}
+
+.cd-live-chord .acc.flat {
+  top: -0.1em;
+}
+
+.cd-live-chord .acc.sharp {
+  top: -0.2em;
+}
+
+.cd-live-bar {
+  display: inline-block;
+  margin: 0 0.15em;
+  color: #9a9a9a;
+  font-weight: 700;
+  transform: scaleY(1.15);
+}
+
+.cd-live-bar.final {
+  color: #444;
+}
+
+/* Narrow screens use the tabs instead; "hidden" only applies to the wide layout. */
+@media (max-width: 760px) {
+  #app.preview-hidden[data-view='preview'] .preview-pane {
+    display: revert;
+  }
+
+  .preview-toggle {
+    display: none;
+  }
+}
+
+.field-key input {
+  width: 9em;
+}
+
+.field-reading {
+  font-size: 12px;
+  color: #777;
+  white-space: nowrap;
+}
+
+.field-reading.bad {
+  color: #c00;
+}
+
+/* Song-form part (a) → A) boxed in the editor, like on the sheet. */
+.cd-live-part {
+  display: inline-block;
+  min-width: 1.3em;
+  padding: 0 0.25em;
+  margin-right: 0.2em;
+  font-family: 'Chordash Geist', 'Chordash Pretendard', sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  color: #111;
+  border: 1.5px solid #111;
+  border-radius: 3px;
+  cursor: text;
+}
+
+.cd-part {
+  color: #7c3aed;
+  font-weight: 700;
 }

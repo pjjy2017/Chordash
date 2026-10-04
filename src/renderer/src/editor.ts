@@ -1,14 +1,22 @@
-// CodeMirror 6 editor: colouring, grey chord hints, error underlines — all driven by core parse().
+// CodeMirror 6 editor — the single editing view (ROADMAP 4.5).
+// Everything is driven by core: parse() for colours, errors and live chords; completionsAt() for
+// autocomplete. The file keeps exactly what was typed; chords are only *shown* as sheet music.
 
+import {
+  autocompletion,
+  type CompletionContext,
+  type CompletionResult
+} from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { linter, lintGutter, type Diagnostic as LintDiagnostic } from '@codemirror/lint'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
-  Compartment,
   EditorState,
-  type Extension,
   RangeSetBuilder,
+  StateEffect,
   StateField,
+  type Extension,
+  type Range,
   type Text
 } from '@codemirror/state'
 import {
@@ -23,14 +31,24 @@ import {
   placeholder,
   type DecorationSet
 } from '@codemirror/view'
-import { chordHint, parse, type BarLine, type ParseResult, type TextChange } from '../../core'
+import {
+  chordHint,
+  completionsAt,
+  headerEndLine,
+  parse,
+  DEFAULT_THEME,
+  type ParseResult,
+  type Part,
+  type TextChange
+} from '../../core'
+import { chordInnerHtml } from './preview'
 
 const PLACEHOLDER = `title: 곡 제목
 key: F
 
 [Verse]
 Bb^7, A-7, Bb^7, F B7*
-> 가사 큐
+l: 가사 큐
 
 [Chorus]
 2-7, 5-7, 17, 4^7.`
@@ -39,7 +57,7 @@ Bb^7, A-7, Bb^7, F B7*
 const offset = (doc: Text, line: number, column: number): number =>
   Math.min(doc.line(line).from + column, doc.line(line).to)
 
-/** Parse once per document version; colouring, hints and lint all share it. */
+/** Parse once per document version; colouring, live chords and lint all share it. */
 const parsed = StateField.define<ParseResult>({
   create: (state) => parse(state.doc.toString()),
   update: (value, tr) => (tr.docChanged ? parse(tr.state.doc.toString()) : value)
@@ -57,6 +75,66 @@ const syntaxColours = EditorView.decorations.compute([parsed], (state) => {
   return builder.finish()
 })
 
+// --- live chords: finished tokens are shown as sheet music ---------------------------
+
+class ChordWidget extends WidgetType {
+  constructor(
+    readonly html: string,
+    readonly themeId: string
+  ) {
+    super()
+  }
+  eq(other: ChordWidget): boolean {
+    return other.html === this.html && other.themeId === this.themeId
+  }
+  toDOM(): HTMLElement {
+    const el = document.createElement('span')
+    el.className = `cd-live-chord theme-${this.themeId}`
+    el.innerHTML = this.html
+    return el
+  }
+  // Let clicks through so the cursor lands on the chord and it opens for editing.
+  ignoreEvent(): boolean {
+    return false
+  }
+}
+
+class BarlineWidget extends WidgetType {
+  constructor(readonly final: boolean) {
+    super()
+  }
+  eq(other: BarlineWidget): boolean {
+    return other.final === this.final
+  }
+  toDOM(): HTMLElement {
+    const el = document.createElement('span')
+    el.className = this.final ? 'cd-live-bar final' : 'cd-live-bar'
+    el.textContent = this.final ? '‖' : '|'
+    return el
+  }
+  ignoreEvent(): boolean {
+    return false
+  }
+}
+
+class PartWidget extends WidgetType {
+  constructor(readonly label: string) {
+    super()
+  }
+  eq(other: PartWidget): boolean {
+    return other.label === this.label
+  }
+  toDOM(): HTMLElement {
+    const el = document.createElement('span')
+    el.className = 'cd-live-part'
+    el.textContent = this.label
+    return el
+  }
+  ignoreEvent(): boolean {
+    return false
+  }
+}
+
 class HintWidget extends WidgetType {
   constructor(readonly text: string) {
     super()
@@ -72,29 +150,110 @@ class HintWidget extends WidgetType {
   }
 }
 
-function hintDecorations(state: EditorState): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>()
-  const { document: doc } = state.field(parsed)
+export const setHintsEnabled = StateEffect.define<boolean>()
+
+const hintsEnabled = StateField.define<boolean>({
+  create: () => true,
+  update: (value, tr) => tr.effects.reduce((v, e) => (e.is(setHintsEnabled) ? e.value : v), value)
+})
+
+/**
+ * A bar (cell) is "being typed" while a cursor is in it or at its edges; its chords stay as typed,
+ * with grey hints. Typing the comma that closes it — or moving to another cell or line — finishes
+ * it, and its chords are shown as sheet music. `,` and `.` are always shown as barlines.
+ */
+function liveDecorations(state: EditorState): DecorationSet {
+  const { document: doc, spans } = state.field(parsed)
+  const theme = DEFAULT_THEME
+  const touching = (from: number, to: number): boolean =>
+    state.selection.ranges.some((r) => r.to >= from && r.from <= to)
+  const decorations: Range<Decoration>[] = []
+
+  /** A part marker (`a)`) is boxed once the cursor has left it. */
+  const addPart = (lineNo: number, part: Part): void => {
+    const from = offset(state.doc, lineNo, part.from)
+    const to = offset(state.doc, lineNo, part.to)
+    if (touching(from, to)) return
+    decorations.push(Decoration.replace({ widget: new PartWidget(part.label) }).range(from, to))
+  }
+
   for (const section of doc.sections) {
     for (const item of section.items) {
+      if (item.type === 'form') item.parts.forEach((part) => addPart(item.line, part))
       if (item.type !== 'bars') continue
-      for (const chord of (item as BarLine).bars.flatMap((b) => b.chords)) {
-        if (!chord.chord) continue
-        const hint = chordHint(chord.source, chord.chord)
-        if (!hint) continue
-        const at = offset(state.doc, item.line, chord.to)
-        builder.add(at, at, Decoration.widget({ widget: new HintWidget(hint), side: 1 }))
+      if (item.part) addPart(item.line, item.part)
+      const line = state.doc.line(item.line)
+      for (const bar of item.bars) {
+        // A bar with no barline after it is still open up to the end of the line, trailing
+        // spaces included — so a space alone never closes it; only `,` / `|` / `.` does.
+        const closed = /[,|.:]/.test(line.text.charAt(bar.to))
+        const editing = touching(
+          offset(state.doc, item.line, bar.from),
+          closed ? offset(state.doc, item.line, bar.to) : line.to
+        )
+        for (const chord of bar.chords) {
+          if (!chord.chord) continue // errors stay as typed, with a red underline
+          const from = offset(state.doc, item.line, chord.from)
+          const to = offset(state.doc, item.line, chord.to)
+          if (editing) {
+            const hint = state.field(hintsEnabled) ? chordHint(chord.source, chord.chord) : null
+            if (hint) {
+              decorations.push(
+                Decoration.widget({ widget: new HintWidget(hint), side: 1 }).range(to)
+              )
+            }
+            continue
+          }
+          const html = chordInnerHtml(chord.chord, theme)
+          decorations.push(
+            Decoration.replace({ widget: new ChordWidget(html, theme.id) }).range(from, to)
+          )
+        }
       }
     }
   }
-  return builder.finish()
+
+  for (const span of spans) {
+    if (span.kind !== 'barline') continue
+    const from = offset(state.doc, span.line, span.from)
+    const to = offset(state.doc, span.line, span.to)
+    const text = state.doc.sliceString(from, to)
+    if (text !== ',' && text !== '.') continue
+    decorations.push(
+      Decoration.replace({ widget: new BarlineWidget(text === '.') }).range(from, to)
+    )
+  }
+  return Decoration.set(decorations, true)
 }
 
-const hints = StateField.define<DecorationSet>({
-  create: hintDecorations,
-  update: (value, tr) => (tr.docChanged ? hintDecorations(tr.state) : value),
+const liveChords = StateField.define<DecorationSet>({
+  create: liveDecorations,
+  update: (value, tr) =>
+    tr.docChanged || tr.selection || tr.effects.some((e) => e.is(setHintsEnabled))
+      ? liveDecorations(tr.state)
+      : value,
   provide: (f) => EditorView.decorations.from(f)
 })
+
+// --- autocomplete ----------------------------------------------------------------------
+
+function chordashCompletions(context: CompletionContext): CompletionResult | null {
+  const { state, pos } = context
+  const line = state.doc.lineAt(pos)
+  const before = state.doc.sliceString(0, line.from)
+  const result = completionsAt(line.text, pos - line.from, {
+    inHeader: headerEndLine(before) >= line.number - 1,
+    sectionNames: state.field(parsed).document.sections.flatMap((s) => (s.name ? [s.name] : []))
+  })
+  if (!result) return null
+  return {
+    from: line.from + result.from,
+    filter: false,
+    options: result.options.map((o) => ({ label: o.label, detail: o.detail, apply: o.insert }))
+  }
+}
+
+// --- errors ----------------------------------------------------------------------------
 
 const chordLint = linter(
   (view) => {
@@ -114,10 +273,11 @@ const chordLint = linter(
   { delay: 200 }
 )
 
-const theme = EditorView.theme({
-  '&': { height: '100%', fontSize: '15px' },
+const editorTheme = EditorView.theme({
+  '&': { height: '100%', fontSize: '16px' },
   '.cm-scroller': {
-    fontFamily: "'D2Coding', 'Consolas', 'Chordash Pretendard', 'Chordash Music', monospace"
+    fontFamily: "'D2Coding', 'Consolas', 'Chordash Pretendard', 'Chordash Music', monospace",
+    lineHeight: '1.75'
   },
   '.cm-content': { padding: '8px 0' }
 })
@@ -134,7 +294,6 @@ export interface ChordEditor {
 }
 
 export function createEditor(parent: HTMLElement, onChange: () => void): ChordEditor {
-  const hintSlot = new Compartment()
   let hintsOn = true
   const extensions = (): Extension[] => [
     lineNumbers(),
@@ -148,10 +307,12 @@ export function createEditor(parent: HTMLElement, onChange: () => void): ChordEd
     EditorView.lineWrapping,
     parsed,
     syntaxColours,
-    hintSlot.of(hintsOn ? hints : []),
+    hintsEnabled.init(() => hintsOn),
+    liveChords,
+    autocompletion({ override: [chordashCompletions], icons: false }),
     chordLint,
     lintGutter(),
-    theme,
+    editorTheme,
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onChange()
     })
@@ -171,7 +332,7 @@ export function createEditor(parent: HTMLElement, onChange: () => void): ChordEd
     change: (change) => view.dispatch({ changes: change }),
     setHints: (on) => {
       hintsOn = on
-      view.dispatch({ effects: hintSlot.reconfigure(on ? hints : []) })
+      view.dispatch({ effects: setHintsEnabled.of(on) })
     },
     parsed: () => view.state.field(parsed)
   }

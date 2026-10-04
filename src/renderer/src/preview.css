@@ -39,7 +39,6 @@ body {
 .title {
   height: var(--title-h);
   font-size: 8mm;
-  font-weight: 800;
   text-align: center;
 }
 
@@ -56,7 +55,36 @@ body {
   align-items: flex-end;
   padding-bottom: 1mm;
   font-size: 4.3mm;
-  font-weight: 800;
+}
+
+/* Song key at the right end of the title row (page 1). */
+.title {
+  position: relative;
+}
+
+.song-key {
+  position: absolute;
+  right: 0;
+  bottom: 3mm;
+  font-size: 4.6mm;
+  font-weight: 700;
+}
+
+/* Key change written on a section label: [Vocal] key: G. */
+.key-change {
+  margin-left: 2.5mm;
+  padding: 0.2mm 1.6mm;
+  font-size: 3.6mm;
+  font-weight: 700;
+  border: 0.35mm solid currentColor;
+  border-radius: 1mm;
+}
+
+.song-key .acc,
+.key-change .acc {
+  position: relative;
+  top: -0.1em;
+  line-height: 0;
 }
 
 .blocks > .label:not(:first-child) {
@@ -69,6 +97,40 @@ body {
 
 .row.has-cue {
   height: calc(var(--row-h) + var(--cue-h));
+}
+
+/* Song-form part boxes (a) → A). On a bar line the box sits in the left margin. */
+.part {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 6.4mm;
+  height: 6.4mm;
+  padding: 0 1mm;
+  font-size: 4mm;
+  font-weight: 700;
+  line-height: 1;
+  border: 0.45mm solid #111;
+  border-radius: 0.6mm;
+}
+
+.row {
+  position: relative;
+}
+
+.row > .part {
+  position: absolute;
+  right: calc(100% + 2mm);
+  top: calc((var(--row-h) - 6.4mm) / 2);
+}
+
+/* A line of parts only: the song form, e.g. A A B A. */
+.form {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  height: var(--form-h);
 }
 
 .bars {
@@ -164,11 +226,6 @@ body {
   margin: 0 0.08em;
 }
 
-/* Noto Music has one weight; thicken its strokes to match heavy letters. */
-.theme-bold .chord .acc {
-  -webkit-text-stroke: 0.018em currentColor;
-}
-
 .chord .bass {
   font-size: 0.8em;
 }
@@ -188,26 +245,20 @@ body {
   text-overflow: ellipsis;
 }
 
-/* --- Themes (ids match `theme:` in the file; chord notation comes from core/theme.ts) --- */
+/* --- The one theme, 플레인: regular weights, everything on one line (core/theme.ts). --- */
 
 .pages {
   font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
 }
 
-/* 굵은 고딕: heavy weights, extensions as superscript. */
-.theme-bold .chord {
-  font-weight: 800;
-}
-
-/* 플레인: regular weights, everything on one line. */
-.theme-plain .title {
+.title {
   font-weight: 700;
 }
-.theme-plain .heading,
-.theme-plain .label {
+.heading,
+.label {
   font-weight: 600;
 }
-.theme-plain .chord {
+.chord {
   font-weight: 500;
   letter-spacing: 0;
 }

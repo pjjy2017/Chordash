@@ -4,10 +4,12 @@ import './app.css'
 import {
   countUncertain,
   DEFAULT_THEME,
+  formatNote,
   layout,
+  parseKey,
+  readHeaderLine,
   setHeaderLine,
-  themeFor,
-  type ThemeId
+  type ChordDocument
 } from '../../core'
 import { platform, type FileRef } from '../../platform'
 import { createEditor } from './editor'
@@ -21,7 +23,9 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const app = $<HTMLElement>('app')
 const preview = $<HTMLElement>('preview')
 const status = $<HTMLElement>('status')
-const themePicker = $<HTMLSelectElement>('theme')
+const titleField = $<HTMLInputElement>('field-title')
+const keyField = $<HTMLInputElement>('field-key')
+const keyReading = $<HTMLElement>('field-key-reading')
 
 const UNTITLED = '제목 없음'
 let file: FileRef | null = null
@@ -40,9 +44,9 @@ let renderTimer: number | undefined
 
 function renderPreview(): void {
   const { document: doc, diagnostics } = editor.parsed()
-  const theme = themeFor(doc.theme)
+  const theme = DEFAULT_THEME
   preview.innerHTML = renderPages(layout(doc, theme.metrics), theme)
-  themePicker.value = theme.id
+  syncHeaderFields(doc)
   fitPreview()
   const errors = diagnostics.filter((d) => d.severity === 'error').length
   const warnings = diagnostics.length - errors
@@ -72,13 +76,13 @@ const editor = createEditor($('editor'), () => {
 
 function showView(view: 'editor' | 'preview'): void {
   app.dataset.view = view
-  document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((tab) => {
+  document.querySelectorAll<HTMLButtonElement>('.view-tabs [data-view]').forEach((tab) => {
     tab.setAttribute('aria-selected', String(tab.dataset.view === view))
   })
   if (view === 'editor') editor.view.focus()
 }
 
-document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((tab) => {
+document.querySelectorAll<HTMLButtonElement>('.view-tabs [data-view]').forEach((tab) => {
   tab.addEventListener('click', () => showView(tab.dataset.view as 'editor' | 'preview'))
 })
 
@@ -139,17 +143,68 @@ async function exportPdf(): Promise<void> {
     if (!window.confirm(`${problems}가 있어요. 그래도 PDF로 내보낼까요?`)) return
   }
   const title = doc.title || documentName().replace(/\.chord$/i, '')
-  const theme = themeFor(doc.theme)
+  const theme = DEFAULT_THEME
   const html = await buildPrintDocument(layout(doc, theme.metrics), theme, title)
   const saved = await platform.exportPdf(html, `${title}.pdf`)
   if (saved) status.textContent = `PDF 저장: ${saved.name}`
 }
 
-themePicker.addEventListener('change', () => {
-  const id = themePicker.value as ThemeId
-  editor.change(setHeaderLine(editor.getText(), 'theme', id))
-  editor.view.focus()
+// --- header fields (title / key / theme) mirror the header lines of the file ------------
+
+/** Shows the header values as typed; a field being typed in is left alone. */
+function syncHeaderFields(doc: ChordDocument): void {
+  if (document.activeElement !== titleField) titleField.value = doc.title ?? ''
+  const typedKey = readHeaderLine(editor.getText(), 'key') ?? ''
+  if (document.activeElement !== keyField) keyField.value = typedKey
+  showKeyReading(typedKey)
+}
+
+/** "C 단조" beside the key field, so a loosely typed key (`c-`) can be checked at a glance. */
+function showKeyReading(typed: string): void {
+  const key = typed ? parseKey(typed) : null
+  keyReading.textContent = key
+    ? `${formatNote(key.tonic)} ${key.minor ? '단조' : '장조'}`
+    : typed
+      ? '알 수 없는 키'
+      : ''
+  keyReading.classList.toggle('bad', Boolean(typed) && !key)
+}
+
+titleField.addEventListener('input', () => {
+  editor.change(setHeaderLine(editor.getText(), 'title', titleField.value.trim() || null))
 })
+keyField.addEventListener('input', () => {
+  editor.change(setHeaderLine(editor.getText(), 'key', keyField.value.trim() || null))
+})
+for (const field of [titleField, keyField]) {
+  field.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') editor.view.focus()
+  })
+}
+
+// --- print preview: shown beside the editor on wide screens, can be hidden ---------------
+
+const previewToggle = $<HTMLButtonElement>('toggle-preview')
+const PREVIEW_KEY = 'chordash.previewHidden'
+
+function setPreviewHidden(hidden: boolean): void {
+  app.classList.toggle('preview-hidden', hidden)
+  previewToggle.setAttribute('aria-pressed', String(!hidden))
+  try {
+    localStorage.setItem(PREVIEW_KEY, hidden ? '1' : '0')
+  } catch {
+    // Remembering the choice is only a convenience.
+  }
+}
+
+previewToggle.addEventListener('click', () => {
+  setPreviewHidden(!app.classList.contains('preview-hidden'))
+})
+try {
+  setPreviewHidden(localStorage.getItem(PREVIEW_KEY) === '1')
+} catch {
+  setPreviewHidden(false)
+}
 
 /** Runs a toolbar command; failures are shown in the status area instead of disappearing. */
 function run(command: string): void {

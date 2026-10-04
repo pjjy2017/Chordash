@@ -96,6 +96,13 @@ describe('bar lines', () => {
     expect(chordNames(line[1])).toEqual([['Em9'], ['Em9']])
     expect(line[1].bars.map((b) => b.final)).toEqual([false, true])
   })
+  it('records where each bar sits in the line', () => {
+    const bars = barLines(parse('C, A- D-,').document)[0].bars
+    expect(bars.map((b) => [b.from, b.to])).toEqual([
+      [0, 1],
+      [2, 8]
+    ])
+  })
   it('treats a trailing comma and a leading comma as optional', () => {
     const names = (t: string): string[][] => chordNames(barLines(parse(t).document)[0])
     expect(names('C, D,')).toEqual([['C'], ['D']])
@@ -139,10 +146,16 @@ describe('bar lines', () => {
 
 describe('cues, memos, directives, page breaks', () => {
   it('attaches a lyric cue to the bar line above', () => {
-    expect(barLines(parse('| C |\n> 첫 소절').document)[0].cue).toBe('첫 소절')
+    expect(barLines(parse('| C |\nl: 첫 소절').document)[0].cue).toBe('첫 소절')
+  })
+  it('also reads the long form lyric:', () => {
+    expect(barLines(parse('C, D\nlyric: 첫 소절').document)[0].cue).toBe('첫 소절')
+  })
+  it('reserves > for a later feature and points to l:', () => {
+    expect(errors('C\n> 가사')).toEqual(['>는 아직 쓰지 않는 기호예요. 가사 큐는 l: 로 쓰세요'])
   })
   it('warns when a cue has no bar line above', () => {
-    expect(parse('[A]\n> x').diagnostics[0]).toMatchObject({ severity: 'warning' })
+    expect(parse('[A]\nl: x').diagnostics[0]).toMatchObject({ severity: 'warning' })
   })
   it('attaches colour memos to the bar line below', () => {
     const line = barLines(parse('{teal: 따-닷 따-닷}\n| C |').document)[0]
@@ -190,7 +203,7 @@ describe('syntax spans', () => {
     ])
   })
   it('marks comments, cues, memos and page breaks', () => {
-    expect(kinds('// x\n| C |\n> cue\n{teal: y}\n---').map((k) => k.split(':')[0])).toEqual([
+    expect(kinds('// x\n| C |\nl: cue\n{teal: y}\n---').map((k) => k.split(':')[0])).toEqual([
       'comment',
       'barline',
       'chord',
@@ -240,5 +253,44 @@ describe('countUncertain', () => {
   it('counts ? chords and ? lines', () => {
     expect(countUncertain(parse('?C, D, ?E\nF, G ?').document)).toBe(3)
     expect(countUncertain(parse('C, D').document)).toBe(0)
+  })
+})
+
+describe('song-form parts', () => {
+  it('reads a part marker at the start of a bar line', () => {
+    const line = barLines(parse('a) Bb^7, A-7').document)[0]
+    expect(line.part).toEqual({ label: 'A', from: 0, to: 2 })
+    expect(chordNames(line)).toEqual([['B♭maj7'], ['Am7']])
+  })
+  it('uppercases Latin letters and keeps digits and Hangul', () => {
+    const label = (t: string): string | undefined => barLines(parse(t).document)[0].part?.label
+    expect(label('b2) C')).toBe('B2')
+    expect(label('ㄱ4) C')).toBe('ㄱ4')
+    expect(label('ㄴ) C')).toBe('ㄴ')
+    expect(label('| C |')).toBeUndefined()
+  })
+  it('works with | barlines and endings after the part', () => {
+    const line = barLines(parse('b) 1. | C | D :||').document)[0]
+    expect(line.part?.label).toBe('B')
+    expect(line.ending).toBe(1)
+    expect(line.bars).toHaveLength(2)
+  })
+  it('reads a line of parts only as the song form', () => {
+    const { document, diagnostics } = parse('a) a) b) a) ㄱ)')
+    expect(diagnostics).toEqual([])
+    expect(document.sections[0].items[0]).toMatchObject({
+      type: 'form',
+      parts: [{ label: 'A' }, { label: 'A' }, { label: 'B' }, { label: 'A' }, { label: 'ㄱ' }]
+    })
+  })
+  it('is not confused with chords', () => {
+    expect(barLines(parse('c(b9), b2, a').document)[0].part).toBeNull()
+    expect(chordNames(barLines(parse('key: E\nb2, a').document)[0])).toEqual([['F'], ['A']])
+  })
+  it('rejects a part in the middle of a line', () => {
+    expect(errors('C, a) D')).toEqual(['파트 표시는 줄 맨 앞에만 쓸 수 있어요'])
+  })
+  it('marks parts for colouring', () => {
+    expect(parse('a) C').spans.map((s) => s.kind)).toEqual(['part', 'chord'])
   })
 })

@@ -3,6 +3,7 @@
 import {
   chordParts,
   type Bar,
+  type Chord,
   type ChordItem,
   type PageBlock,
   type PageModel,
@@ -21,17 +22,20 @@ const withAccidentals = (text: string): string =>
     (a) => `<span class="acc ${a === '♭' ? 'flat' : 'sharp'}">${a}</span>`
   )
 
-function chordHtml(item: ChordItem, theme: Theme): string {
-  if (!item.chord) return `<span class="chord chord-error">${escapeHtml(item.source)}</span>`
-  const p = chordParts(item.chord, theme.chord)
+/** The parts of a chord as the theme draws them; shared by the pages and the editor. */
+export function chordInnerHtml(chord: Chord, theme: Theme): string {
+  const p = chordParts(chord, theme.chord)
   return (
-    `<span class="chord">` +
     `<span class="root">${withAccidentals(p.root)}</span>` +
     (p.inline ? `<span class="inline">${escapeHtml(p.inline)}</span>` : '') +
     (p.sup ? `<sup>${withAccidentals(p.sup)}</sup>` : '') +
-    (p.bass ? `<span class="bass">${withAccidentals(p.bass)}</span>` : '') +
-    `</span>`
+    (p.bass ? `<span class="bass">${withAccidentals(p.bass)}</span>` : '')
   )
+}
+
+function chordHtml(item: ChordItem, theme: Theme): string {
+  if (!item.chord) return `<span class="chord chord-error">${escapeHtml(item.source)}</span>`
+  return `<span class="chord">${chordInnerHtml(item.chord, theme)}</span>`
 }
 
 /** Each bar draws its left barline; the last bar (or one ending in `.`) also draws its right one. */
@@ -44,14 +48,24 @@ function barHtml(bar: Bar, index: number, bars: Bar[], theme: Theme): string {
   return `<div class="${classes.join(' ')}">${chords}</div>`
 }
 
+/** A song-form part (`a)` → A) in a square box. */
+export const partHtml = (label: string): string => `<span class="part">${escapeHtml(label)}</span>`
+
 function blockHtml(block: PageBlock, theme: Theme): string {
   if (block.type === 'label') {
-    return `<div class="label">${escapeHtml(block.name)}</div>`
+    const key = block.keyChange
+      ? ` <span class="key-change">Key ${withAccidentals(block.keyChange)}</span>`
+      : ''
+    return `<div class="label">${escapeHtml(block.name)}${key}</div>`
+  }
+  if (block.type === 'form') {
+    return `<div class="form">${block.parts.map((p) => partHtml(p.label)).join('')}</div>`
   }
   const { line } = block
   const cue = line.cue !== null ? `<div class="cue">${escapeHtml(line.cue)}</div>` : ''
   return (
     `<div class="row${cue ? ' has-cue' : ''}">` +
+    (line.part ? partHtml(line.part.label) : '') +
     `<div class="bars" style="--slots:${block.slots}">${line.bars.map((b, i, all) => barHtml(b, i, all, theme)).join('')}</div>` +
     cue +
     `</div>`
@@ -72,7 +86,8 @@ function metricVars(theme: Theme): string {
     'section-gap': m.sectionGap,
     'label-h': m.sectionLabelHeight,
     'row-h': m.rowHeight,
-    'cue-h': m.cueHeight
+    'cue-h': m.cueHeight,
+    'form-h': m.formHeight
   }
   return Object.entries(vars)
     .map(([k, v]) => `--${k}:${v}mm`)
@@ -83,7 +98,9 @@ export function renderPages(model: PageModel, theme: Theme): string {
   const pages = model.pages.map(
     (page) =>
       `<section class="page">` +
-      `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}</header>` +
+      `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
+      (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
+      `</header>` +
       `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
       `</section>`
   )

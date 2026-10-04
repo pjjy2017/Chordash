@@ -1,12 +1,15 @@
 // Document model → pages (PRD 4: page breaks, page titles).
 
-import type { BarLine, ChordDocument, Section } from './document'
+import type { BarLine, ChordDocument, Part, Section } from './document'
+import { formatKey } from './key'
 import type { LayoutMetrics } from './theme'
 
 export interface SectionLabelBlock {
   type: 'label'
   name: string
   directive: string | null
+  /** `[Vocal] key: G` → `G`, shown beside the label. */
+  keyChange: string | null
   height: number
 }
 
@@ -18,13 +21,22 @@ export interface RowBlock {
   height: number
 }
 
-export type PageBlock = SectionLabelBlock | RowBlock
+/** Song form at a glance: a row of part boxes. */
+export interface FormBlock {
+  type: 'form'
+  parts: Part[]
+  height: number
+}
+
+export type PageBlock = SectionLabelBlock | RowBlock | FormBlock
 
 export interface Page {
   /** 1-based. */
   number: number
   /** Page 1: the song title. Pages 2+: "제목 N". */
   heading: string
+  /** The song's key (`F`, `F♯m`), shown on page 1 only. */
+  key: string | null
   blocks: PageBlock[]
 }
 
@@ -54,12 +66,16 @@ function sectionRuns(
       type: 'label',
       name: section.name,
       directive: section.directive,
+      keyChange: section.keyChange ? formatKey(section.keyChange) : null,
       height: m.sectionLabelHeight
     })
   }
   for (const item of section.items) {
     if (item.type === 'pageBreak') runs.push({ blocks: [], forceBreak: true })
     else if (item.type === 'bars') runs[runs.length - 1].blocks.push(rowBlock(item, m))
+    else if (item.type === 'form') {
+      runs[runs.length - 1].blocks.push({ type: 'form', parts: item.parts, height: m.formHeight })
+    }
     // Standalone directives are drawn in Phase 6.
   }
   return runs
@@ -74,7 +90,12 @@ export function layout(doc: ChordDocument, m: LayoutMetrics): PageModel {
 
   const newPage = (): void => {
     const number = pages.length + 1
-    page = { number, heading: number === 1 ? title : `${title} ${number}`.trim(), blocks: [] }
+    page = {
+      number,
+      heading: number === 1 ? title : `${title} ${number}`.trim(),
+      key: number === 1 && doc.key ? formatKey(doc.key) : null,
+      blocks: []
+    }
     pages.push(page)
     used = number === 1 ? m.titleHeight : m.headingHeight
   }

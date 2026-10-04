@@ -18,6 +18,8 @@ export interface LayoutMetrics {
   rowHeight: number
   /** Extra height for a lyric cue under a row. */
   cueHeight: number
+  /** A line of song-form part boxes (`a) a) b) a)`). */
+  formHeight: number
   /** A row is at least this many bars wide; shorter rows leave the right side empty. */
   minBarsPerRow: number
 }
@@ -30,12 +32,12 @@ export interface ChordStyle {
   extensionStyle: 'superscript' | 'inline'
 }
 
-export const THEME_IDS = ['bold', 'plain'] as const
-export type ThemeId = (typeof THEME_IDS)[number]
-
+/**
+ * The look of the sheet. There is one theme, "플레인" (user decision 2026-10-05); the structure stays
+ * so chord notation and sizes live in one place.
+ */
 export interface Theme {
-  /** Written in the file header as `theme: <id>`. */
-  id: ThemeId
+  id: string
   name: string
   chord: ChordStyle
   metrics: LayoutMetrics
@@ -53,15 +55,8 @@ const A4_METRICS: LayoutMetrics = {
   sectionLabelHeight: 6.5,
   rowHeight: 12,
   cueHeight: 4,
+  formHeight: 9,
   minBarsPerRow: 4
-}
-
-/** Bold Geist/Pretendard, △ ø °, extensions as superscript. */
-export const BOLD_THEME: Theme = {
-  id: 'bold',
-  name: '굵은 고딕',
-  chord: { minorSymbol: '−', symbols: true, extensionStyle: 'superscript' },
-  metrics: A4_METRICS
 }
 
 /** Regular weight, everything on one line: C−7, Cmaj7, C−7♭5, Cdim7. */
@@ -72,13 +67,4 @@ export const PLAIN_THEME: Theme = {
   metrics: A4_METRICS
 }
 
-export const THEMES: Record<ThemeId, Theme> = { bold: BOLD_THEME, plain: PLAIN_THEME }
-
-export const DEFAULT_THEME = BOLD_THEME
-
-export const isThemeId = (id: string): id is ThemeId =>
-  (THEME_IDS as readonly string[]).includes(id)
-
-/** The theme a document asks for, or the default. */
-export const themeFor = (id: string | null): Theme =>
-  id && isThemeId(id) ? THEMES[id] : DEFAULT_THEME
+export const DEFAULT_THEME = PLAIN_THEME

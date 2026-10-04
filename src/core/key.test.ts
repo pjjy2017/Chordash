@@ -40,7 +40,34 @@ describe('parseKey', () => {
     }
   )
   it('formats with ♯/♭', () => expect(formatKey(key('Ebm'))).toBe('E♭m'))
-  it.each(['H', 'C##', 'Cmaj', '', 'Am7'])('rejects %j', (name) =>
+
+  // Lenient: whatever a musician would write for a key is accepted (user decision 2026-10-05).
+  it.each([
+    ['c-', 'Cm'],
+    ['C-', 'Cm'],
+    ['cm', 'Cm'],
+    ['Cmin', 'Cm'],
+    ['C minor', 'Cm'],
+    ['c단조', 'Cm'],
+    ['f# -', 'F♯m'],
+    ['bb', 'B♭'],
+    ['b', 'B'],
+    ['b-', 'Bm'],
+    ['Bb major', 'B♭'],
+    ['Cmaj', 'C'],
+    ['CM', 'C'],
+    ['C장조', 'C'],
+    ['E♭', 'E♭'],
+    ['F♯m', 'F♯m'],
+    ['Cb', 'C♭'],
+    ['E#', 'E♯'],
+    ['  g  ', 'G']
+  ])('accepts %j as %s', (input, expected) => {
+    const k = parseKey(input)
+    expect(k && formatKey(k)).toBe(expected)
+  })
+
+  it.each(['H', 'C##', '', 'Am7', 'xyz', 'C#b'])('rejects %j', (name) =>
     expect(parseKey(name)).toBeNull()
   )
 })

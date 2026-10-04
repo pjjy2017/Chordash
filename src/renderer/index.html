@@ -25,22 +25,44 @@
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
-        <label class="theme-picker" title="이 곡의 테마 (파일의 theme: 줄)">
-          테마
-          <select id="theme">
-            <option value="bold">굵은 고딕</option>
-            <option value="plain">플레인</option>
-          </select>
-        </label>
         <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
+        <button
+          id="toggle-preview"
+          class="preview-toggle"
+          aria-pressed="true"
+          title="인쇄 미리보기 보이기/숨기기"
+        >
+          미리보기
+        </button>
       </header>
       <!-- Shown only on narrow screens, where one pane is visible at a time. -->
       <nav class="view-tabs" role="tablist">
         <button data-view="editor" role="tab" aria-selected="true">입력</button>
-        <button data-view="preview" role="tab" aria-selected="false">악보</button>
+        <button data-view="preview" role="tab" aria-selected="false">미리보기</button>
       </nav>
       <main class="split">
-        <section id="editor" class="editor-pane"></section>
+        <section class="editor-pane">
+          <!-- Header fields mirror the title:/key:/theme: lines at the top of the file. -->
+          <div class="header-fields">
+            <label class="field field-title">
+              제목
+              <input id="field-title" type="text" placeholder="곡 제목" spellcheck="false" />
+            </label>
+            <label class="field field-key">
+              키
+              <input
+                id="field-key"
+                type="text"
+                placeholder="예: F, c-, Bb, F#m"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <!-- How the typed key was read, e.g. "C 단조"; red when it can't be read. -->
+              <span id="field-key-reading" class="field-reading"></span>
+            </label>
+          </div>
+          <div id="editor" class="editor-host"></div>
+        </section>
         <section id="preview" class="preview-pane"></section>
       </main>
     </div>
