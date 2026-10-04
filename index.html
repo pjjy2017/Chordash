@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chordash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Music&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:"Geist";src:url("fonts/Geist.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url("fonts/GeistMono.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Pretendard Variable";src:url("fonts/PretendardVariable.woff2") format("woff2");font-weight:45 920;font-display:swap}
+:root{
+  --bg:#ECEAF2; --panel:#FFFFFF; --line:#D9D5E4; --text:#1E1B29; --muted:#6E6A7C;
+  --accent:#6B2BD9; --accent-ink:#FFFFFF; --error:#C4302B; --warn:#C77700;
+  --ui:"Geist","Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --chord:"Geist","Pretendard Variable","Noto Music","Segoe UI Symbol",sans-serif;
+  --mono:"Geist Mono","Pretendard Variable","Consolas",monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#17151F;--panel:#221F2C;--line:#36324A;--text:#ECEAF2;--muted:#A19CB3;--accent:#A98BFF;--accent-ink:#17151F;--error:#FF7A70;--warn:#FFB547}
+}
+:root[data-theme="dark"]{--bg:#17151F;--panel:#221F2C;--line:#36324A;--text:#ECEAF2;--muted:#A19CB3;--accent:#A98BFF;--accent-ink:#17151F;--error:#FF7A70;--warn:#FFB547}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--ui);font-size:14px}
+button,select{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;height:100%}
+
+/* 상단 바 */
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mark{font-family:"Geist",sans-serif;font-weight:900;font-size:19px;letter-spacing:-.02em;display:flex;align-items:center;gap:6px;margin-right:6px}
+.mark i{display:inline-block;width:18px;height:4px;background:var(--accent);border-radius:2px;transform:skewX(-20deg)}
+.ctl{display:flex;align-items:center;gap:6px}
+.sel{appearance:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 28px 7px 10px;max-width:220px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.btn{background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.danger{color:var(--error);border-color:var(--error)}
+.btn:focus-visible,.sel:focus-visible,textarea:focus-visible,.sym button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{color:var(--muted);font-size:12px;min-width:7em}
+.spacer{flex:1}
+.lbl{color:var(--muted);font-size:12px}
+.tabs{display:none;gap:4px}
+.tabs .btn[aria-selected="true"]{background:var(--text);color:var(--panel);border-color:var(--text)}
+
+/* 본문 */
+.main{flex:1;display:grid;grid-template-columns:minmax(320px,40%) 1fr;min-height:0}
+.edit{display:flex;flex-direction:column;border-right:1px solid var(--line);background:var(--panel);min-height:0}
+.sym{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+.sym button{font-family:var(--mono);font-weight:600;min-width:34px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--bg);cursor:pointer;flex:none}
+textarea{flex:1;resize:none;border:0;padding:14px 16px;background:var(--panel);color:var(--text);font-family:var(--mono);font-size:15px;line-height:1.65;min-height:0;tab-size:2}
+.issues{border-top:1px solid var(--line);padding:8px 14px;font-size:12.5px;max-height:30%;overflow:auto}
+.issues .ok{color:var(--muted)}
+.issues button{display:block;width:100%;text-align:left;background:none;border:0;padding:3px 0;cursor:pointer;color:var(--error)}
+.issues button b{display:inline-block;min-width:3.6em;color:var(--muted);font-weight:500}
+.view{overflow:auto;padding:20px 16px 40px;min-height:0}
+#pages{display:flex;flex-direction:column;align-items:center;gap:18px}
+.pw{position:relative;flex:none}
+.page{position:absolute;left:0;top:0;transform-origin:0 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--panel);padding:10px 14px;border-radius:10px;font-size:13px;max-width:min(520px,92vw);box-shadow:0 6px 24px rgba(0,0,0,.25);display:none;z-index:9}
+
+/* ===== 악보 페이지 (굵은 고딕 테마) — 항상 흰 종이 ===== */
+.page{width:210mm;height:297mm;background:#fff;color:#000;padding:16mm 15mm 14mm;box-shadow:0 2px 14px rgba(30,20,60,.18);font-family:var(--ui);overflow:hidden}
+.ph1{height:22mm;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:.6mm solid #000;margin-bottom:3mm}
+.ph1 h1{margin:0;font-size:9.5mm;line-height:1.1;font-weight:900;letter-spacing:-.02em}
+.ph1 .k{font-family:var(--chord);font-weight:800;font-size:4.2mm;padding-top:2.4mm;white-space:nowrap}
+.phn{height:12mm;font-size:4.6mm;font-weight:700;color:#333}
+.sec{height:7mm;display:flex;align-items:flex-end;gap:2.5mm;font-weight:900;font-size:4.3mm;letter-spacing:-.01em}
+.sec .d{font-weight:500;font-size:3.5mm;color:#444}
+.sec .kc{font-family:var(--chord);font-weight:800;font-size:3.3mm;border:.35mm solid #000;border-radius:1mm;padding:.2mm 1.2mm}
+.sec.gap{margin-top:4mm}
+.row{display:grid;height:12mm;margin-top:.8mm}
+.bar{border-left:.55mm solid #000;display:flex;align-items:center;padding:0 1.6mm;min-width:0}
+.bar:last-child{border-right:.55mm solid #000}
+.bar{position:relative}
+.bar.dl::before,.bar.dr::after{content:'';position:absolute;top:0;bottom:0;border-left:.55mm solid #000}
+.bar.dl::before{left:.75mm}
+.bar.dr::after{right:.75mm}
+.bar.dl{padding-left:2.6mm}
+.sec .mk{display:inline-flex;align-items:center;justify-content:center;min-width:6.4mm;height:6.4mm;padding:0 1.4mm;box-sizing:border-box;border:.55mm solid #000;font-family:var(--chord);font-weight:900;font-size:4.2mm;line-height:1}
+.sec .nm{font-weight:700}
+.ch{flex:1;min-width:0;white-space:nowrap;font-family:var(--chord);font-weight:800;font-size:calc(6.2mm * var(--fs,1));line-height:1;letter-spacing:-.01em}
+.ch .m{font-weight:700}
+.ch sup{font-size:.58em;font-weight:700;vertical-align:.62em;margin-left:.04em;letter-spacing:0}
+.ch .ac{font-size:.8em;margin-left:.02em;font-family:"Noto Music","Segoe UI Symbol",var(--chord)}
+.ch .bs{font-weight:700;font-size:.8em}
+.ch.err{color:#C4302B;font-family:var(--mono);font-weight:600;font-size:calc(4.2mm * var(--fs,1));text-decoration:underline wavy #C4302B}
+.ch.unc{text-decoration:underline dotted #C77700 .5mm;text-underline-offset:1mm}
+.end{height:4.2mm;margin-top:.8mm;border-top:.45mm solid #000;border-left:.45mm solid #000;width:46%;position:relative}
+.end span{position:absolute;left:1.2mm;top:.3mm;font-family:var(--chord);font-weight:800;font-size:3.3mm;line-height:1}
+.end + .row{margin-top:0}
+.cue{height:5mm;font-size:3.4mm;font-weight:500;color:#333;padding-left:1.6mm;line-height:5mm;white-space:nowrap;overflow:hidden}
+
+@media (max-width:900px){
+  .main{grid-template-columns:1fr}
+  .tabs{display:flex}
+  .app[data-tab="edit"] .view{display:none}
+  .app[data-tab="view"] .edit{display:none}
+  .status{display:none}
+}
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff;height:auto}
+  :root{padding:0}
+  .top,.edit,.toast{display:none!important}
+  .app,.main,.view{display:block!important;height:auto;padding:0;overflow:visible}
+  #pages{display:block}
+  .pw{width:auto!important;height:auto!important}
+  .page{position:static;transform:none!important;box-shadow:none;break-after:page;page-break-after:always}
+  .pw:last-child .page{break-after:auto;page-break-after:auto}
+  .ch.err,.ch.unc{text-decoration:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" data-tab="edit">
+  <header class="top">
+    <div class="mark">Chordash<i aria-hidden="true"></i></div>
+    <div class="ctl">
+      <select id="songSel" class="sel" aria-label="곡 선택"></select>
+      <button id="newBtn" class="btn">새 곡</button>
+      <button id="delBtn" class="btn">삭제</button>
+    </div>
+    <span id="status" class="status"></span>
+    <div class="spacer"></div>
+    <div class="tabs" role="tablist">
+      <button class="btn" role="tab" data-t="edit" aria-selected="true">입력</button>
+      <button class="btn" role="tab" data-t="view" aria-selected="false">악보</button>
+    </div>
+    <div class="ctl">
+      <label class="lbl" for="keySel">키</label>
+      <select id="keySel" class="sel" aria-label="조옮김할 키"></select>
+      <button id="applyBtn" class="btn" hidden>원본에 적용</button>
+    </div>
+    <div class="ctl">
+      <button id="copyBtn" class="btn">텍스트 복사</button>
+      <button id="printBtn" class="btn primary">PDF로 인쇄</button>
+    </div>
+  </header>
+  <div class="main">
+    <section class="edit" aria-label="악보 입력">
+      <div class="sym" id="sym" aria-label="기호 입력"></div>
+      <textarea id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="악보 텍스트"></textarea>
+      <div class="issues" id="issues" aria-live="polite"></div>
+    </section>
+    <section class="view" id="view" aria-label="악보 미리보기"><div id="pages"></div></section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+// ===== Chordash core: 순수 함수 (앱 이전 시 src/core로 그대로 옮길 부분) =====
+const Core = (() => {
+  const LETTERS = 'CDEFGAB';
+  const NAT = [0, 2, 4, 5, 7, 9, 11];
+  const MAJ = [0, 2, 4, 5, 7, 9, 11];
+  const MIN = [0, 2, 3, 5, 7, 8, 10];
+  const SHARP_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  const FLAT_NAMES  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  const MAJOR_KEYS = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+  const MINOR_KEYS = ['C-','C#-','D-','Eb-','E-','F-','F#-','G-','G#-','A-','Bb-','B-'];
+  const mod = (n, m) => ((n % m) + m) % m;
+  const accVal = a => (a === '#' ? 1 : a === 'b' ? -1 : 0);
+
+  function parseKey(str) {
+    const m = /^\s*([A-Ga-g])([#b]?)\s*(m|min|-)?\s*$/.exec(str || '');
+    if (!m) return null;
+    const letter = LETTERS.indexOf(m[1].toUpperCase());
+    const acc = m[2];
+    const minor = !!m[3];
+    const pc = mod(NAT[letter] + accVal(acc), 12);
+    const L = LETTERS[letter];
+    const flatPref = acc === 'b' || (!minor && L === 'F' && !acc) ||
+      (minor && !acc && ['D', 'G', 'C', 'F'].includes(L));
+    return { letter, acc, pc, minor, flatPref, name: L + acc + (minor ? '-' : '') };
+  }
+
+  // 글자 기준 철자. 이중 ♯/♭이면 키 성향에 맞춰 단순화
+  function spell(letter, pc, flatPref) {
+    const acc = mod(pc - NAT[letter] + 6, 12) - 6;
+    if (acc >= -1 && acc <= 1) return { letter, acc };
+    const name = (flatPref ? FLAT_NAMES : SHARP_NAMES)[mod(pc, 12)];
+    return { letter: LETTERS.indexOf(name[0]), acc: accVal(name[1] || '') };
+  }
+
+  function resolveDegree(accStr, n, key) {
+    const letter = (key.letter + n - 1) % 7;
+    const pc = mod(key.pc + (key.minor ? MIN : MAJ)[n - 1] + accVal(accStr), 12);
+    return spell(letter, pc, key.flatPref);
+  }
+
+  // 루트: 절대음 또는 도수. 반환 {note:{letter,acc}, len, isDegree} | {error}
+  function parseRoot(s, key) {
+    let m = /^([b#]?)([0-9])/.exec(s);
+    if (m && (m[1] !== '' || /[0-9]/.test(s[0]))) {
+      const n = +m[2];
+      if (n < 1 || n > 7) return { error: '도수는 1~7만 쓸 수 있어요' };
+      if (!key) return { error: '도수를 쓰려면 key: 를 먼저 지정하세요' };
+      return { note: resolveDegree(m[1], n, key), len: m[0].length, isDegree: true };
+    }
+    m = /^([A-Ga-g])([#b]?)/.exec(s);
+    if (!m) return { error: '알 수 없는 루트' };
+    return { note: { letter: LETTERS.indexOf(m[1].toUpperCase()), acc: accVal(m[2]) }, len: m[0].length, isDegree: false };
+  }
+
+  function parseRest(s) {
+    s = s.replace(/[()]/g, '');
+    const r = { q: '', ext: '', sus: '', add: [], alts: [] };
+    const take = re => { const m = re.exec(s); if (m) { s = s.slice(m[0].length); return m; } return null; };
+    if (take(/^-(\^|M|m|maj|△)/)) r.q = 'mM';
+    else if (take(/^(%|ø)/)) { r.q = 'hdim'; }
+    else if (take(/^(o7|dim7|°7)/)) { r.q = 'dim'; r.ext = '7'; }
+    else if (take(/^(o|dim|°)/)) r.q = 'dim';
+    else if (take(/^(\+|aug)/)) r.q = 'aug';
+    else if (take(/^(\^|maj|M|m|△)/)) r.q = 'maj';
+    else if (take(/^-/)) r.q = 'm';
+    if (r.q !== 'hdim' && !r.ext) { const e = take(/^(69|6\/9|13|11|9|7|6|5)/); if (e) r.ext = e[1].replace('/', ''); }
+    if (r.q === 'hdim') { const e = take(/^(9|11)/); if (e) r.ext = e[1]; }
+    let guard = 0;
+    while (s.length && guard++ < 10) {
+      let m;
+      if ((m = take(/^(sus4|sus2|sus|s4|s2|s)/))) r.sus = /2/.test(m[1]) ? 'sus2' : 'sus4';
+      else if ((m = take(/^add(2|4|9|11|13)/))) r.add.push(m[1]);
+      else if ((m = take(/^([b#♭♯])(5|9|11|13)/))) r.alts.push((/[b♭]/.test(m[1]) ? 'b' : '#') + m[2]);
+      else if (take(/^\s/)) {}
+      else return { error: `"${s}" 부분을 해석할 수 없어요` };
+    }
+    return r;
+  }
+
+  function parseChord(raw, key) {
+    let s = raw, uncertain = false;
+    s = s.replace(/\*+$/, '');                 // 별표: 앱 전용, 무시
+    while (/^['?]/.test(s)) { if (s[0] === '?') uncertain = true; s = s.slice(1); }
+    if (!s) return { raw, error: '빈 코드' };
+    const [main, bassStr, extra] = s.split('/');
+    if (extra !== undefined) return { raw, error: '슬래시가 두 번 있어요' };
+    const root = parseRoot(main, key);
+    if (root.error) return { raw, error: root.error };
+    const rest = parseRest(main.slice(root.len));
+    if (rest.error) return { raw, error: rest.error };
+    let bass = null;
+    if (bassStr !== undefined) {
+      const b = parseRoot(bassStr, key);
+      if (b.error) return { raw, error: '베이스음: ' + b.error };
+      if (b.len !== bassStr.length) return { raw, error: '베이스음을 해석할 수 없어요' };
+      bass = b.note;
+    }
+    return { raw, uncertain, chord: { root: root.note, ...rest, bass }, degree: root.isDegree };
+  }
+
+  const ACC_TXT = { '-1': '♭', '0': '', '1': '♯' };
+  const noteName = n => LETTERS[n.letter] + ACC_TXT[n.acc];
+  const altTxt = a => (a[0] === 'b' ? '♭' : '♯') + a.slice(1);
+
+  // 정규형 문자열 = 표시형을 한 줄로 이은 것 (테스트·복사용)
+  function chordName(c) { const x = chordParts(c); return x.root + x.main + x.sup + (x.bass ? '/' + x.bass : ''); }
+
+  // 표시용 조각 (굵은 고딕 테마: 확장음 위첨자)
+  function chordParts(c) {
+    let main = '', sup = '';
+    switch (c.q) {
+      case 'maj': sup = '△' + (c.ext && c.ext !== '7' ? c.ext : '7'); break;
+      case 'mM': main = '-'; sup = '△' + (c.ext || '7'); break;
+      case 'hdim': sup = 'ø' + (c.ext && c.ext !== '7' ? c.ext : '7'); break;
+      case 'dim': sup = '°' + c.ext; break;
+      case 'aug': main = '+'; sup = c.ext; break;
+      case 'm': main = '-'; sup = c.ext; break;
+      default: sup = c.ext;
+    }
+    sup += c.sus + c.add.map(a => 'add' + a).join('') + c.alts.map(altTxt).join('');
+    return { root: noteName(c.root), main, sup, bass: c.bass ? noteName(c.bass) : '' };
+  }
+
+  function transposeNote(n, from, to) {
+    const dl = mod(to.letter - from.letter, 7);
+    const ds = mod(to.pc - from.pc, 12);
+    const r = spell((n.letter + dl) % 7, mod(NAT[n.letter] + n.acc + ds, 12), to.flatPref);
+    // E#·B#·Cb·Fb는 목표 키의 음계에 있을 때만 유지, 아니면 읽기 쉬운 철자로
+    const L = LETTERS[r.letter];
+    const odd = (r.acc === 1 && (L === 'E' || L === 'B')) || (r.acc === -1 && (L === 'C' || L === 'F'));
+    if (odd) {
+      const inScale = [1,2,3,4,5,6,7].some(d => { const x = resolveDegree('', d, to); return x.letter === r.letter && x.acc === r.acc; });
+      if (!inScale) { const name = (to.flatPref ? FLAT_NAMES : SHARP_NAMES)[mod(NAT[r.letter] + r.acc, 12)]; return { letter: LETTERS.indexOf(name[0]), acc: accVal(name[1] || '') }; }
+    }
+    return r;
+  }
+  function transposeChord(c, from, to) {
+    return { ...c, root: transposeNote(c.root, from, to), bass: c.bass ? transposeNote(c.bass, from, to) : null };
+  }
+  function shiftKey(k, semis) {
+    const list = k.minor ? MINOR_KEYS : MAJOR_KEYS;
+    return parseKey(list[mod(k.pc + semis, 12)]);
+  }
+
+
+  // 마디 줄: , 또는 | = 마디선, . 또는 || = 겹세로줄
+  const SEP = { ',': 's', '|': 's', '.': 'd' };
+  function parseRow(line, key, ln, errors) {
+    const s = line.replace(/\|\|:|:\|\||\|\|/g, ' . ');
+    const items = s.match(/[|,.]|[^\s|,.]+/g) || [];
+    const hasSep = items.some(t => t in SEP);
+    const tokErr = [];
+    const parsed = items.map(t => (t in SEP) ? t : (() => { const p = parseChord(t, key); if (p.error) tokErr.push(`${t}: ${p.error}`); return { ...p, key }; })());
+    const chords = parsed.filter(t => typeof t !== 'string');
+    if (!hasSep && (!chords.length || chords.every(c => c.error))) return null;
+    tokErr.forEach(msg => errors.push({ line: ln, msg }));
+    const bars = []; let cur = { chords: [], left: 's' }, seen = false, endSep = null;
+    for (const t of parsed) {
+      if (typeof t === 'string') {
+        if (!seen) { cur.left = SEP[t]; seen = true; endSep = SEP[t]; continue; }
+        bars.push(cur); cur = { chords: [], left: SEP[t] }; endSep = SEP[t];
+      } else { cur.chords.push(t); seen = true; endSep = null; }
+    }
+    let end = 's';
+    if (endSep && !cur.chords.length) end = endSep; else bars.push(cur);
+    if (!bars.length) return null;
+    return { type: 'row', bars, end, cue: '', line: ln };
+  }
+
+  // ---- 문서 파서 ----
+  function parseDoc(text) {
+    const doc = { title: '', key: null, keyText: '', items: [], errors: [] };
+    let curKey = null, seenSection = false, lastRow = null;
+    const lines = text.split(/\r?\n/);
+    lines.forEach((orig, i) => {
+      const ln = i + 1;
+      const line = orig.trim();
+      if (!line || line.startsWith('//')) return;
+      let m;
+      if ((m = /^title\s*:(.*)$/i.exec(line))) { doc.title = m[1].trim(); return; }
+      if ((m = /^key\s*:(.*)$/i.exec(line))) {
+        const k = parseKey(m[1]);
+        if (!k) { doc.errors.push({ line: ln, msg: `키 "${m[1].trim()}"를 알 수 없어요` }); return; }
+        curKey = k;
+        if (!seenSection && !doc.key) { doc.key = k; doc.keyText = m[1].trim(); }
+        else doc.items.push({ type: 'key', key: k, line: ln });
+        return;
+      }
+      if (line.startsWith('---')) { doc.items.push({ type: 'break' }); lastRow = null; return; }
+      if ((m = /^\[([^\]]*)\](.*)$/.exec(line)) || (m = /^([A-Za-z][0-9]{0,2})\)(.*)$/.exec(line))) {
+        const mark = !line.startsWith('[');
+        seenSection = true;
+        let rest = m[2];
+        let directive = '';
+        const dq = /"([^"]*)"/.exec(rest);
+        if (dq) { directive = dq[1]; rest = rest.replace(dq[0], ''); }
+        const km = /key\s*:\s*(\S+)/i.exec(rest);
+        let skey = null;
+        if (km) {
+          skey = parseKey(km[1]);
+          if (!skey) doc.errors.push({ line: ln, msg: `키 "${km[1]}"를 알 수 없어요` });
+          else curKey = skey;
+        }
+        let name = mark ? m[1].toUpperCase() : m[1].trim(), sub = '';
+        if (mark) { sub = rest.replace(/key\s*:\s*\S+/i, '').trim(); }
+        doc.items.push({ type: 'section', name, sub, mark, directive, key: skey, line: ln });
+        lastRow = null;
+        return;
+      }
+      if (line.startsWith('>')) {
+        if (lastRow) lastRow.cue = line.slice(1).trim();
+        else doc.errors.push({ line: ln, msg: '가사 큐(>) 위에 마디 줄이 없어요' });
+        return;
+      }
+      if (line.startsWith('{') || line.startsWith('"')) return; // 색 메모·지시문: 앱 전용
+      let ending = 0, body = line;
+      const em = /^([1-9])(?::|end\b)\s*/i.exec(line);   // 엔딩: 1: 또는 1end
+      if (em) { ending = +em[1]; body = line.slice(em[0].length); }
+      const row = parseRow(body, curKey, ln, doc.errors);
+      if (row) row.ending = ending;
+      else if (ending) { doc.errors.push({ line: ln, msg: '엔딩 표시 뒤에 마디가 없어요' }); return; }
+      if (row) { lastRow = row; doc.items.push(row); return; }
+      doc.errors.push({ line: ln, msg: '알 수 없는 줄이에요 (마디는 , 로 나눠요)' });
+    });
+    return doc;
+  }
+
+  // 원본 텍스트에 조옮김 적용: 절대 코드의 루트·베이스 글자만 바꾸고 나머지 입력은 유지
+  function applyTranspose(text, semis) {
+    let curKey = null, newKey = null;
+    const fmt = n => LETTERS[n.letter] + (n.acc === 1 ? '#' : n.acc === -1 ? 'b' : '');
+    const fmtKey = k => k.name;
+    const retok = tok => {
+      const m = /^(['?]*)(.*?)(\**)$/.exec(tok);
+      const pre = m[1], body = m[2], post = m[3];
+      if (!curKey) return tok;
+      const [main, bass] = body.split('/');
+      const r = parseRoot(main, curKey);
+      if (r.error) return tok;
+      let out = r.isDegree ? main : fmt(transposeNote(r.note, curKey, newKey)) + main.slice(r.len);
+      if (bass !== undefined) {
+        const b = parseRoot(bass, curKey);
+        out += '/' + (b.error || b.isDegree ? bass : fmt(transposeNote(b.note, curKey, newKey)) + bass.slice(b.len));
+      }
+      return pre + out + post;
+    };
+    return text.split(/\r?\n/).map(line => {
+      const t = line.trim();
+      let m;
+      if ((m = /^(\s*key\s*:\s*)(\S+)(.*)$/i.exec(line))) {
+        const k = parseKey(m[2]); if (!k) return line;
+        curKey = k; newKey = shiftKey(k, semis);
+        return m[1] + fmtKey(newKey) + m[3];
+      }
+      if ((/^\[/.test(t) || /^[A-Za-z][0-9]{0,2}\)/.test(t)) && /key\s*:/i.test(t)) {
+        return line.replace(/(key\s*:\s*)(\S+)/i, (all, a, b) => {
+          const k = parseKey(b); if (!k) return all;
+          curKey = k; newKey = shiftKey(k, semis);
+          return a + fmtKey(newKey);
+        });
+      }
+      if (t.startsWith('[') || /^[A-Za-z][0-9]{0,2}\)/.test(t) || t.startsWith('>') || t.startsWith('{') || t.startsWith('"') || t.startsWith('//') || /^(title|key)\s*:/i.test(t) || t.startsWith('---')) return line;
+      const em = /^(\s*[1-9](?::|end\b))/i.exec(line);
+      const head = em ? em[1] : '';
+      return head + line.slice(head.length).replace(/[^\s|:,.]+/g, tok => retok(tok));
+    }).join('\n');
+  }
+
+  return { parseKey, parseChord, chordName, chordParts, parseDoc, transposeChord, shiftKey, applyTranspose, MAJOR_KEYS, MINOR_KEYS };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+
+</script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const ed = $('ed'), pagesEl = $('pages'), view = $('view');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const SAMPLE = `// 예제 곡: 가사 큐는 자리만 표시해 둠
+title: 샴푸의 요정
+key: F
+
+[Intro] "드럼 4마디"
+
+a) Verse
+Bb^7, A-7, Bb^7, F B7*
+> (가사 큐)
+Bb, A- D-, G-, Cs B7
+> (가사 큐)
+Bb, A-, Bb, F B7
+> (가사 큐)
+Bb, A- D-, G7, Cs C#* .
+> (가사 큐)
+
+b) Chorus
+D-7, G-7, C7, F^7
+> (가사 큐)
+Bb^7, E7b9, A7, ,
+> (가사 큐)
+D-, G-, C7, F
+> (가사 큐)
+Bb, E7b9, A7, E A .
+> (가사 큐)
+
+[Guitar]
+Bb, A-, Bb, F B
+Bb, A- D-, G-, Cs .
+
+a) Verse 2
+Bb, A-, Bb, F B
+> (가사 큐)
+Bb, A- D-, G7, Cs, Cs C#s* .
+> (가사 큐)
+
+b) Chorus 2
+D-, G-, C7, F
+> (가사 큐)
+Bb, E7b9, A7, A7/C# E% A7
+> (가사 큐)
+D-, G-, C7, F
+> (가사 큐)
+Bb, E7b9, A7, A7/C# .
+> (가사 큐)
+
+c) Bridge
+C-, F7, Bb, ,
+> (가사 큐)
+D-7, G7, C^7, B7 .
+> (가사 큐)
+
+[Vocal] key: G
+E-, A-7, D7, G
+C, F#7b9, B7, B7/D# .
+
+b) Chorus 3
+E-, A-7, D, G
+> (가사 큐)
+C, F#7b9, B7, B7/D#
+> (가사 큐)
+E-, A-7, D, G7
+> (가사 큐)
+C, F#7b9, B7, B7 .
+> (가사 큐)
+
+[Outro]
+{teal: 스캣}
+C, A-7 B-7, E-9, E-9 F-9
+E-9, E-9 F-9, E-9, E-9 F-9
+{teal: 스캣}
+E-9, 'E-9 .
+`;
+const BLANK = `title: 새 곡\nkey: C\n\na) Verse\nC^, A-7, D-7, G7 .\n> 가사 큐\n`;
+
+// ---------- 저장소: db(기기 간 동기화) → 없으면 localStorage ----------
+const LS = 'chordash:songs:v1';
+const localStore = {
+  kind: 'local',
+  load() { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch { return {}; } },
+  saveAll(map) { try { localStorage.setItem(LS, JSON.stringify(map)); } catch {} },
+  async put(song) { const m = this.load(); m[song.id] = song; this.saveAll(m); },
+  async remove(id) { const m = this.load(); delete m[id]; this.saveAll(m); },
+};
+let store = localStore;
+let songs = localStore.load();          // id -> {id,text,updatedAt}
+let curId = null, dirty = false, saveTimer = null, semis = 0;
+
+const newId = () => 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const titleOf = t => ((/^\s*title\s*:(.*)$/im.exec(t) || [])[1] || '').trim() || '제목 없음';
+const sorted = () => Object.values(songs).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+function setStatus(s) { $('status').textContent = s; }
+function toast(msg, ms = 5000) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', ms); }
+
+function fillSongSel() {
+  const sel = $('songSel');
+  const list = sorted();
+  sel.innerHTML = list.map(s => `<option value="${esc(s.id)}">${esc(titleOf(s.text))}</option>`).join('');
+  sel.value = curId;
+}
+function openSong(id) {
+  flushSave();
+  curId = id; semis = 0;
+  ed.value = songs[id].text;
+  fillSongSel(); render();
+}
+function scheduleSave() {
+  dirty = true; setStatus('저장 중');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSave, 700);
+}
+async function flushSave() {
+  clearTimeout(saveTimer);
+  if (!dirty || !curId) return;
+  const song = { id: curId, text: ed.value, updatedAt: Date.now() };
+  songs[curId] = song; dirty = false;
+  const oldTitle = $('songSel').selectedOptions[0]?.textContent;
+  if (oldTitle !== titleOf(song.text)) fillSongSel();
+  try { await store.put(song); setStatus(store.kind === 'db' ? '저장됨' : '이 기기에 저장됨'); }
+  catch (e) { setStatus('저장 실패'); toast('저장하지 못했어요. 텍스트 복사로 백업해 두세요.'); }
+}
+
+async function connectDb() {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const uid = await user.id();
+    if (!uid) return;
+    const col = db.collection('data/users/' + uid);
+    const dbStore = {
+      kind: 'db',
+      put: s => col.doc(s.id).set({ kind: 'song', text: s.text, updatedAt: s.updatedAt }),
+      remove: id => col.doc(id).delete(),
+    };
+    let first = true;
+    col.onSnapshot(snap => {
+      const remote = {};
+      snap.docs.forEach(d => { const v = d.data(); if (v && v.kind === 'song') remote[d.id] = { id: d.id, text: v.text || '', updatedAt: v.updatedAt || 0 }; });
+      if (first) {
+        first = false;
+        store = dbStore;
+        // 이 기기에만 있던 곡은 클라우드로 옮김
+        const locals = Object.values(localStore.load());
+        (async () => { for (const s of locals) if (!remote[s.id] || remote[s.id].updatedAt < s.updatedAt) { try { await dbStore.put(s); } catch {} } })();
+        locals.forEach(s => { if (!remote[s.id] || remote[s.id].updatedAt < s.updatedAt) remote[s.id] = s; });
+        const keepCur = songs[curId] && (dirty || !remote[curId]);
+        if (keepCur) remote[curId] = songs[curId];
+        songs = remote;
+        if (!songs[curId]) { const l = sorted(); if (l.length) curId = l[0].id; }
+        if (songs[curId] && !dirty && document.activeElement !== ed) ed.value = songs[curId].text;
+        if (keepCur && dirty) scheduleSave();
+        fillSongSel(); render(); setStatus('저장됨');
+        return;
+      }
+      // 다른 기기의 변경 반영 (지금 편집 중인 곡은 입력 중이 아닐 때만)
+      const prevCur = songs[curId];
+      const merged = { ...remote };
+      if (dirty && prevCur) merged[curId] = prevCur;
+      songs = merged;
+      if (!songs[curId]) { const l = sorted(); curId = l.length ? l[0].id : null; if (!curId) { createSong(BLANK); return; } ed.value = songs[curId].text; render(); }
+      else if (!dirty && document.activeElement !== ed && ed.value !== songs[curId].text) { ed.value = songs[curId].text; render(); }
+      fillSongSel();
+    }, () => { store = localStore; setStatus('이 기기에 저장됨'); });
+  } catch { /* db 없음: localStorage 유지 */ }
+}
+
+function createSong(text) {
+  flushSave();
+  const id = newId();
+  songs[id] = { id, text, updatedAt: Date.now() };
+  curId = id; semis = 0; ed.value = text;
+  dirty = true; flushSave();
+  fillSongSel(); render();
+}
+
+// ---------- 레이아웃 (mm 단위, 측정 없이 결정적으로 계산) ----------
+const MM = { content: 297 - 16 - 14, head1: 25, headN: 12, sec: 7, secGap: 4, row: 12.8, cue: 5 };
+
+function chordHTML(p, to) {
+  if (p.error) return `<span class="ch err" title="${esc(p.error)}">${esc(p.raw)}</span>`;
+  let c = p.chord;
+  if (semis && p.key) c = Core.transposeChord(c, p.key, Core.shiftKey(p.key, semis));
+  const x = Core.chordParts(c);
+  const acc = t => esc(t).replace(/([♭♯])/g, '<span class="ac">$1</span>');
+  return `<span class="ch${p.uncertain ? ' unc' : ''}">${acc(x.root)}${x.main ? `<span class="m">${esc(x.main)}</span>` : ''}${x.sup ? `<sup>${esc(x.sup)}</sup>` : ''}${x.bass ? `<span class="bs">/${acc(x.bass)}</span>` : ''}</span>`;
+}
+function estWidth(p) { // mm, 글꼴 배율 1 기준 대략치
+  if (p.error) return p.raw.length * 2.6 + 1;
+  const x = Core.chordParts(p.chord);
+  return x.root.length * 3.9 + x.main.length * 3.6 + x.sup.length * 2.3 + (x.bass ? (x.bass.length + 1) * 3.1 : 0) + 1.5;
+}
+function rowHTML(r) {
+  const n = Math.max(1, r.bars.length);
+  const barW = 180 / n - 3.2;
+  const bars = r.bars.map((b, i) => {
+    const cs = b.chords;
+    const need = cs.reduce((s, p) => s + estWidth(p), 0) + Math.max(0, cs.length - 1) * 1.5;
+    const fs = need > barW ? Math.max(0.55, barW / need) : 1;
+    const cls = 'bar' + (b.left === 'd' ? ' dl' : '') + (i === r.bars.length - 1 && r.end === 'd' ? ' dr' : '');
+    return `<div class="${cls}" style="--fs:${fs.toFixed(3)}">${cs.map(chordHTML).join('')}</div>`;
+  }).join('');
+  return (r.ending ? `<div class="end"><span>${r.ending}.</span></div>` : '') + `<div class="row" style="grid-template-columns:repeat(${n},1fr)">${bars}</div>` + (r.cue ? `<div class="cue">${esc(r.cue)}</div>` : '');
+}
+function keyLabel(k) { if (!k) return ''; return (semis ? Core.shiftKey(k, semis) : k).name.replace('b', '♭').replace('#', '♯'); }
+
+function paginate(doc) {
+  // 섹션 단위 블록으로 묶기
+  const blocks = []; let cur = null;
+  for (const it of doc.items) {
+    if (it.type === 'break') { blocks.push({ brk: true }); cur = null; continue; }
+    if (it.type === 'key') continue;
+    if (it.type === 'section') { cur = { sec: it, rows: [] }; blocks.push(cur); continue; }
+    if (it.type === 'row') { if (!cur) { cur = { sec: null, rows: [] }; blocks.push(cur); } cur.rows.push(it); }
+  }
+  const pages = []; let page = null, used = 0;
+  const newPage = () => { page = { parts: [] }; pages.push(page); used = pages.length === 1 ? MM.head1 : MM.headN; };
+  const rowH = r => MM.row + (r.cue ? MM.cue : 0) + (r.ending ? 4.2 : 0);
+  newPage();
+  for (const b of blocks) {
+    if (b.brk) { newPage(); continue; }
+    const secH = b.sec ? MM.sec + (page.parts.length ? MM.secGap : 0) : 0;
+    const total = secH + b.rows.reduce((s, r) => s + rowH(r), 0);
+    const fresh = MM.content - (pages.length >= 1 ? MM.headN : MM.head1);
+    if (used + total > MM.content && page.parts.length && total <= fresh) newPage();
+    // 섹션 라벨이 혼자 남지 않게: 라벨 + 첫 줄이 안 들어가면 넘김
+    const firstH = b.rows.length ? rowH(b.rows[0]) : 0;
+    if (b.sec && page.parts.length && used + secH + firstH > MM.content) newPage();
+    if (b.sec) { page.parts.push({ sec: b.sec, gap: page.parts.length > 0 }); used += b.sec && page.parts.length > 1 ? MM.sec + MM.secGap : MM.sec; }
+    for (const r of b.rows) {
+      if (used + rowH(r) > MM.content && page.parts.length) newPage();
+      page.parts.push({ row: r }); used += rowH(r);
+    }
+  }
+  return pages;
+}
+
+let lastDoc = null;
+function render() {
+  const doc = Core.parseDoc(ed.value);
+  lastDoc = doc;
+  const pages = paginate(doc);
+  const title = doc.title || '제목 없음';
+  pagesEl.innerHTML = pages.map((pg, i) => {
+    const head = i === 0
+      ? `<div class="ph1"><h1>${esc(title)}</h1>${doc.key ? `<div class="k">Key ${esc(keyLabel(doc.key))}</div>` : ''}</div>`
+      : `<div class="phn">${esc(title)} ${i + 1}</div>`;
+    const body = pg.parts.map(pt => pt.sec
+      ? `<div class="sec${pt.gap ? ' gap' : ''}">${pt.sec.mark ? `<span class="mk">${esc(pt.sec.name)}</span>${pt.sec.sub ? `<span class="nm">${esc(pt.sec.sub)}</span>` : ''}` : esc(pt.sec.name)}${pt.sec.key ? `<span class="kc">${esc(keyLabel(pt.sec.key))}</span>` : ''}${pt.sec.directive ? `<span class="d">${esc(pt.sec.directive)}</span>` : ''}</div>`
+      : rowHTML(pt.row)).join('');
+    return `<div class="pw"><div class="page">${head}${body}</div></div>`;
+  }).join('');
+  fit();
+  renderIssues(doc);
+  renderKeySel(doc);
+}
+function fit() {
+  const pxPerMm = 96 / 25.4;
+  const avail = view.clientWidth - 32;
+  const s = Math.min(1, Math.max(0.2, avail / (210 * pxPerMm)));
+  pagesEl.querySelectorAll('.pw').forEach(w => {
+    w.style.width = (210 * pxPerMm * s) + 'px'; w.style.height = (297 * pxPerMm * s) + 'px';
+    w.firstChild.style.transform = `scale(${s})`;
+  });
+}
+function renderIssues(doc) {
+  const box = $('issues');
+  if (!doc.errors.length) { box.innerHTML = '<span class="ok">해석 문제 없음</span>'; return; }
+  box.innerHTML = doc.errors.slice(0, 30).map(e => `<button data-line="${e.line}"><b>${e.line}줄</b>${esc(e.msg)}</button>`).join('');
+}
+$('issues').addEventListener('click', e => {
+  const b = e.target.closest('button[data-line]'); if (!b) return;
+  const ln = +b.dataset.line; const lines = ed.value.split('\n');
+  let pos = 0; for (let i = 0; i < ln - 1; i++) pos += lines[i].length + 1;
+  ed.focus(); ed.setSelectionRange(pos, pos + (lines[ln - 1] || '').length);
+  if (matchMedia('(max-width:900px)').matches) setTab('edit');
+});
+function renderKeySel(doc) {
+  const sel = $('keySel');
+  if (!doc.key) { sel.innerHTML = '<option>key 없음</option>'; sel.disabled = true; $('applyBtn').hidden = true; return; }
+  sel.disabled = false;
+  const opts = [];
+  for (let d = -6; d <= 5; d++) {
+    const k = Core.shiftKey(doc.key, d);
+    opts.push(`<option value="${d}">${esc(k.name.replace('b', '♭').replace('#', '♯'))}${d === 0 ? ' (원키)' : ` (${d > 0 ? '+' : ''}${d})`}</option>`);
+  }
+  const html = opts.join('');
+  if (sel._html !== html) { sel.innerHTML = html; sel._html = html; }
+  sel.value = String(semis);
+  $('applyBtn').hidden = semis === 0;
+}
+
+// ---------- 이벤트 ----------
+let rTimer = null;
+ed.addEventListener('input', () => { scheduleSave(); clearTimeout(rTimer); rTimer = setTimeout(render, 120); });
+ed.addEventListener('blur', flushSave);
+$('songSel').addEventListener('change', e => openSong(e.target.value));
+$('newBtn').addEventListener('click', () => { createSong(BLANK); setTab('edit'); ed.focus(); });
+$('delBtn').addEventListener('click', async e => {
+  const b = e.currentTarget;
+  if (!b.classList.contains('danger')) { b.classList.add('danger'); b.textContent = '한 번 더 눌러 삭제'; setTimeout(() => { b.classList.remove('danger'); b.textContent = '삭제'; }, 3000); return; }
+  b.classList.remove('danger'); b.textContent = '삭제';
+  const id = curId; clearTimeout(saveTimer); dirty = false;
+  delete songs[id];
+  try { await store.remove(id); } catch {}
+  const l = sorted();
+  if (l.length) openSong(l[0].id); else createSong(BLANK);
+  toast('곡을 삭제했어요.', 2500);
+});
+$('keySel').addEventListener('change', e => { semis = +e.target.value; render(); });
+$('applyBtn').addEventListener('click', () => {
+  ed.value = Core.applyTranspose(ed.value, semis); semis = 0;
+  scheduleSave(); render(); toast('원본 텍스트에 조옮김을 적용했어요. 도수로 쓴 코드는 키만 바뀌어요.');
+});
+$('copyBtn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(ed.value); toast('텍스트를 복사했어요.', 2500); }
+  catch { ed.focus(); ed.select(); try { document.execCommand('copy'); toast('텍스트를 복사했어요.', 2500); } catch { toast('입력창 내용이 선택됐어요. 직접 복사하세요.'); } }
+});
+$('printBtn').addEventListener('click', () => {
+  flushSave();
+  try { window.print(); } catch {}
+  toast('인쇄 창에서 대상을 "PDF로 저장"으로 고르세요. 인쇄 창이 뜨지 않으면 [텍스트 복사] 후 Claude에게 PDF를 요청하세요.', 8000);
+});
+function setTab(t) {
+  document.querySelector('.app').dataset.tab = t;
+  document.querySelectorAll('.tabs .btn').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === t)));
+  if (t === 'view') requestAnimationFrame(fit);
+}
+document.querySelectorAll('.tabs .btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.t)));
+window.addEventListener('resize', fit);
+window.addEventListener('beforeprint', flushSave);
+
+// 기호 입력 줄 (터치 키보드용)
+const SYMS = [',', '.', '-', '^', '%', 'o', '+', 's', '#', 'b', '/', '>', ')'];
+$('sym').innerHTML = SYMS.map(s => `<button type="button" data-s="${esc(s)}" aria-label="${esc(s)} 입력">${esc(s)}</button>`).join('');
+$('sym').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
+$('sym').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = b.dataset.s === ',' ? ', ' : b.dataset.s === '.' ? ' .' : b.dataset.s;
+  const a = ed.selectionStart, z = ed.selectionEnd;
+  ed.setRangeText(s, a, z, 'end');
+  ed.focus(); ed.dispatchEvent(new Event('input'));
+});
+
+// ---------- 시작 ----------
+const list = sorted();
+if (list.length) { curId = list[0].id; ed.value = songs[curId].text; }
+else { curId = newId(); songs[curId] = { id: curId, text: SAMPLE, updatedAt: 0 }; ed.value = SAMPLE; }
+fillSongSel(); render(); setStatus(list.length ? '이 기기에 저장됨' : '');
+connectDb();
+})();
+</script>
+</body>
+</html>
