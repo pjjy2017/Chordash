@@ -5,10 +5,14 @@
     "vitest.config.*",
     "src/main/**/*",
     "src/preload/**/*",
-    "src/core/**/*"
+    "src/core/**/*",
+    "src/platform/types.ts",
+    "src/platform/electron/bridge.ts"
   ],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": [
+      "electron-vite/node"
+    ]
   }
 }

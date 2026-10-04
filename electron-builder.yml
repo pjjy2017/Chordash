@@ -1,5 +1,5 @@
-appId: com.chordpad.app
-productName: chordpad
+appId: com.chordash.app
+productName: Chordash
 directories:
   buildResources: build
 files:
@@ -15,7 +15,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: chordpad
+  executableName: Chordash
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

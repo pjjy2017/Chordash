@@ -1,22 +1,19 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+// Exposes the Electron IPC bridge used by src/platform/electron. Nothing else is exposed
+// to the page: the renderer reaches the device only through the platform interface.
 
-// Custom APIs for renderer
-const api = {}
+import { contextBridge, ipcRenderer } from 'electron'
+import { IPC, type ElectronBridge } from '../platform/electron/bridge'
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+const bridge: ElectronBridge = {
+  openFile: () => ipcRenderer.invoke(IPC.open),
+  saveFile: (file, text) => ipcRenderer.invoke(IPC.save, file, text),
+  saveFileAs: (file, text) => ipcRenderer.invoke(IPC.saveAs, file, text),
+  confirmDiscard: (name) => ipcRenderer.invoke(IPC.confirmDiscard, name),
+  setDocumentState: (state) => ipcRenderer.send(IPC.documentState, state),
+  onCloseRequested: (callback) => {
+    ipcRenderer.on(IPC.closeRequested, () => callback())
+  },
+  closeWindow: () => ipcRenderer.send(IPC.close)
 }
+
+contextBridge.exposeInMainWorld('chordashBridge', bridge)

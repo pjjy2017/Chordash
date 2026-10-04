@@ -2,7 +2,8 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <title>chordpad</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chordash</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -11,7 +12,30 @@
   </head>
 
   <body>
-    <div id="app"></div>
+    <div id="app" data-view="editor">
+      <header class="toolbar">
+        <div class="file-buttons">
+          <button data-command="new" title="새 파일 (Ctrl+N)">새 파일</button>
+          <button data-command="open" title="열기 (Ctrl+O)">열기</button>
+          <button data-command="save" title="저장 (Ctrl+S)">저장</button>
+          <button data-command="saveAs" title="다른 이름으로 저장 (Ctrl+Shift+S)">
+            다른 이름으로 저장
+          </button>
+        </div>
+        <span class="spacer"></span>
+        <span id="status" class="status"></span>
+        <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
+      </header>
+      <!-- Shown only on narrow screens, where one pane is visible at a time. -->
+      <nav class="view-tabs" role="tablist">
+        <button data-view="editor" role="tab" aria-selected="true">입력</button>
+        <button data-view="preview" role="tab" aria-selected="false">악보</button>
+      </nav>
+      <main class="split">
+        <section id="editor" class="editor-pane"></section>
+        <section id="preview" class="preview-pane"></section>
+      </main>
+    </div>
     <script type="module" src="./src/renderer.ts"></script>
   </body>
 </html>

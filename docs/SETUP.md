@@ -19,14 +19,14 @@ claude --version
 
 ## 3. 프로젝트 폴더 만들기
 ```powershell
-mkdir C:\src\chordpad
-cd C:\src\chordpad
+mkdir C:\src\chordash
+cd C:\src\chordash
 ```
 이 문서 세트(`CLAUDE.md`, `docs/`, `examples/`)를 이 폴더에 그대로 복사합니다.
 
 ## 4. Claude Code 시작
 ```powershell
-cd C:\src\chordpad
+cd C:\src\chordash
 claude
 ```
 첫 메시지 예:
@@ -34,7 +34,7 @@ claude
 
 ## 5. 패키지 설치와 실행 (Phase 0 이후)
 ```powershell
-cd C:srcchordpad
+cd C:\src\chordash
 npm install        # package.json에 적힌 라이브러리를 node_modules에 설치 (처음 한 번, 몇 분 걸림)
 npm run dev        # 앱을 개발 모드로 실행 (창을 닫으면 종료, 또는 터미널에서 Ctrl+C)
 npm test           # 자동 테스트 실행

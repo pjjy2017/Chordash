@@ -3,20 +3,23 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { appTitle } from '../core/version'
+import { guardClose, registerFileHandlers } from './files'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
-    title: appTitle(),
+    title: appTitle('제목 없음'),
     show: false,
     autoHideMenuBar: true,
     icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true
     }
   })
+
+  guardClose(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -37,13 +40,14 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.chordpad.app')
+  electronApp.setAppUserModelId('com.chordash.app')
 
   // F12 toggles DevTools in development; Ctrl+R reload is disabled in production.
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  registerFileHandlers()
   createWindow()
 
   app.on('activate', () => {

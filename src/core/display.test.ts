@@ -1,7 +1,8 @@
 // Default theme chord display (SYNTAX 6 table, minor shown as − per user choice).
 import { describe, expect, it } from 'vitest'
 import { parseChord } from './chord'
-import { chordParts } from './display'
+import { chordHint, chordParts } from './display'
+import { parseKey } from './key'
 import { BOLD_GOTHIC, type ChordStyle } from './theme'
 
 function show(input: string, style: ChordStyle = BOLD_GOTHIC.chord): string {
@@ -32,6 +33,21 @@ describe('bold gothic', () => {
     ['B7alt', 'B^(7alt)'],
     ['A7/C#', 'A^(7)/C♯']
   ])('%s → %s', (input, expected) => expect(show(input)).toBe(expected))
+})
+
+describe('chordHint', () => {
+  const hint = (input: string, keyName: string | null = null): string | null => {
+    const r = parseChord(input, keyName ? parseKey(keyName) : null)
+    if (!r.ok) throw new Error(r.error.message)
+    return chordHint(input, r.value)
+  }
+  it('shows the resolved name for degrees', () => expect(hint('3+7', 'E')).toBe('G♯aug7'))
+  it('shows the normal form for shorthand', () => expect(hint('bb^')).toBe('B♭maj7'))
+  it('stays quiet when only #/b or case differ', () => {
+    expect(hint('f#7')).toBeNull()
+    expect(hint('Bb7')).toBeNull()
+    expect(hint('E7b9')).toBeNull()
+  })
 })
 
 describe('style options', () => {

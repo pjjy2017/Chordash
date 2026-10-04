@@ -95,6 +95,30 @@ export interface ChordDocument {
 export interface ParseResult {
   document: ChordDocument
   diagnostics: Diagnostic[]
+  /** What each part of the text is, for syntax colouring in the editor. */
+  spans: SyntaxSpan[]
+}
+
+export type SyntaxKind =
+  | 'comment'
+  | 'meta'
+  | 'section'
+  | 'directive'
+  | 'cue'
+  | 'memo'
+  | 'pageBreak'
+  | 'ending'
+  | 'barline'
+  | 'chord'
+  | 'mark'
+
+export interface SyntaxSpan {
+  /** 1-based line number. */
+  line: number
+  /** 0-based column range within the line. */
+  from: number
+  to: number
+  kind: SyntaxKind
 }
 
 const SECTION = /^\[([^\]]*)\]/
@@ -109,12 +133,17 @@ const ENDING = /^(\d)\.(?=\s*\S)\s*/
 class Parser {
   readonly doc: ChordDocument = { title: null, key: null, sections: [] }
   readonly diagnostics: Diagnostic[] = []
+  readonly spans: SyntaxSpan[] = []
   private lineNo = 0
   private headerOpen = true
   private pendingMemos: ColorMemo[] = []
 
   report(severity: Diagnostic['severity'], from: number, to: number, message: string): void {
     this.diagnostics.push({ line: this.lineNo, from, to, severity, message })
+  }
+
+  private mark(kind: SyntaxKind, from: number, to: number): void {
+    if (to > from) this.spans.push({ line: this.lineNo, from, to, kind })
   }
 
   private get section(): Section | undefined {
@@ -152,20 +181,32 @@ class Parser {
     const trimmed = raw.trim()
     const start = raw.length - raw.trimStart().length
     const end = start + trimmed.length
-    if (trimmed === '' || trimmed.startsWith('//')) return
+    if (trimmed === '') return
+    if (trimmed.startsWith('//')) return this.mark('comment', start, end)
 
     const header = HEADER.exec(trimmed)
-    if (header) return this.parseHeader(header[1], header[2], start, end)
+    if (header) {
+      this.mark('meta', start, end)
+      return this.parseHeader(header[1], header[2], start, end)
+    }
     this.headerOpen = false
 
     if (trimmed.startsWith('[')) return this.parseSection(raw, start)
-    if (trimmed.startsWith('>')) return this.parseCue(trimmed.slice(1).trim(), start, end)
-    if (trimmed.startsWith('{')) return this.parseMemo(trimmed, start, end)
+    if (trimmed.startsWith('>')) {
+      this.mark('cue', start, end)
+      return this.parseCue(trimmed.slice(1).trim(), start, end)
+    }
+    if (trimmed.startsWith('{')) {
+      this.mark('memo', start, end)
+      return this.parseMemo(trimmed, start, end)
+    }
     if (trimmed === '---') {
+      this.mark('pageBreak', start, end)
       this.currentSection().items.push({ type: 'pageBreak', line: this.lineNo })
       return
     }
     if (trimmed.startsWith('"')) {
+      this.mark('directive', start, end)
       if (trimmed.length < 2 || !trimmed.endsWith('"')) {
         return this.report('error', start, end, '지시문의 닫는 따옴표(")가 없음')
       }
@@ -210,12 +251,14 @@ class Parser {
       items: []
     }
     let pos = start + m[0].length
+    this.mark('section', start, pos)
     for (;;) {
       while (pos < raw.length && /\s/.test(raw[pos])) pos++
       if (pos >= raw.length) break
       const rest = raw.slice(pos)
       const keyMatch = /^key\s*:\s*(\S*)/.exec(rest)
       if (keyMatch) {
+        this.mark('meta', pos, pos + keyMatch[0].length)
         const key = parseKey(keyMatch[1])
         if (key) section.key = section.keyChange = key
         else
@@ -235,6 +278,7 @@ class Parser {
           break
         }
         section.directive = raw.slice(pos + 1, close)
+        this.mark('directive', pos, close + 1)
         pos = close + 1
         continue
       }
@@ -265,6 +309,7 @@ class Parser {
     const ending = ENDING.exec(raw.slice(start))
     if (ending) {
       line.ending = Number(ending[1])
+      this.mark('ending', pos, pos + 2)
       pos += ending[0].length
     }
 
@@ -273,6 +318,7 @@ class Parser {
     if (/(?:[|,.:]|\s)\?$/.test(raw.slice(pos, end))) {
       line.uncertain = true
       stop = end - 1
+      this.mark('mark', stop, end)
     }
 
     // Split into barlines and the content between them. Commas inside `( )` belong to the chord.
@@ -301,6 +347,7 @@ class Parser {
       else if (c === '.') barline = 'final'
 
       if (barline !== null) {
+        this.mark('barline', i, i + width)
         closeBar(barline, i)
         left = barline
         contentStart = i + width
@@ -349,6 +396,9 @@ class Parser {
     if (accent) e--
 
     const source = text.slice(s, e)
+    this.mark('mark', at, at + s)
+    this.mark('chord', at + s, at + e)
+    this.mark('mark', at + e, at + text.length)
     const item: ChordItem = {
       source,
       from: at + s,
@@ -408,5 +458,6 @@ class Parser {
 export function parse(text: string): ParseResult {
   const parser = new Parser()
   parser.parse(text)
-  return { document: parser.doc, diagnostics: parser.diagnostics }
+  const spans = parser.spans.sort((a, b) => a.line - b.line || a.from - b.from)
+  return { document: parser.doc, diagnostics: parser.diagnostics, spans }
 }

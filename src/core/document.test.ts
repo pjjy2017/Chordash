@@ -166,6 +166,42 @@ describe('cues, memos, directives, page breaks', () => {
   })
 })
 
+describe('syntax spans', () => {
+  const kinds = (text: string): string[] =>
+    parse(text).spans.map((s) => `${s.kind}:${text.split('\n')[s.line - 1].slice(s.from, s.to)}`)
+
+  it('marks header, section, directive and key change', () => {
+    expect(kinds('title: X\n[Vocal] key: G "slow"')).toEqual([
+      'meta:title: X',
+      'section:[Vocal]',
+      'meta:key: G',
+      'directive:"slow"'
+    ])
+  })
+  it('marks barlines, chords and chord marks', () => {
+    expect(kinds("1. 'C, B7*.")).toEqual([
+      'ending:1.',
+      "mark:'",
+      'chord:C',
+      'barline:,',
+      'chord:B7',
+      'mark:*',
+      'barline:.'
+    ])
+  })
+  it('marks comments, cues, memos and page breaks', () => {
+    expect(kinds('// x\n| C |\n> cue\n{teal: y}\n---').map((k) => k.split(':')[0])).toEqual([
+      'comment',
+      'barline',
+      'chord',
+      'barline',
+      'cue',
+      'memo',
+      'pageBreak'
+    ])
+  })
+})
+
 describe('examples/샴푸의요정.chord', () => {
   const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
   const { document, diagnostics } = parse(text)

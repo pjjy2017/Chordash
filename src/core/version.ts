@@ -1,6 +1,6 @@
-// Placeholder pure module so the test pipeline has something to run in Phase 0.
-export const APP_NAME = 'chordpad'
+export const APP_NAME = 'Chordash'
 
-export function appTitle(fileName?: string): string {
-  return fileName ? `${fileName} — ${APP_NAME}` : APP_NAME
+/** Window title: `*곡.chord — Chordash` (the `*` marks unsaved changes). */
+export function appTitle(fileName?: string, dirty = false): string {
+  return fileName ? `${dirty ? '*' : ''}${fileName} — ${APP_NAME}` : APP_NAME
 }

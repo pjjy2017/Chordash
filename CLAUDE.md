@@ -1,6 +1,6 @@
 # CLAUDE.md — 세션 규약
 
-이 저장소는 코드 악보를 텍스트로 입력하고 A4 PDF로 내보내는 Windows 데스크톱 앱(가칭 **chordpad**)입니다.
+이 저장소는 코드 악보를 텍스트로 입력하고 A4 PDF로 내보내는 Windows 데스크톱 앱 **Chordash**입니다. (나중에 Capacitor로 안드로이드 버전 예정)
 모든 세션을 시작할 때 이 파일과 `docs/ROADMAP.md`의 "현재 단계"를 먼저 읽으세요.
 
 ## 문서 지도
@@ -30,7 +30,14 @@
 9. **단계 완료 시** ROADMAP의 체크박스와 "현재 단계"를 갱신하고, 사용자에게 직접 확인할 항목(앱을 띄워서 볼 것)을 알려줍니다.
 
 ## 구조 원칙
-- `src/core/` : 파서·화성 계산·조옮김·임포트 변환 등 **순수 함수**. Electron이나 DOM에 의존하지 않습니다. 테스트 대상의 대부분이 여기 있습니다.
-- `src/renderer/` : 에디터와 미리보기 UI.
-- `src/main/` : Electron 메인 프로세스. 파일 입출력, PDF 출력, 외부 API 호출(키 보관 포함)은 여기서만 합니다.
+나중에 Capacitor로 안드로이드 버전을 냅니다. 지금 기능은 데스크톱 기준으로 만들되, 아래 원칙을 지킵니다.
+
+- `src/core/` : 파서·화성 계산·조옮김·쪽 나누기·임포트 변환 등 **순수 함수**. Electron, Node, DOM, platform에 의존하지 않습니다. 테스트 대상의 대부분이 여기 있습니다.
+- `src/platform/` : **기기에 맡기는 일의 인터페이스**(`types.ts`의 `Platform`). 파일 입출력, PDF 출력, 키 보관, 외부 API 호출은 모두 이 인터페이스 뒤로 숨깁니다.
+  - `src/platform/electron/` : Electron 구현체(인터페이스의 한 구현). 안드로이드는 나중에 같은 인터페이스의 Capacitor 구현체를 추가합니다.
+  - 파일은 경로가 아니라 `FileRef`(식별값 + 표시 이름)로 다룹니다. 안드로이드는 경로 대신 URI를 줍니다.
+- `src/renderer/` : 에디터와 미리보기 UI. **Electron이나 Node API를 직접 부르지 않고 `src/platform`의 `platform`만 씁니다.** (특정 구현체 `platform/electron`을 직접 가져오지도 않음.) ESLint 규칙으로 막혀 있습니다.
+- `src/main/`, `src/preload/` : Electron 구현체의 뒷단(메인 프로세스, 연결 통로). 디스크·대화상자·창 제어는 여기서만 합니다.
+- **반응형 화면:** 넓은 화면은 에디터·미리보기 좌우 배치, 좁은 화면(760px 이하)은 "입력 / 악보" 탭 전환. 새 UI도 좁은 화면에서 쓸 수 있게 만듭니다.
+- 새 기기 기능이 필요하면(Phase 4 PDF, Phase 8 키 보관·API 호출 등) 먼저 `Platform` 인터페이스에 추가하고, Electron 구현체에 구현합니다.
 - 렌더링 흐름: 텍스트 → `parse()` → 문서 모델(AST) → `layout()` → 페이지 모델 → HTML. 미리보기와 PDF는 같은 HTML을 씁니다.

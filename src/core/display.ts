@@ -1,7 +1,7 @@
 // Splits a chord into the pieces a theme draws: root, inline quality, superscript, bass (SYNTAX 6).
 
 import { formatAccidental, formatNote } from './key'
-import type { Chord } from './chord'
+import { formatChord, type Chord } from './chord'
 import type { ChordStyle } from './theme'
 
 export interface ChordParts {
@@ -76,4 +76,14 @@ export function chordParts(chord: Chord, style: ChordStyle): ChordParts {
     sup,
     bass: chord.bass ? '/' + formatNote(chord.bass) : ''
   }
+}
+
+/**
+ * Grey hint shown next to a chord in the editor: its normal form, or null when that
+ * only differs from what was typed by ♯/♭ vs #/b or letter case (`f#7` needs no hint).
+ */
+export function chordHint(source: string, chord: Chord): string | null {
+  const normal = formatChord(chord)
+  const plain = (s: string): string => s.replace(/♯/g, '#').replace(/♭/g, 'b').toLowerCase()
+  return plain(normal) === plain(source) ? null : normal
 }

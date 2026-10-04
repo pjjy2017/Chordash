@@ -1,0 +1,192 @@
+/* App shell: toolbar, editor pane, preview pane, and editor syntax colours. */
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  font-family: 'Pretendard Variable', 'Malgun Gothic', sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f7f7f7;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.toolbar button {
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  background: #eef3ff;
+  border-color: #9bb2e8;
+}
+
+.file-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.status {
+  font-size: 13px;
+  color: #777;
+}
+
+.status.has-errors {
+  color: #c00;
+  font-weight: 600;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 2fr) 3fr;
+  min-height: 0;
+}
+
+.editor-pane {
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+  border-right: 1px solid #d8d8d8;
+}
+
+.preview-pane {
+  min-width: 0;
+  overflow: auto;
+}
+
+/* Syntax colours (class names come from core SyntaxKind). */
+.cd-chord {
+  color: #1d3f9e;
+  font-weight: 700;
+}
+.cd-barline {
+  color: #999;
+  font-weight: 700;
+}
+.cd-mark {
+  color: #c2410c;
+  font-weight: 700;
+}
+.cd-ending {
+  color: #7c3aed;
+  font-weight: 700;
+}
+.cd-section {
+  color: #7c3aed;
+  font-weight: 800;
+}
+.cd-meta {
+  color: #0f766e;
+}
+.cd-cue {
+  color: #15803d;
+}
+.cd-memo {
+  color: #0e7490;
+}
+.cd-directive {
+  color: #b45309;
+}
+.cd-pageBreak {
+  color: #999;
+}
+.cd-comment {
+  color: #9a9a9a;
+  font-style: italic;
+}
+
+.cd-hint {
+  margin-left: 4px;
+  padding: 0 3px;
+  font-size: 0.82em;
+  color: #8a8a8a;
+  background: #f2f2f2;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* --- Narrow screens (phones, narrow windows): one pane at a time, switched by tabs. --- */
+
+.view-tabs {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .file-buttons {
+    overflow-x: auto;
+  }
+
+  .view-tabs {
+    display: flex;
+    border-bottom: 1px solid #d8d8d8;
+    background: #f7f7f7;
+  }
+
+  .view-tabs button {
+    flex: 1;
+    padding: 9px 0;
+    font: inherit;
+    font-size: 14px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #666;
+    cursor: pointer;
+  }
+
+  .view-tabs button[aria-selected='true'] {
+    color: #1d3f9e;
+    font-weight: 700;
+    border-bottom-color: #1d3f9e;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-pane {
+    border-right: none;
+  }
+
+  #app[data-view='editor'] .preview-pane,
+  #app[data-view='preview'] .editor-pane {
+    display: none;
+  }
+}
