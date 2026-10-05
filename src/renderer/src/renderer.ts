@@ -4,6 +4,8 @@ import './app.css'
 import {
   cleanRecognizedText,
   countUncertain,
+  spellingEdits,
+  type ChordSpelling,
   MAX_RECOGNIZE_PAGES,
   RECOGNIZE_SYSTEM_PROMPT,
   recognizeErrorMessage,
@@ -575,6 +577,46 @@ transposeApply.addEventListener('click', () => {
   cancelTransposition()
   editor.change(edits)
 })
+
+// --- chord spelling: note names ↔ degrees, written into the text -------------------------
+
+const spellingReading = $<HTMLElement>('spelling-reading')
+let spellingTimer: number | undefined
+
+function sayAboutSpelling(message: string, bad = false): void {
+  spellingReading.textContent = message
+  spellingReading.classList.toggle('bad', bad)
+  window.clearTimeout(spellingTimer)
+  spellingTimer = window.setTimeout(() => (spellingReading.textContent = ''), 5000)
+}
+
+/** Rewrites chords on the selected lines (or the whole song) as degrees or note names. */
+function respell(to: ChordSpelling): void {
+  if (transposeTo) {
+    sayAboutSpelling('조옮김을 먼저 적용하거나 취소해 주세요', true)
+    return
+  }
+  const { from, to: end } = editor.selection()
+  const lines = editor.view.state.doc
+  const range =
+    from === end ? null : { from: lines.lineAt(from).number, to: lines.lineAt(end).number }
+  const { edits, changed, withoutKey } = spellingEdits(
+    editor.getText(),
+    editor.parsed().document,
+    to,
+    range
+  )
+  if (edits.length) editor.change(edits)
+  const where = range ? `${range.from}~${range.to}줄` : '전체'
+  const done = changed ? `${where}: 코드 ${changed}개를 바꿨어요` : `${where}: 바꿀 코드가 없어요`
+  sayAboutSpelling(
+    withoutKey ? `${done} · key:가 없어서 못 바꾼 코드 ${withoutKey}개` : done,
+    withoutKey > 0
+  )
+}
+
+$<HTMLButtonElement>('to-degrees').addEventListener('click', () => respell('degrees'))
+$<HTMLButtonElement>('to-notes').addEventListener('click', () => respell('notes'))
 
 // --- print preview: shown beside the editor on wide screens, can be hidden ---------------
 

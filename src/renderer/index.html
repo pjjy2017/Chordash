@@ -82,6 +82,27 @@
               <button type="button" id="transpose-apply" class="action" hidden>원본에 적용</button>
               <button type="button" id="transpose-cancel" class="action" hidden>취소</button>
             </div>
+            <!-- Rewrites chord roots and basses as degrees or note names: selected lines, or all. -->
+            <div class="field field-transpose">
+              <span>표기</span>
+              <button
+                type="button"
+                id="to-degrees"
+                class="action"
+                title="코드 이름을 도수로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
+              >
+                도수로
+              </button>
+              <button
+                type="button"
+                id="to-notes"
+                class="action"
+                title="도수를 코드 이름으로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
+              >
+                음이름으로
+              </button>
+              <span id="spelling-reading" class="field-reading"></span>
+            </div>
           </div>
           <div id="editor" class="editor-host"></div>
         </section>
