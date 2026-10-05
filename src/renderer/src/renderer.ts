@@ -9,6 +9,15 @@ import {
   parseKey,
   readHeaderLine,
   setHeaderLine,
+  intervalBetween,
+  isUnison,
+  keyBySemitones,
+  keyText,
+  semitonesBetween,
+  transposeDocument,
+  transpositionEdits,
+  type Key,
+  type LineRange,
   type ChordDocument
 } from '../../core'
 import { platform, type FileRef } from '../../platform'
@@ -45,8 +54,9 @@ let renderTimer: number | undefined
 function renderPreview(): void {
   const { document: doc, diagnostics } = editor.parsed()
   const theme = DEFAULT_THEME
-  preview.innerHTML = renderPages(layout(doc, theme.metrics), theme)
+  preview.innerHTML = renderPages(layout(shownDocument(), theme.metrics), theme)
   syncHeaderFields(doc)
+  showTransposition()
   fitPreview()
   const errors = diagnostics.filter((d) => d.severity === 'error').length
   const warnings = diagnostics.length - errors
@@ -66,7 +76,13 @@ function fitPreview(): void {
 }
 new ResizeObserver(fitPreview).observe(preview)
 
-const editor = createEditor($('editor'), () => {
+const editor = createEditor($('editor'), (changes) => {
+  // Keep a transposed line range on the same lines while text around it changes.
+  if (transposeScope) {
+    transposeScope = changes
+      ? { from: changes.mapPos(transposeScope.from, -1), to: changes.mapPos(transposeScope.to, 1) }
+      : null
+  }
   reportState()
   window.clearTimeout(renderTimer)
   renderTimer = window.setTimeout(renderPreview, 80)
@@ -89,6 +105,9 @@ document.querySelectorAll<HTMLButtonElement>('.view-tabs [data-view]').forEach((
 // --- file commands -----------------------------------------------------------
 
 function load(text: string, newFile: FileRef | null): void {
+  transposeTo = null
+  transposeScope = null
+  transposeField.value = ''
   file = newFile
   savedText = text
   editor.setText(text)
@@ -144,7 +163,7 @@ async function exportPdf(): Promise<void> {
   }
   const title = doc.title || documentName().replace(/\.chord$/i, '')
   const theme = DEFAULT_THEME
-  const html = await buildPrintDocument(layout(doc, theme.metrics), theme, title)
+  const html = await buildPrintDocument(layout(shownDocument(), theme.metrics), theme, title)
   const saved = await platform.exportPdf(html, `${title}.pdf`)
   if (saved) status.textContent = `PDF 저장: ${saved.name}`
 }
@@ -181,6 +200,110 @@ for (const field of [titleField, keyField]) {
     if (e.key === 'Enter') editor.view.focus()
   })
 }
+
+// --- transposition: the sheet in another key; the text changes only on "원본에 적용" ---------
+
+const transposeField = $<HTMLInputElement>('transpose-key')
+const transposeReading = $<HTMLElement>('transpose-reading')
+const transposeApply = $<HTMLButtonElement>('transpose-apply')
+const transposeCancel = $<HTMLButtonElement>('transpose-cancel')
+
+/** Target key, or null when the sheet shows the song as written. */
+let transposeTo: Key | null = null
+/** Document offsets of the selected lines it applies to; null = the whole song. */
+let transposeScope: { from: number; to: number } | null = null
+
+function scopeLines(): LineRange | null {
+  if (!transposeScope) return null
+  const doc = editor.view.state.doc
+  return { from: doc.lineAt(transposeScope.from).number, to: doc.lineAt(transposeScope.to).number }
+}
+
+/** What the preview and PDF show: the song, transposed if a target key is set. */
+function shownDocument(): ChordDocument {
+  const { document: doc } = editor.parsed()
+  if (!transposeTo || !doc.key) return doc
+  return transposeDocument(doc, intervalBetween(doc.key, transposeTo), scopeLines())
+}
+
+function showTransposition(): void {
+  const songKey = editor.parsed().document.key
+  const active = transposeTo !== null
+  transposeApply.hidden = transposeCancel.hidden = !active || !songKey
+  if (!active) {
+    transposeReading.textContent = ''
+  } else if (!songKey) {
+    transposeReading.textContent = '곡에 key:가 있어야 조옮김할 수 있어요'
+  } else {
+    const steps = semitonesBetween(songKey, transposeTo!)
+    const lines = scopeLines()
+    transposeReading.textContent =
+      `${formatNote(songKey.tonic)} → ${formatNote(transposeTo!.tonic)} (${steps > 0 ? '+' : ''}${steps}) · ` +
+      (lines ? `${lines.from}~${lines.to}줄만` : '전체')
+  }
+  transposeReading.classList.toggle('bad', active && !songKey)
+  preview.classList.toggle('transposed', active && Boolean(songKey))
+}
+
+/** Starts or changes the transposition. A selection in the editor, if any, becomes its range. */
+function setTransposition(to: Key | null): void {
+  const songKey = editor.parsed().document.key
+  if (to && songKey && isUnison(intervalBetween(songKey, to)) && !transposeScope) to = null
+  if (to && !transposeTo) {
+    const { from, to: end } = editor.selection()
+    transposeScope = from === end ? null : { from, to: end }
+  }
+  transposeTo = to
+  if (!to) transposeScope = null
+  renderPreview()
+}
+
+transposeField.addEventListener('input', () => {
+  const typed = transposeField.value.trim()
+  const key = typed ? parseKey(typed) : null
+  if (typed && !key) {
+    transposeReading.textContent = '알 수 없는 키'
+    transposeReading.classList.add('bad')
+    return
+  }
+  setTransposition(key)
+})
+
+function step(semitones: number): void {
+  const songKey = editor.parsed().document.key
+  const base = transposeTo ?? songKey
+  if (!base) {
+    transposeReading.textContent = '곡에 key:가 있어야 조옮김할 수 있어요'
+    transposeReading.classList.add('bad')
+    return
+  }
+  const next = keyBySemitones(base, semitones)
+  transposeField.value = keyText(next)
+  setTransposition(next)
+  if (!transposeTo) transposeField.value = ''
+}
+$<HTMLButtonElement>('transpose-down').addEventListener('click', () => step(-1))
+$<HTMLButtonElement>('transpose-up').addEventListener('click', () => step(1))
+
+function cancelTransposition(): void {
+  transposeField.value = ''
+  setTransposition(null)
+}
+transposeCancel.addEventListener('click', cancelTransposition)
+
+/** Writes the transposition into the text (roots, basses and key lines), then shows it as written. */
+transposeApply.addEventListener('click', () => {
+  const { document: doc } = editor.parsed()
+  if (!transposeTo || !doc.key) return
+  const edits = transpositionEdits(
+    editor.getText(),
+    doc,
+    intervalBetween(doc.key, transposeTo),
+    scopeLines()
+  )
+  cancelTransposition()
+  editor.change(edits)
+})
 
 // --- print preview: shown beside the editor on wide screens, can be hidden ---------------
 

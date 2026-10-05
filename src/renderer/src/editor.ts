@@ -15,6 +15,7 @@ import {
   RangeSetBuilder,
   StateEffect,
   StateField,
+  type ChangeSet,
   type Extension,
   type Range,
   type Text
@@ -288,12 +289,17 @@ export interface ChordEditor {
   /** Replaces the whole document and resets undo history. */
   setText(text: string): void
   /** Applies one edit as a normal, undoable change. */
-  change(change: TextChange): void
+  change(change: TextChange | TextChange[]): void
+  /** The current selection as document offsets (empty when nothing is selected). */
+  selection(): { from: number; to: number }
   setHints(on: boolean): void
   parsed(): ParseResult
 }
 
-export function createEditor(parent: HTMLElement, onChange: () => void): ChordEditor {
+/** Called after every text change; `changes` maps old offsets to new ones (null on a full reset). */
+export type ChangeListener = (changes: ChangeSet | null) => void
+
+export function createEditor(parent: HTMLElement, onChange: ChangeListener): ChordEditor {
   let hintsOn = true
   const extensions = (): Extension[] => [
     lineNumbers(),
@@ -314,7 +320,7 @@ export function createEditor(parent: HTMLElement, onChange: () => void): ChordEd
     lintGutter(),
     editorTheme,
     EditorView.updateListener.of((u) => {
-      if (u.docChanged) onChange()
+      if (u.docChanged) onChange(u.changes)
     })
   ]
 
@@ -327,9 +333,13 @@ export function createEditor(parent: HTMLElement, onChange: () => void): ChordEd
     getText: () => view.state.doc.toString(),
     setText: (text) => {
       view.setState(EditorState.create({ doc: text, extensions: extensions() }))
-      onChange()
+      onChange(null)
     },
     change: (change) => view.dispatch({ changes: change }),
+    selection: () => {
+      const { from, to } = view.state.selection.main
+      return { from, to }
+    },
     setHints: (on) => {
       hintsOn = on
       view.dispatch({ effects: setHintsEnabled.of(on) })

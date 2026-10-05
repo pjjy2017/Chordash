@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { formatChord, parseChord } from './chord'
 import { parseKey, type Key } from './key'
+import { intervalBetween, transposeChord } from './transpose'
 
 const syntax = readFileSync(resolve(__dirname, '../../docs/SYNTAX.md'), 'utf8')
 
@@ -65,6 +66,14 @@ describe('SYNTAX 7.4 오류', () => {
 describe('SYNTAX 7.5 조옮김', () => {
   const rows = tableRows('7.5')
   it('has the expected number of rows', () => expect(rows).toHaveLength(4))
-  // Transposition is Phase 5 (ROADMAP); rows are listed here so none get forgotten.
-  for (const [source, op, expected] of rows) it.todo(`${source} ${op} → ${expected}`)
+  // Row shape: `key C, \`C7\`` | `→ key E` or `key를 G로 변경` | result.
+  for (const [source, op, expected] of rows) {
+    it(`${source} ${op} → ${expected}`, () => {
+      const from = parseKey(/key (\S+),/.exec(source)![1])!
+      const to = parseKey(/key (\S+)/.exec(op)?.[1] ?? /key를 (\S+)로/.exec(op)![1])!
+      const chord = parseChord(code(source), from)
+      if (!chord.ok) throw new Error(chord.error.message)
+      expect(formatChord(transposeChord(chord.value, intervalBetween(from, to)))).toBe(expected)
+    })
+  }
 })

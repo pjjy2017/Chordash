@@ -359,3 +359,35 @@ body {
   color: #7c3aed;
   font-weight: 700;
 }
+
+/* --- Transposition ------------------------------------------------------------- */
+
+.field-transpose input {
+  width: 6em;
+}
+
+.field-transpose .step,
+.field-transpose .action {
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.field-transpose .action {
+  font-size: 13px;
+}
+
+.field-transpose #transpose-apply {
+  color: #fff;
+  background: #1d3f9e;
+  border-color: #1d3f9e;
+}
+
+/* While transposed, a coloured edge reminds that the sheet is not the key as written. */
+.preview-pane.transposed {
+  box-shadow: inset 4px 0 0 #e8a33d;
+}

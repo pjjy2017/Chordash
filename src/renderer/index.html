@@ -60,6 +60,22 @@
               <!-- How the typed key was read, e.g. "C 단조"; red when it can't be read. -->
               <span id="field-key-reading" class="field-reading"></span>
             </label>
+            <!-- Transposition shows the sheet in another key; the text changes only on "원본에 적용". -->
+            <div class="field field-transpose">
+              <label for="transpose-key">조옮김</label>
+              <input
+                id="transpose-key"
+                type="text"
+                placeholder="예: G, e-"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <button type="button" id="transpose-down" class="step" title="반음 내리기">▼</button>
+              <button type="button" id="transpose-up" class="step" title="반음 올리기">▲</button>
+              <span id="transpose-reading" class="field-reading"></span>
+              <button type="button" id="transpose-apply" class="action" hidden>원본에 적용</button>
+              <button type="button" id="transpose-cancel" class="action" hidden>취소</button>
+            </div>
           </div>
           <div id="editor" class="editor-host"></div>
         </section>
