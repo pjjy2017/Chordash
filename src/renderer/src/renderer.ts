@@ -3,6 +3,11 @@ import './preview.css'
 import './app.css'
 import {
   countUncertain,
+  decodeText,
+  ENCODING_LABELS,
+  IMPORT_FORMAT_LABELS,
+  importText,
+  type TextEncodingName,
   DEFAULT_THEME,
   formatNote,
   layout,
@@ -31,6 +36,7 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 
 const app = $<HTMLElement>('app')
 const preview = $<HTMLElement>('preview')
+const pagesHost = $<HTMLElement>('pages-host')
 const status = $<HTMLElement>('status')
 const titleField = $<HTMLInputElement>('field-title')
 const keyField = $<HTMLInputElement>('field-key')
@@ -54,7 +60,7 @@ let renderTimer: number | undefined
 function renderPreview(): void {
   const { document: doc, diagnostics } = editor.parsed()
   const theme = DEFAULT_THEME
-  preview.innerHTML = renderPages(layout(shownDocument(), theme.metrics), theme)
+  pagesHost.innerHTML = renderPages(layout(shownDocument(), theme.metrics), theme)
   syncHeaderFields(doc)
   showTransposition()
   fitPreview()
@@ -104,12 +110,14 @@ document.querySelectorAll<HTMLButtonElement>('.view-tabs [data-view]').forEach((
 
 // --- file commands -----------------------------------------------------------
 
-function load(text: string, newFile: FileRef | null): void {
+/** Opens a document. An imported result opens unsaved, with its original kept for review. */
+function load(text: string, newFile: FileRef | null, imported: ImportSource | null = null): void {
   transposeTo = null
   transposeScope = null
   transposeField.value = ''
   file = newFile
-  savedText = text
+  savedText = imported ? '' : text
+  showImportSource(imported)
   editor.setText(text)
   reportState()
   showView('editor')
@@ -147,8 +155,78 @@ const commands: Record<string, () => Promise<unknown>> = {
   },
   save,
   saveAs,
-  exportPdf
+  exportPdf,
+  import: async () => {
+    importText_.value = ''
+    importDialog.showModal()
+  }
 }
+
+// --- import: text from other formats → a new document; the original stays viewable -------
+
+interface ImportSource {
+  name: string
+  text: string
+}
+
+const importDialog = $<HTMLDialogElement>('import-dialog')
+const importText_ = $<HTMLTextAreaElement>('import-text')
+const previewSwitch = $<HTMLElement>('preview-switch')
+const originalView = $<HTMLElement>('original')
+const originalInfo = $<HTMLElement>('original-info')
+
+/** Converts the text and opens the result, after asking about unsaved changes. */
+async function runImport(
+  text: string,
+  name: string,
+  encoding: TextEncodingName | null
+): Promise<void> {
+  const result = importText(text, name)
+  if (result.format === 'unknown') {
+    window.alert(
+      '코드 악보로 보이는 줄을 찾지 못했어요. 코드 줄, 마디선(|), ChordPro 중 하나인지 확인해 주세요.'
+    )
+    return
+  }
+  importDialog.close()
+  if (!(await confirmDiscard())) return
+  load(result.text, null, { name, text })
+  const details = [IMPORT_FORMAT_LABELS[result.format]]
+  if (encoding) details.push(ENCODING_LABELS[encoding])
+  details.push(result.uncertain ? `확인 필요(?) ${result.uncertain}곳` : '확인 필요 없음')
+  originalInfo.textContent = `${name} · ${details.join(' · ')}`
+  status.textContent = `가져옴: ${details.join(' · ')}`
+}
+
+$<HTMLButtonElement>('import-paste').addEventListener('click', () => {
+  const text = importText_.value
+  if (text.trim()) void runImport(text, '붙여넣은 글', null)
+})
+
+$<HTMLButtonElement>('import-from-file').addEventListener('click', async () => {
+  const picked = await platform.importFile()
+  if (!picked) return
+  const { text, encoding } = decodeText(picked.data)
+  await runImport(text, picked.file.name, encoding)
+})
+
+function showImportSource(source: ImportSource | null): void {
+  previewSwitch.hidden = !source
+  originalView.textContent = source?.text ?? ''
+  showOriginal(false)
+}
+
+function showOriginal(on: boolean): void {
+  originalView.hidden = !on
+  pagesHost.hidden = on
+  previewSwitch.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => {
+    b.setAttribute('aria-pressed', String((b.dataset.show === 'original') === on))
+  })
+}
+
+previewSwitch.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => {
+  b.addEventListener('click', () => showOriginal(b.dataset.show === 'original'))
+})
 
 /** PDF of the current pages; warns first about errors and `?` marks. */
 async function exportPdf(): Promise<void> {

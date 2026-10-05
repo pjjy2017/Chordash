@@ -391,3 +391,115 @@ body {
 .preview-pane.transposed {
   box-shadow: inset 4px 0 0 #e8a33d;
 }
+
+/* --- Import ------------------------------------------------------------------- */
+
+.import-dialog {
+  width: min(720px, calc(100vw - 32px));
+  padding: 18px 20px;
+  border: 1px solid #c8c8c8;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.25);
+  font-size: 14px;
+}
+
+.import-dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.import-dialog h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.import-dialog p {
+  margin: 0 0 10px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.import-dialog textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  font-family: 'D2Coding', 'Consolas', 'Chordash Pretendard', monospace;
+  font-size: 13px;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.import-actions button {
+  padding: 6px 14px;
+  font: inherit;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.import-actions button.primary {
+  color: #fff;
+  background: #1d3f9e;
+  border-color: #1d3f9e;
+}
+
+/* Preview pane after an import: 미리보기 / 원본. */
+.preview-switch {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f7f7f7;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.preview-switch[hidden] {
+  display: none;
+}
+
+.preview-switch button {
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.preview-switch button[aria-pressed='true'] {
+  color: #fff;
+  background: #1d3f9e;
+  border-color: #1d3f9e;
+}
+
+.original-info {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.original {
+  margin: 0;
+  padding: 14px 16px;
+  min-height: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  font-family: 'D2Coding', 'Consolas', 'Chordash Pretendard', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

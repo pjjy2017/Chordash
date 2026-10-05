@@ -1,10 +1,11 @@
 // The IPC bridge the Electron preload script exposes as `window.chordashBridge`.
 // Only the Electron platform implementation (./index.ts) may use it.
 
-import type { DiscardChoice, DocumentState, FileRef, OpenedFile } from '../types'
+import type { DiscardChoice, DocumentState, FileRef, ImportedFile, OpenedFile } from '../types'
 
 export interface ElectronBridge {
   openFile(): Promise<OpenedFile | null>
+  importFile(): Promise<ImportedFile | null>
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
   exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
@@ -18,6 +19,7 @@ export interface ElectronBridge {
 
 export const IPC = {
   open: 'file:open',
+  importFile: 'file:import',
   save: 'file:save',
   saveAs: 'file:saveAs',
   exportPdf: 'file:exportPdf',

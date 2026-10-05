@@ -22,6 +22,7 @@
             다른 이름으로 저장
           </button>
           <button data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">PDF</button>
+          <button data-command="import" title="다른 형식의 악보 텍스트를 가져오기">가져오기</button>
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
@@ -79,9 +80,39 @@
           </div>
           <div id="editor" class="editor-host"></div>
         </section>
-        <section id="preview" class="preview-pane"></section>
+        <section id="preview" class="preview-pane">
+          <!-- After an import: switch between the sheet and the original text to review. -->
+          <div id="preview-switch" class="preview-switch" hidden>
+            <button type="button" data-show="pages" aria-pressed="true">미리보기</button>
+            <button type="button" data-show="original" aria-pressed="false">원본</button>
+            <span id="original-info" class="original-info"></span>
+          </div>
+          <div id="pages-host"></div>
+          <pre id="original" class="original" hidden></pre>
+        </section>
       </main>
     </div>
+    <dialog id="import-dialog" class="import-dialog">
+      <form method="dialog">
+        <h2>악보 가져오기</h2>
+        <p>
+          웹에서 복사한 코드 악보(가사 위에 코드), 마디선 텍스트(| C | Am |), ChordPro를 Chordash
+          문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요.
+        </p>
+        <textarea
+          id="import-text"
+          rows="14"
+          spellcheck="false"
+          placeholder="여기에 붙여넣기 (Ctrl+V)"
+        ></textarea>
+        <div class="import-actions">
+          <button type="button" id="import-from-file">파일에서 가져오기…</button>
+          <span class="spacer"></span>
+          <button value="cancel">취소</button>
+          <button type="button" id="import-paste" class="primary">붙여넣은 글 바꾸기</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="./src/renderer.ts"></script>
   </body>
 </html>

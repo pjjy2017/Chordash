@@ -13,6 +13,12 @@ export interface OpenedFile {
   text: string
 }
 
+/** A file picked for import, unread: the bytes are decoded by the core (UTF-8 / CP949). */
+export interface ImportedFile {
+  file: FileRef
+  data: Uint8Array
+}
+
 export type DiscardChoice = 'save' | 'discard' | 'cancel'
 
 export interface DocumentState {
@@ -24,6 +30,8 @@ export interface DocumentState {
 export interface Platform {
   /** Asks the user for a file to open. null when cancelled. */
   openFile(): Promise<OpenedFile | null>
+  /** Asks for a text or ChordPro file to import. null when cancelled. */
+  importFile(): Promise<ImportedFile | null>
   /** Saves to `file`, or asks where when it is null. Returns where it saved, null when cancelled. */
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   /** Always asks where to save. Returns where it saved, null when cancelled. */

@@ -6,6 +6,7 @@ import { IPC, type ElectronBridge } from '../platform/electron/bridge'
 
 const bridge: ElectronBridge = {
   openFile: () => ipcRenderer.invoke(IPC.open),
+  importFile: () => ipcRenderer.invoke(IPC.importFile),
   saveFile: (file, text) => ipcRenderer.invoke(IPC.save, file, text),
   saveFileAs: (file, text) => ipcRenderer.invoke(IPC.saveAs, file, text),
   exportPdf: (html, suggestedName) => ipcRenderer.invoke(IPC.exportPdf, html, suggestedName),

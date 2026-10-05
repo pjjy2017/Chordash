@@ -48,6 +48,26 @@ export function registerFileHandlers(): void {
     return { file: refFor(path), text }
   })
 
+  ipcMain.handle(IPC.importFile, async (e) => {
+    // Automated checks set this to skip the dialog; normal use never does.
+    const testPath = process.env.CHORDASH_TEST_IMPORT_PATH
+    if (testPath) return { file: refFor(testPath), data: new Uint8Array(await readFile(testPath)) }
+    const result = await dialog.showOpenDialog(windowOf(e.sender), {
+      title: '가져올 악보 파일',
+      filters: [
+        {
+          name: '텍스트 악보, ChordPro',
+          extensions: ['txt', 'cho', 'chopro', 'chordpro', 'crd', 'pro']
+        },
+        { name: '모든 파일', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const path = result.filePaths[0]
+    return { file: refFor(path), data: new Uint8Array(await readFile(path)) }
+  })
+
   ipcMain.handle(IPC.save, async (e, file: FileRef | null, text: string) => {
     if (!file) return saveAs(windowOf(e.sender), null, text)
     await writeFile(file.id, text, 'utf8')

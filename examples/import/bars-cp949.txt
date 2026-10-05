@@ -1,0 +1,10 @@
+고엽 연습 - 마디선 예제
+Key: Gm
+
+[A]
+|: Cm7 | F7 | Bbmaj7 | Ebmaj7 |
+| Am7b5 | D7 | Gm6 | % :|
+여기는 가사 첫 줄 연습용
+[B]
+| Am7-5 | D7(b9) | Gm | Gm |
+| Cm7 | F7 | Bbmaj7 | Ebmaj7 ||
