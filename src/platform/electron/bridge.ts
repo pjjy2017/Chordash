@@ -1,11 +1,20 @@
 // The IPC bridge the Electron preload script exposes as `window.chordashBridge`.
 // Only the Electron platform implementation (./index.ts) may use it.
 
-import type { DiscardChoice, DocumentState, FileRef, ImportedFile, OpenedFile } from '../types'
+import type {
+  DiscardChoice,
+  DocumentState,
+  FileRef,
+  ImportedFile,
+  ImportKind,
+  OpenedFile,
+  RecognizeRequest,
+  RecognizeResult
+} from '../types'
 
 export interface ElectronBridge {
   openFile(): Promise<OpenedFile | null>
-  importFile(): Promise<ImportedFile | null>
+  importFile(kind: ImportKind): Promise<ImportedFile | null>
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
   exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
@@ -15,6 +24,10 @@ export interface ElectronBridge {
   onCloseRequested(callback: () => void): void
   /** Closes the window without asking again. */
   closeWindow(): void
+  hasApiKey(): Promise<boolean>
+  setApiKey(key: string | null): Promise<string | null>
+  recognize(request: RecognizeRequest): Promise<RecognizeResult>
+  cancelRecognize(): void
 }
 
 export const IPC = {
@@ -26,5 +39,9 @@ export const IPC = {
   confirmDiscard: 'doc:confirmDiscard',
   documentState: 'doc:state',
   closeRequested: 'app:closeRequested',
-  close: 'app:close'
+  close: 'app:close',
+  hasApiKey: 'ai:hasKey',
+  setApiKey: 'ai:setKey',
+  recognize: 'ai:recognize',
+  cancelRecognize: 'ai:cancel'
 } as const

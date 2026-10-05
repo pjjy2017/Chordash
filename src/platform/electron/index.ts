@@ -13,7 +13,7 @@ export function createElectronPlatform(): Platform {
   const bridge = window.chordashBridge
   return {
     openFile: () => bridge.openFile(),
-    importFile: () => bridge.importFile(),
+    importFile: (kind) => bridge.importFile(kind),
     saveFile: (file, text) => bridge.saveFile(file, text),
     saveFileAs: (file, text) => bridge.saveFileAs(file, text),
     exportPdf: (html, suggestedName) => bridge.exportPdf(html, suggestedName),
@@ -23,6 +23,10 @@ export function createElectronPlatform(): Platform {
       bridge.onCloseRequested(async () => {
         if (await handler()) bridge.closeWindow()
       })
-    }
+    },
+    hasApiKey: () => bridge.hasApiKey(),
+    setApiKey: (key) => bridge.setApiKey(key),
+    recognize: (request) => bridge.recognize(request),
+    cancelRecognize: () => bridge.cancelRecognize()
   }
 }

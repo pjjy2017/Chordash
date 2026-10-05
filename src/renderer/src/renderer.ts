@@ -2,7 +2,13 @@
 import './preview.css'
 import './app.css'
 import {
+  cleanRecognizedText,
   countUncertain,
+  MAX_RECOGNIZE_PAGES,
+  RECOGNIZE_SYSTEM_PROMPT,
+  recognizeErrorMessage,
+  recognizeImagesPrompt,
+  recognizeTextPrompt,
   decodeText,
   ENCODING_LABELS,
   IMPORT_FORMAT_LABELS,
@@ -26,9 +32,11 @@ import {
   type ChordDocument
 } from '../../core'
 import { platform, type FileRef } from '../../platform'
+import { chartPages, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { buildPrintDocument, renderPages } from './preview'
+import { modelName, openSettings, recognizeModel } from './settings'
 
 installFonts()
 
@@ -159,20 +167,26 @@ const commands: Record<string, () => Promise<unknown>> = {
   import: async () => {
     importText_.value = ''
     importDialog.showModal()
-  }
+  },
+  settings: openSettings
 }
 
 // --- import: text from other formats → a new document; the original stays viewable -------
 
 interface ImportSource {
   name: string
-  text: string
+  /** The original text (text import). */
+  text?: string
+  /** The original pages as image URLs (image/PDF import). */
+  images?: string[]
 }
 
 const importDialog = $<HTMLDialogElement>('import-dialog')
 const importText_ = $<HTMLTextAreaElement>('import-text')
 const previewSwitch = $<HTMLElement>('preview-switch')
 const originalView = $<HTMLElement>('original')
+const originalImages = $<HTMLElement>('original-images')
+let importSource: ImportSource | null = null
 const originalInfo = $<HTMLElement>('original-info')
 
 /** Converts the text and opens the result, after asking about unsaved changes. */
@@ -183,9 +197,14 @@ async function runImport(
 ): Promise<void> {
   const result = importText(text, name)
   if (result.format === 'unknown') {
-    window.alert(
-      '코드 악보로 보이는 줄을 찾지 못했어요. 코드 줄, 마디선(|), ChordPro 중 하나인지 확인해 주세요.'
+    const useAi = window.confirm(
+      '코드 악보로 보이는 줄을 찾지 못했어요. (코드 줄, 마디선 |, ChordPro 형식을 읽을 수 있어요.)\n\n' +
+        'AI에게 이 글을 읽혀 볼까요? 인터넷이 필요하고 API 요금이 나와요.'
     )
+    if (useAi) {
+      importDialog.close()
+      openAiDialog({ name, text })
+    }
     return
   }
   importDialog.close()
@@ -204,20 +223,30 @@ $<HTMLButtonElement>('import-paste').addEventListener('click', () => {
 })
 
 $<HTMLButtonElement>('import-from-file').addEventListener('click', async () => {
-  const picked = await platform.importFile()
+  const picked = await platform.importFile('text')
   if (!picked) return
   const { text, encoding } = decodeText(picked.data)
   await runImport(text, picked.file.name, encoding)
 })
 
 function showImportSource(source: ImportSource | null): void {
+  importSource = source
   previewSwitch.hidden = !source
   originalView.textContent = source?.text ?? ''
+  originalImages.replaceChildren(
+    ...(source?.images ?? []).map((url, i) => {
+      const img = document.createElement('img')
+      img.src = url
+      img.alt = `원본 ${i + 1}쪽`
+      return img
+    })
+  )
   showOriginal(false)
 }
 
 function showOriginal(on: boolean): void {
-  originalView.hidden = !on
+  originalView.hidden = !on || !importSource?.text
+  originalImages.hidden = !on || !importSource?.images
   pagesHost.hidden = on
   previewSwitch.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => {
     b.setAttribute('aria-pressed', String((b.dataset.show === 'original') === on))
@@ -226,6 +255,170 @@ function showOriginal(on: boolean): void {
 
 previewSwitch.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => {
   b.addEventListener('click', () => showOriginal(b.dataset.show === 'original'))
+})
+
+// --- image/PDF import: page images → the AI → a new document to review ---------------------
+
+/** What the AI is asked to read: page images, or a text the rules could not read. */
+interface AiJob {
+  name: string
+  pages?: ChartPage[]
+  text?: string
+}
+
+const aiDialog = $<HTMLDialogElement>('ai-dialog')
+const aiSummary = $<HTMLElement>('ai-summary')
+const aiPages = $<HTMLElement>('ai-pages')
+const aiMessage = $<HTMLElement>('ai-message')
+const aiSend = $<HTMLButtonElement>('ai-send')
+const aiCancel = $<HTMLButtonElement>('ai-cancel')
+let aiJob: AiJob | null = null
+let aiBusy = false
+
+function aiSay(message: string, isError = false): void {
+  aiMessage.hidden = !message
+  aiMessage.textContent = message
+  aiMessage.classList.toggle('is-error', isError)
+}
+
+const checkedPages = (): ChartPage[] =>
+  (aiJob?.pages ?? []).filter(
+    (_, i) => aiPages.querySelector<HTMLInputElement>(`input[data-page="${i}"]`)?.checked
+  )
+
+/** Updates the send button: it opens the settings while there is no API key. */
+async function refreshAiSend(): Promise<void> {
+  if (!aiJob) return
+  if (!(await platform.hasApiKey())) {
+    aiSend.textContent = '설정 열기'
+    aiSend.dataset.action = 'settings'
+    aiSend.disabled = false
+    aiSay('API 키가 없어요. 설정에서 Anthropic API 키를 넣은 뒤 보내 주세요.', true)
+    return
+  }
+  aiSend.dataset.action = 'send'
+  const count = checkedPages().length
+  aiSend.textContent = aiJob.pages ? `${count}쪽 보내기` : '보내기'
+  aiSend.disabled = !!aiJob.pages && count === 0
+  aiSay('')
+}
+
+function setAiBusy(busy: boolean): void {
+  aiBusy = busy
+  aiCancel.textContent = busy ? '멈추기' : '취소'
+  aiPages.querySelectorAll('input').forEach((box) => (box.disabled = busy))
+  if (busy) {
+    aiSend.disabled = true
+    aiSend.textContent = '읽는 중…'
+  }
+}
+
+function openAiDialog(job: AiJob): void {
+  aiJob = job
+  const model = modelName(recognizeModel())
+  aiSummary.textContent = job.pages
+    ? `체크한 쪽을 Anthropic 서버로 보내서 AI(${model})가 읽어요. 인터넷이 필요하고, 쓴 만큼 API 요금이 나와요.`
+    : `이 글(${job.text?.length ?? 0}자)을 Anthropic 서버로 보내서 AI(${model})가 읽어요. 인터넷이 필요하고, 쓴 만큼 API 요금이 나와요.`
+  aiPages.replaceChildren(
+    ...(job.pages ?? []).map((page, i) => {
+      const label = document.createElement('label')
+      label.className = 'ai-page'
+      label.innerHTML = `<img alt=""><span><input type="checkbox" checked data-page="${i}"> ${i + 1}쪽</span>`
+      label.querySelector('img')!.src = page.url
+      return label
+    })
+  )
+  setAiBusy(false)
+  if (!aiDialog.open) aiDialog.showModal()
+  void refreshAiSend()
+}
+
+aiPages.addEventListener('change', () => void refreshAiSend())
+
+async function sendToAi(): Promise<void> {
+  const job = aiJob
+  if (!job) return
+  const pages = job.pages ? checkedPages() : []
+  // Ask before paying for an answer that would then be thrown away.
+  if (!(await confirmDiscard())) return
+  const model = recognizeModel()
+  setAiBusy(true)
+  aiSay('AI가 악보를 읽고 있어요. 보통 30초~2분쯤 걸려요.')
+  const result = await platform.recognize({
+    model,
+    system: RECOGNIZE_SYSTEM_PROMPT,
+    images: pages.map((page) => page.image),
+    prompt: job.pages
+      ? recognizeImagesPrompt(job.name, pages.length)
+      : recognizeTextPrompt(job.name, job.text ?? '')
+  })
+  setAiBusy(false)
+  if (!result.ok) {
+    await refreshAiSend()
+    aiSay(recognizeErrorMessage(result.failure), result.failure.kind !== 'cancelled')
+    return
+  }
+  let text = cleanRecognizedText(result.text)
+  if (result.truncated)
+    text += '// ? AI의 답이 길이 제한에서 끊겼어요. 끝부분을 원본과 비교해 주세요.\n'
+  aiDialog.close()
+  load(text, null, {
+    name: job.name,
+    images: job.pages && pages.map((page) => page.url),
+    text: job.text
+  })
+  const uncertain = countUncertain(editor.parsed().document)
+  const details = [
+    `AI(${modelName(model)})`,
+    ...(job.pages ? [`${pages.length}쪽`] : []),
+    uncertain ? `확인 필요(?) ${uncertain}곳` : '확인 필요 없음'
+  ]
+  originalInfo.textContent = `${job.name} · ${details.join(' · ')}`
+  status.textContent = `가져옴: ${details.join(' · ')}`
+}
+
+aiSend.addEventListener('click', async () => {
+  if (aiSend.dataset.action === 'settings') {
+    await openSettings()
+    await refreshAiSend()
+  } else void sendToAi()
+})
+
+aiCancel.addEventListener('click', () => {
+  if (aiBusy) platform.cancelRecognize()
+  else aiDialog.close()
+})
+
+// Esc while the AI is reading stops the request instead of hiding it.
+aiDialog.addEventListener('cancel', (e) => {
+  if (!aiBusy) return
+  e.preventDefault()
+  platform.cancelRecognize()
+})
+
+aiDialog.addEventListener('close', () => {
+  aiJob = null
+  aiPages.replaceChildren()
+})
+
+$<HTMLButtonElement>('import-chart').addEventListener('click', async () => {
+  const picked = await platform.importFile('chart')
+  if (!picked) return
+  importDialog.close()
+  aiJob = null
+  aiSummary.textContent = `${picked.file.name}: 쪽 그림을 만드는 중…`
+  aiPages.replaceChildren()
+  aiSay('')
+  aiSend.disabled = true
+  aiDialog.showModal()
+  try {
+    const { pages, total } = await chartPages(picked, MAX_RECOGNIZE_PAGES)
+    openAiDialog({ name: picked.file.name, pages })
+    if (total > pages.length)
+      aiSummary.textContent += ` (전체 ${total}쪽 중 앞 ${pages.length}쪽만 보낼 수 있어요.)`
+  } catch (error) {
+    aiSay(error instanceof Error ? error.message : String(error), true)
+  }
 })
 
 /** PDF of the current pages; warns first about errors and `?` marks. */

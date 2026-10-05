@@ -1,6 +1,8 @@
 // What the app needs from the device it runs on. The renderer talks only to this interface
 // (CLAUDE.md 구조 원칙); Electron is one implementation, Capacitor (Android) will be another.
 
+import type { RecognizeFailure } from '../core/recognize'
+
 /** A file chosen by the user. `id` is opaque: a path on desktop, a content URI on Android. */
 export interface FileRef {
   id: string
@@ -19,6 +21,33 @@ export interface ImportedFile {
   data: Uint8Array
 }
 
+/** What an import file picker offers: text charts, or images and PDFs for the AI. */
+export type ImportKind = 'text' | 'chart'
+
+/** A page image sent to the AI, base64 without the `data:` prefix. */
+export interface ChartImage {
+  mediaType: 'image/jpeg' | 'image/png'
+  data: string
+}
+
+/** One request to read a chart. The platform sends it with the stored API key. */
+export interface RecognizeRequest {
+  model: string
+  system: string
+  /** Page images in order; empty when only text is sent. */
+  images: ChartImage[]
+  prompt: string
+}
+
+export type RecognizeResult =
+  | {
+      ok: true
+      text: string
+      /** The answer hit the length limit and may be cut off. */
+      truncated: boolean
+    }
+  | { ok: false; failure: RecognizeFailure }
+
 export type DiscardChoice = 'save' | 'discard' | 'cancel'
 
 export interface DocumentState {
@@ -30,8 +59,8 @@ export interface DocumentState {
 export interface Platform {
   /** Asks the user for a file to open. null when cancelled. */
   openFile(): Promise<OpenedFile | null>
-  /** Asks for a text or ChordPro file to import. null when cancelled. */
-  importFile(): Promise<ImportedFile | null>
+  /** Asks for a file to import: text/ChordPro, or an image/PDF (`chart`). null when cancelled. */
+  importFile(kind: ImportKind): Promise<ImportedFile | null>
   /** Saves to `file`, or asks where when it is null. Returns where it saved, null when cancelled. */
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   /** Always asks where to save. Returns where it saved, null when cancelled. */
@@ -50,4 +79,15 @@ export interface Platform {
    * The handler resolves true to let it close.
    */
   onBeforeClose(handler: () => Promise<boolean>): void
+  /** Whether an Anthropic API key is stored on this device. The key itself never comes back. */
+  hasApiKey(): Promise<boolean>
+  /**
+   * Checks the key with Anthropic and stores it encrypted on this device; null deletes it.
+   * Resolves with a message for the user when it could not be stored, null on success.
+   */
+  setApiKey(key: string | null): Promise<string | null>
+  /** Sends page images (or text) to the AI with the stored key. Never throws. */
+  recognize(request: RecognizeRequest): Promise<RecognizeResult>
+  /** Stops the running recognize request; it then resolves as cancelled. */
+  cancelRecognize(): void
 }

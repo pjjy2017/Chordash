@@ -5,12 +5,23 @@ import { readFile, writeFile } from 'fs/promises'
 import { basename } from 'path'
 import { appTitle } from '../core/version'
 import { IPC } from '../platform/electron/bridge'
-import type { DiscardChoice, DocumentState, FileRef } from '../platform/types'
+import type { DiscardChoice, DocumentState, FileRef, ImportKind } from '../platform/types'
 
 const FILTERS = [
   { name: 'Chordash 악보', extensions: ['chord'] },
   { name: '모든 파일', extensions: ['*'] }
 ]
+
+const IMPORT_FILTERS: Record<ImportKind, Electron.FileFilter[]> = {
+  text: [
+    {
+      name: '텍스트 악보, ChordPro',
+      extensions: ['txt', 'cho', 'chopro', 'chordpro', 'crd', 'pro']
+    },
+    { name: '모든 파일', extensions: ['*'] }
+  ],
+  chart: [{ name: '악보 사진, PDF', extensions: ['png', 'jpg', 'jpeg', 'pdf'] }]
+}
 
 const dirtyWindows = new WeakSet<BrowserWindow>()
 const closing = new WeakSet<BrowserWindow>()
@@ -48,19 +59,13 @@ export function registerFileHandlers(): void {
     return { file: refFor(path), text }
   })
 
-  ipcMain.handle(IPC.importFile, async (e) => {
+  ipcMain.handle(IPC.importFile, async (e, kind: ImportKind) => {
     // Automated checks set this to skip the dialog; normal use never does.
     const testPath = process.env.CHORDASH_TEST_IMPORT_PATH
     if (testPath) return { file: refFor(testPath), data: new Uint8Array(await readFile(testPath)) }
     const result = await dialog.showOpenDialog(windowOf(e.sender), {
       title: '가져올 악보 파일',
-      filters: [
-        {
-          name: '텍스트 악보, ChordPro',
-          extensions: ['txt', 'cho', 'chopro', 'chordpro', 'crd', 'pro']
-        },
-        { name: '모든 파일', extensions: ['*'] }
-      ],
+      filters: IMPORT_FILTERS[kind],
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) return null

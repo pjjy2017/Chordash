@@ -7,7 +7,7 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
   </head>
 
@@ -22,11 +22,16 @@
             다른 이름으로 저장
           </button>
           <button data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">PDF</button>
-          <button data-command="import" title="다른 형식의 악보 텍스트를 가져오기">가져오기</button>
+          <button data-command="import" title="다른 형식의 악보, 악보 사진·PDF 가져오기">
+            가져오기
+          </button>
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
         <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
+        <button data-command="settings" class="settings-button" title="설정 (AI 키, 모델)">
+          설정
+        </button>
         <button
           id="toggle-preview"
           class="preview-toggle"
@@ -89,6 +94,7 @@
           </div>
           <div id="pages-host"></div>
           <pre id="original" class="original" hidden></pre>
+          <div id="original-images" class="original-images" hidden></div>
         </section>
       </main>
     </div>
@@ -97,7 +103,8 @@
         <h2>악보 가져오기</h2>
         <p>
           웹에서 복사한 코드 악보(가사 위에 코드), 마디선 텍스트(| C | Am |), ChordPro를 Chordash
-          문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요.
+          문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요. 손글씨·인쇄 악보의 사진이나
+          PDF는 <b>사진·PDF (AI)</b>로 가져와요.
         </p>
         <textarea
           id="import-text"
@@ -107,9 +114,60 @@
         ></textarea>
         <div class="import-actions">
           <button type="button" id="import-from-file">파일에서 가져오기…</button>
+          <button type="button" id="import-chart">사진·PDF (AI)…</button>
           <span class="spacer"></span>
           <button value="cancel">취소</button>
           <button type="button" id="import-paste" class="primary">붙여넣은 글 바꾸기</button>
+        </div>
+      </form>
+    </dialog>
+    <!-- Image/PDF import: pick the pages, send them to the AI only after the user says so. -->
+    <dialog id="ai-dialog" class="import-dialog ai-dialog">
+      <form method="dialog">
+        <h2>AI로 악보 읽기</h2>
+        <p id="ai-summary"></p>
+        <div id="ai-pages" class="ai-pages"></div>
+        <p id="ai-message" class="ai-message" hidden></p>
+        <div class="import-actions">
+          <span class="spacer"></span>
+          <button type="button" id="ai-cancel">취소</button>
+          <button type="button" id="ai-send" class="primary">보내기</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="settings-dialog" class="import-dialog settings-dialog">
+      <form method="dialog">
+        <h2>설정</h2>
+        <h3>AI 악보 읽기 (Anthropic API)</h3>
+        <p>
+          사진·PDF 악보를 읽으려면 Anthropic API 키가 필요해요. 키는
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer"
+            >Anthropic 콘솔</a
+          >에서 만들 수 있고, 쓴 만큼 요금이 나와요. 키는 이 컴퓨터에만 암호화해서 저장돼요.
+        </p>
+        <div class="settings-row">
+          <span>API 키</span>
+          <span id="key-state" class="key-state"></span>
+        </div>
+        <div class="settings-row">
+          <input
+            id="key-input"
+            type="password"
+            placeholder="sk-ant-… 붙여넣기"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="button" id="key-save">저장</button>
+          <button type="button" id="key-delete">지우기</button>
+        </div>
+        <p id="key-message" class="ai-message" hidden></p>
+        <label class="settings-row">
+          <span>AI 모델</span>
+          <select id="model-select"></select>
+        </label>
+        <div class="import-actions">
+          <span class="spacer"></span>
+          <button value="close" class="primary">닫기</button>
         </div>
       </form>
     </dialog>

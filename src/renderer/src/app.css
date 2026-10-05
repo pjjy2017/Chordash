@@ -503,3 +503,124 @@ body {
   line-height: 1.6;
   white-space: pre-wrap;
 }
+
+/* Image/PDF import: the original pages under "원본". */
+.original-images {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.original-images[hidden] {
+  display: none;
+}
+
+.original-images img {
+  max-width: 100%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+}
+
+/* --- AI dialog and settings ---------------------------------------------------- */
+
+.ai-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.ai-pages:empty {
+  display: none;
+}
+
+.ai-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ai-page img {
+  width: 100%;
+  aspect-ratio: 1 / 1.414;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+}
+
+.ai-page:has(input:not(:checked)) img {
+  opacity: 0.35;
+}
+
+.ai-message {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  color: #1d3f9e;
+  background: #eef3ff;
+  border-radius: 6px;
+}
+
+.ai-message.is-error {
+  color: #a01818;
+  background: #fdeeee;
+}
+
+.ai-message[hidden] {
+  display: none;
+}
+
+.import-actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.settings-dialog h3 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+}
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.settings-row input,
+.settings-row select {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px 8px;
+  font: inherit;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+}
+
+.settings-row button {
+  padding: 6px 14px;
+  font: inherit;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-row button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.key-state {
+  font-weight: 600;
+  color: #888;
+}
+
+.key-state.is-saved {
+  color: #1a7f37;
+}

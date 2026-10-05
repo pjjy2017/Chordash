@@ -6,7 +6,7 @@ import { IPC, type ElectronBridge } from '../platform/electron/bridge'
 
 const bridge: ElectronBridge = {
   openFile: () => ipcRenderer.invoke(IPC.open),
-  importFile: () => ipcRenderer.invoke(IPC.importFile),
+  importFile: (kind) => ipcRenderer.invoke(IPC.importFile, kind),
   saveFile: (file, text) => ipcRenderer.invoke(IPC.save, file, text),
   saveFileAs: (file, text) => ipcRenderer.invoke(IPC.saveAs, file, text),
   exportPdf: (html, suggestedName) => ipcRenderer.invoke(IPC.exportPdf, html, suggestedName),
@@ -15,7 +15,11 @@ const bridge: ElectronBridge = {
   onCloseRequested: (callback) => {
     ipcRenderer.on(IPC.closeRequested, () => callback())
   },
-  closeWindow: () => ipcRenderer.send(IPC.close)
+  closeWindow: () => ipcRenderer.send(IPC.close),
+  hasApiKey: () => ipcRenderer.invoke(IPC.hasApiKey),
+  setApiKey: (key) => ipcRenderer.invoke(IPC.setApiKey, key),
+  recognize: (request) => ipcRenderer.invoke(IPC.recognize, request),
+  cancelRecognize: () => ipcRenderer.send(IPC.cancelRecognize)
 }
 
 contextBridge.exposeInMainWorld('chordashBridge', bridge)
