@@ -7,6 +7,7 @@ import {
   type ChordItem,
   type PageBlock,
   type PageModel,
+  type RowBlock,
   type Theme
 } from '../../core'
 import { embeddedFontCss } from './fonts'
@@ -33,40 +34,100 @@ export function chordInnerHtml(chord: Chord, theme: Theme): string {
   )
 }
 
+/** A chord with its marks: `'` breath (V), `*` accent (>), `?` needs checking, `nc` → N.C. */
 function chordHtml(item: ChordItem, theme: Theme): string {
-  if (!item.chord) return `<span class="chord chord-error">${escapeHtml(item.source)}</span>`
-  return `<span class="chord">${chordInnerHtml(item.chord, theme)}</span>`
+  const classes = ['chord']
+  let body: string
+  if (item.noChord) {
+    classes.push('no-chord')
+    body = 'N.C.'
+  } else if (!item.chord) {
+    classes.push('chord-error')
+    body = escapeHtml(item.source)
+  } else {
+    body = chordInnerHtml(item.chord, theme)
+  }
+  if (item.uncertain) classes.push('uncertain')
+  const marks =
+    (item.breath ? '<span class="breath" title="브레스">V</span>' : '') +
+    (item.accent ? '<span class="accent" title="악센트">&gt;</span>' : '')
+  return `<span class="${classes.join(' ')}">${marks}${body}</span>`
 }
 
-/** Each bar draws its left barline; the last bar (or one ending in `.`) also draws its right one. */
+type BarlineKind = 'plain' | 'final' | 'repeat-start' | 'repeat-end' | 'none'
+
+/**
+ * Each bar draws its left barline, plus its right one when it is the last bar or the right side
+ * is special (final, repeat end). A bar after a final or repeat end leaves its left side to it.
+ */
 function barHtml(bar: Bar, index: number, bars: Bar[], theme: Theme): string {
-  const classes = ['bar']
-  if (index > 0 && bars[index - 1].final) classes.push('after-final')
-  if (bar.final) classes.push('final')
-  else if (index === bars.length - 1) classes.push('end')
+  const previous = index > 0 ? bars[index - 1] : null
+  const left: BarlineKind = bar.repeatStart
+    ? 'repeat-start'
+    : previous && (previous.final || previous.repeatEnd)
+      ? 'none'
+      : 'plain'
+  const right: BarlineKind = bar.final
+    ? 'final'
+    : bar.repeatEnd
+      ? 'repeat-end'
+      : index === bars.length - 1
+        ? 'plain'
+        : 'none'
+  const dots =
+    (bar.repeatStart ? '<span class="dots start"></span>' : '') +
+    (bar.repeatEnd ? '<span class="dots end"></span>' : '')
   const chords = bar.chords.map((c) => chordHtml(c, theme)).join('')
-  return `<div class="${classes.join(' ')}">${chords}</div>`
+  return `<div class="bar" data-left="${left}" data-right="${right}">${dots}${chords}</div>`
 }
 
 /** A song-form part (`a)` → A) in a square box. */
 export const partHtml = (label: string): string => `<span class="part">${escapeHtml(label)}</span>`
 
+/** Band above the bars: the ending bracket (`1.`) and texts over bars (`"Break"`). */
+function aboveHtml(block: RowBlock): string {
+  const { line, slots } = block
+  const ending =
+    line.ending !== null
+      ? `<div class="ending" style="width:calc(100% * ${line.bars.length} / ${slots})">${line.ending}.</div>`
+      : ''
+  const cells = line.bars
+    .map((b) => `<div class="above-cell">${b.texts.map(escapeHtml).join(' · ')}</div>`)
+    .join('')
+  const kind = line.ending !== null ? 'above has-ending' : 'above'
+  return `<div class="${kind}" style="--slots:${slots}">${ending}${cells}</div>`
+}
+
 function blockHtml(block: PageBlock, theme: Theme): string {
   if (block.type === 'label') {
+    const directive = block.directive
+      ? ` <span class="label-directive">${escapeHtml(block.directive)}</span>`
+      : ''
     const key = block.keyChange
       ? ` <span class="key-change">Key ${withAccidentals(block.keyChange)}</span>`
       : ''
-    return `<div class="label">${escapeHtml(block.name)}${key}</div>`
+    return `<div class="label">${escapeHtml(block.name)}${directive}${key}</div>`
   }
   if (block.type === 'form') {
     return `<div class="form">${block.parts.map((p) => partHtml(p.label)).join('')}</div>`
   }
+  if (block.type === 'directive') {
+    return `<div class="directive">${escapeHtml(block.text)}</div>`
+  }
   const { line } = block
+  const memos = line.memos
+    .map((m) => `<div class="memo memo-${m.color}">${escapeHtml(m.text)}</div>`)
+    .join('')
   const cue = line.cue !== null ? `<div class="cue">${escapeHtml(line.cue)}</div>` : ''
+  const bars = line.bars.map((b, i, all) => barHtml(b, i, all, theme)).join('')
   return (
-    `<div class="row${cue ? ' has-cue' : ''}">` +
+    `<div class="row" style="height:${block.height}mm">` +
+    memos +
+    (block.above ? aboveHtml(block) : '') +
+    `<div class="bar-row">` +
     (line.part ? partHtml(line.part.label) : '') +
-    `<div class="bars" style="--slots:${block.slots}">${line.bars.map((b, i, all) => barHtml(b, i, all, theme)).join('')}</div>` +
+    `<div class="bars" style="--slots:${block.slots}">${bars}</div>` +
+    `</div>` +
     cue +
     `</div>`
   )
@@ -87,7 +148,10 @@ function metricVars(theme: Theme): string {
     'label-h': m.sectionLabelHeight,
     'row-h': m.rowHeight,
     'cue-h': m.cueHeight,
-    'form-h': m.formHeight
+    'form-h': m.formHeight,
+    'memo-h': m.memoHeight,
+    'above-h': m.aboveHeight,
+    'directive-h': m.directiveHeight
   }
   return Object.entries(vars)
     .map(([k, v]) => `--${k}:${v}mm`)

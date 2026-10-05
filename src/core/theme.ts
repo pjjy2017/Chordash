@@ -20,6 +20,12 @@ export interface LayoutMetrics {
   cueHeight: number
   /** A line of song-form part boxes (`a) a) b) a)`). */
   formHeight: number
+  /** Each colour memo line above a row. */
+  memoHeight: number
+  /** Band above a row for an ending bracket and texts over bars (`"Break"`). */
+  aboveHeight: number
+  /** A standalone directive line (`"드럼 4마디"`). */
+  directiveHeight: number
   /** A row is at least this many bars wide; shorter rows leave the right side empty. */
   minBarsPerRow: number
 }
@@ -56,6 +62,9 @@ const A4_METRICS: LayoutMetrics = {
   rowHeight: 12,
   cueHeight: 4,
   formHeight: 9,
+  memoHeight: 4.5,
+  aboveHeight: 5,
+  directiveHeight: 6,
   minBarsPerRow: 4
 }
 

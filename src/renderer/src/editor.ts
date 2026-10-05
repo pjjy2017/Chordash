@@ -100,17 +100,27 @@ class ChordWidget extends WidgetType {
   }
 }
 
+/** Typed barline → symbol shown in the editor. */
+const BARLINE_SYMBOLS: Record<string, string> = {
+  ',': '|',
+  '.': '‖',
+  '.:': '‖:',
+  '||:': '‖:',
+  ':.': ':‖',
+  ':||': ':‖'
+}
+
 class BarlineWidget extends WidgetType {
-  constructor(readonly final: boolean) {
+  constructor(readonly symbol: string) {
     super()
   }
   eq(other: BarlineWidget): boolean {
-    return other.final === this.final
+    return other.symbol === this.symbol
   }
   toDOM(): HTMLElement {
     const el = document.createElement('span')
-    el.className = this.final ? 'cd-live-bar final' : 'cd-live-bar'
-    el.textContent = this.final ? '‖' : '|'
+    el.className = this.symbol === '|' ? 'cd-live-bar' : 'cd-live-bar strong'
+    el.textContent = this.symbol
     return el
   }
   ignoreEvent(): boolean {
@@ -161,7 +171,7 @@ const hintsEnabled = StateField.define<boolean>({
 /**
  * A bar (cell) is "being typed" while a cursor is in it or at its edges; its chords stay as typed,
  * with grey hints. Typing the comma that closes it — or moving to another cell or line — finishes
- * it, and its chords are shown as sheet music. `,` and `.` are always shown as barlines.
+ * it, and its chords are shown as sheet music. Barlines are always shown as symbols (| ‖ ‖: :‖).
  */
 function liveDecorations(state: EditorState): DecorationSet {
   const { document: doc, spans } = state.field(parsed)
@@ -193,6 +203,14 @@ function liveDecorations(state: EditorState): DecorationSet {
           closed ? offset(state.doc, item.line, bar.to) : line.to
         )
         for (const chord of bar.chords) {
+          if (chord.noChord && !editing) {
+            const from = offset(state.doc, item.line, chord.from)
+            const to = offset(state.doc, item.line, chord.to)
+            decorations.push(
+              Decoration.replace({ widget: new ChordWidget('N.C.', theme.id) }).range(from, to)
+            )
+            continue
+          }
           if (!chord.chord) continue // errors stay as typed, with a red underline
           const from = offset(state.doc, item.line, chord.from)
           const to = offset(state.doc, item.line, chord.to)
@@ -219,10 +237,9 @@ function liveDecorations(state: EditorState): DecorationSet {
     const from = offset(state.doc, span.line, span.from)
     const to = offset(state.doc, span.line, span.to)
     const text = state.doc.sliceString(from, to)
-    if (text !== ',' && text !== '.') continue
-    decorations.push(
-      Decoration.replace({ widget: new BarlineWidget(text === '.') }).range(from, to)
-    )
+    const symbol = BARLINE_SYMBOLS[text]
+    if (!symbol) continue
+    decorations.push(Decoration.replace({ widget: new BarlineWidget(symbol) }).range(from, to))
   }
   return Decoration.set(decorations, true)
 }

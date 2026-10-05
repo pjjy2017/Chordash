@@ -18,6 +18,15 @@ export interface RowBlock {
   line: BarLine
   /** Grid columns: bars in the row, but at least `minBarsPerRow`. */
   slots: number
+  /** Height of the band above the bars (ending bracket, texts over bars); 0 if none. */
+  above: number
+  height: number
+}
+
+/** A standalone directive line: `"드럼 4마디"`. */
+export interface DirectiveBlock {
+  type: 'directive'
+  text: string
   height: number
 }
 
@@ -28,7 +37,7 @@ export interface FormBlock {
   height: number
 }
 
-export type PageBlock = SectionLabelBlock | RowBlock | FormBlock
+export type PageBlock = SectionLabelBlock | RowBlock | FormBlock | DirectiveBlock
 
 export interface Page {
   /** 1-based. */
@@ -44,12 +53,17 @@ export interface PageModel {
   pages: Page[]
 }
 
+/** Row height, top to bottom: colour memos, the "above" band, the bars, the lyric cue. */
 function rowBlock(line: BarLine, m: LayoutMetrics): RowBlock {
+  const hasAbove = line.ending !== null || line.bars.some((b) => b.texts.length > 0)
+  const above = hasAbove ? m.aboveHeight : 0
   return {
     type: 'row',
     line,
     slots: Math.max(m.minBarsPerRow, line.bars.length),
-    height: m.rowHeight + (line.cue !== null ? m.cueHeight : 0)
+    above,
+    height:
+      line.memos.length * m.memoHeight + above + m.rowHeight + (line.cue !== null ? m.cueHeight : 0)
   }
 }
 
@@ -75,8 +89,13 @@ function sectionRuns(
     else if (item.type === 'bars') runs[runs.length - 1].blocks.push(rowBlock(item, m))
     else if (item.type === 'form') {
       runs[runs.length - 1].blocks.push({ type: 'form', parts: item.parts, height: m.formHeight })
+    } else if (item.type === 'directive') {
+      runs[runs.length - 1].blocks.push({
+        type: 'directive',
+        text: item.text,
+        height: m.directiveHeight
+      })
     }
-    // Standalone directives are drawn in Phase 6.
   }
   return runs
 }

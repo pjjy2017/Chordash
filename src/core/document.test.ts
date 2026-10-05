@@ -76,6 +76,37 @@ describe('bar lines', () => {
     expect(lines[1].bars[3].repeatEnd).toBe(true)
     expect(lines[1].bars).toHaveLength(4)
   })
+  it('reads .: and :. as repeat start and end', () => {
+    const line = barLines(parse('.: C, A-, F, G7 :.').document)[0]
+    expect(chordNames(line)).toEqual([['C'], ['Am'], ['F'], ['G7']])
+    expect(line.bars[0].repeatStart).toBe(true)
+    expect(line.bars[3].repeatEnd).toBe(true)
+    expect(line.bars[3].final).toBe(false)
+  })
+  it('mixes .: :. with commas and still reads a lone . as the final barline', () => {
+    const line = barLines(parse('C, D .: E, F :. G.').document)[0]
+    expect(line.bars.map((b) => [b.repeatStart, b.repeatEnd, b.final])).toEqual([
+      [false, false, false],
+      [false, false, false],
+      [true, false, false],
+      [false, true, false],
+      [false, false, true]
+    ])
+  })
+  it('reads 1end, 2end, end1, end2 as endings', () => {
+    const endings = (t: string): (number | null)[] =>
+      barLines(parse(t).document).map((l) => l.ending)
+    expect(endings('1end C, D :.\n2end C, D.')).toEqual([1, 2])
+    expect(endings('end1 C, D :.\nEND2 | C | D |')).toEqual([1, 2])
+    expect(chordNames(barLines(parse('end1 C, D').document)[0])).toEqual([['C'], ['D']])
+  })
+  it('marks the whole ending word for colouring', () => {
+    const t = 'end2 C'
+    expect(parse(t).spans.map((s) => `${s.kind}:${t.slice(s.from, s.to)}`)).toEqual([
+      'ending:end2',
+      'chord:C'
+    ])
+  })
   it('flags a whole line with a trailing ?', () => {
     const line = barLines(parse('| C | A- |?').document)[0]
     expect(line.uncertain).toBe(true)
@@ -292,5 +323,36 @@ describe('song-form parts', () => {
   })
   it('marks parts for colouring', () => {
     expect(parse('a) C').spans.map((s) => s.kind)).toEqual(['part', 'chord'])
+  })
+})
+
+describe('no chord and bar texts (Phase 6)', () => {
+  it('reads nc as N.C. (no chord), in any case', () => {
+    const chords = barLines(parse('F7, nc, NC, Bb7').document)[0].bars.flatMap((b) => b.chords)
+    expect(chords.map((c) => [c.source, c.noChord, c.error])).toEqual([
+      ['F7', false, null],
+      ['nc', true, null],
+      ['NC', true, null],
+      ['Bb7', false, null]
+    ])
+    expect(parse('F7, nc').diagnostics).toEqual([])
+  })
+  it('reads quoted text inside a bar as a mark shown above that bar', () => {
+    const bars = barLines(parse('F7, "Break" nc, "Drum fill, 2박" Bb7').document)[0].bars
+    expect(bars.map((b) => b.texts)).toEqual([[], ['Break'], ['Drum fill, 2박']])
+    expect(bars.map((b) => b.chords.map((c) => c.source))).toEqual([['F7'], ['nc'], ['Bb7']])
+  })
+  it('still reads a line that is only a quoted text as a directive', () => {
+    expect(parse('[A]\n"드럼 4마디"').document.sections[0].items[0]).toMatchObject({
+      type: 'directive',
+      text: '드럼 4마디'
+    })
+  })
+  it('reads a bar line that starts with a quoted text as bars', () => {
+    const line = barLines(parse('"Break" nc, F7').document)[0]
+    expect(line.bars.map((b) => b.texts)).toEqual([['Break'], []])
+  })
+  it('reports an unclosed quote in a bar', () => {
+    expect(errors('F7, "Break nc')).toEqual(['닫는 따옴표(")가 없음'])
   })
 })

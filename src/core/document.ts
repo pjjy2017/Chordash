@@ -24,6 +24,8 @@ export interface ChordItem {
   breath: boolean
   /** `?` before the chord (needs checking). */
   uncertain: boolean
+  /** `nc`: no chord (N.C.) — the band rests. */
+  noChord: boolean
   spec: ChordSpec | null
   chord: Chord | null
   error: string | null
@@ -36,6 +38,8 @@ export interface Bar {
   repeatEnd: boolean
   /** Final barline (`.`) after this bar. */
   final: boolean
+  /** Quoted texts in the bar (`"Break"`), shown above it. */
+  texts: string[]
   /** 0-based column range of the bar's content (between its barlines). */
   from: number
   to: number
@@ -153,8 +157,10 @@ const MEMO = /^\{\s*([^:{}\s]*)\s*:\s*(.*?)\s*\}$/
 /** `|` and `,` are plain barlines, `.` is a final barline. */
 type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
 
-// `1.` / `2.` followed by more on the line. A lone `1.` is a bar of degree 1 with a final barline.
-const ENDING = /^(\d)\.(?=\s*\S)\s*/
+// Ending at the start of a line, followed by more on the line: `1.`, `2.`, or the words `1end`,
+// `end1` (any case). A lone `1.` is a bar of degree 1 with a final barline; `1.:` is degree 1
+// then a repeat start, so a `.` followed by `.` or `:` is not an ending.
+const ENDING = /^(?:(\d)\.(?![.:])|(?:(\d)end|end(\d))(?=[\s|,]))(?=\s*\S)\s*/i
 
 class Parser {
   readonly doc: ChordDocument = { title: null, key: null, sections: [] }
@@ -235,11 +241,8 @@ class Parser {
       this.currentSection().items.push({ type: 'pageBreak', line: this.lineNo })
       return
     }
-    if (trimmed.startsWith('"')) {
+    if (/^"[^"]*"$/.test(trimmed)) {
       this.mark('directive', start, end)
-      if (trimmed.length < 2 || !trimmed.endsWith('"')) {
-        return this.report('error', start, end, '지시문의 닫는 따옴표(")가 없음')
-      }
       this.currentSection().items.push({
         type: 'directive',
         line: this.lineNo,
@@ -362,8 +365,8 @@ class Parser {
     }
     const ending = ENDING.exec(raw.slice(pos))
     if (ending) {
-      line.ending = Number(ending[1])
-      this.mark('ending', pos, pos + 2)
+      line.ending = Number(ending[1] ?? ending[2] ?? ending[3])
+      this.mark('ending', pos, pos + ending[0].trimEnd().length)
       pos += ending[0].length
     }
 
@@ -388,12 +391,23 @@ class Parser {
       let barline: Barline | null = null
       let width = 1
       const c = raw[i]
-      if (c === '(') depth++
+      if (c === '"') {
+        // Quoted text inside a bar (`"Drum fill, 2박"`): commas and dots in it are not barlines.
+        const close = raw.indexOf('"', i + 1)
+        if (close < 0 || close >= stop) {
+          this.report('error', i, stop, '닫는 따옴표(")가 없음')
+          i = stop
+        } else i = close + 1
+        continue
+      } else if (c === '(') depth++
       else if (c === ')') depth = Math.max(0, depth - 1)
       else if (depth > 0) {
         // inside an alteration list such as (b9,#11)
       } else if (raw.startsWith(':||', i)) [barline, width] = ['repeatEnd', 3]
       else if (raw.startsWith('||:', i)) [barline, width] = ['repeatStart', 3]
+      // `.` is the final barline, so `.:` (bar then dots) starts a repeat and `:.` ends one.
+      else if (raw.startsWith(':.', i)) [barline, width] = ['repeatEnd', 2]
+      else if (raw.startsWith('.:', i)) [barline, width] = ['repeatStart', 2]
       else if (raw.startsWith('||', i)) {
         this.report('error', i, i + 2, '알 수 없는 마디선 || (반복은 ||: 와 :||)')
         ;[barline, width] = ['plain', 2]
@@ -422,13 +436,23 @@ class Parser {
     right: Barline | null
   ): Bar {
     const chords: ChordItem[] = []
-    const token = /\S+/g
+    const texts: string[] = []
+    const token = /"[^"]*"?|\S+/g
     const content = raw.slice(from, to)
     for (let m = token.exec(content); m; m = token.exec(content)) {
+      if (m[0].startsWith('"')) {
+        // An unclosed quote was already reported while splitting the bars.
+        if (m[0].length > 1 && m[0].endsWith('"')) {
+          this.mark('directive', from + m.index, from + m.index + m[0].length)
+          texts.push(m[0].slice(1, -1).trim())
+        }
+        continue
+      }
       chords.push(this.parseChordToken(m[0], from + m.index))
     }
     return {
       chords,
+      texts,
       repeatStart: left === 'repeatStart',
       repeatEnd: right === 'repeatEnd',
       final: right === 'final',
@@ -448,6 +472,7 @@ class Parser {
         accent: false,
         breath: false,
         uncertain: false,
+        noChord: false,
         spec: null,
         chord: null,
         error
@@ -477,10 +502,12 @@ class Parser {
       accent,
       breath,
       uncertain,
+      noChord: /^nc$/i.test(source),
       spec: null,
       chord: null,
       error: null
     }
+    if (item.noChord) return item
     const spec = parseChordSpec(source)
     const resolved = spec.ok ? resolveChord(spec.value, this.currentKey) : spec
     if (spec.ok) item.spec = spec.value
@@ -495,7 +522,7 @@ class Parser {
   private parseCue(text: string, start: number, end: number): void {
     const last = this.section?.items[this.section.items.length - 1]
     if (!last || last.type !== 'bars')
-      return this.report('warning', start, end, '가사 큐(>) 바로 위에 마디 줄이 없음')
+      return this.report('warning', start, end, '가사 큐(l:) 바로 위에 마디 줄이 없음')
     if (last.cue !== null)
       return this.report('warning', start, end, '이 마디 줄에는 이미 가사 큐가 있음')
     last.cue = text

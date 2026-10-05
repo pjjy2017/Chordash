@@ -20,6 +20,9 @@ const M: LayoutMetrics = {
   rowHeight: 10,
   cueHeight: 5,
   formHeight: 10,
+  memoHeight: 4,
+  aboveHeight: 6,
+  directiveHeight: 7,
   minBarsPerRow: 4
 }
 
@@ -118,5 +121,23 @@ describe('song-form parts on the page', () => {
     const [page] = pagesOf('a) a) b) a)\n[A]\na) C, D')
     expect(page.blocks.map((b) => b.type)).toEqual(['form', 'label', 'row'])
     expect(page.blocks[0].height).toBe(10)
+  })
+})
+
+describe('Phase 6 heights', () => {
+  const heights = (text: string): number[] => pagesOf(text)[0].blocks.map((b) => b.height)
+  it('adds a line per colour memo, a band for endings and texts over bars', () => {
+    // row 10, cue 5, memo 4 each, above 6
+    expect(heights('{teal: a}\n{red: b}\n| C |')).toEqual([18])
+    expect(heights('1. C, D')).toEqual([16])
+    expect(heights('C, "Break" nc')).toEqual([16])
+    expect(heights('{teal: a}\n1. C\nl: cue')).toEqual([25])
+  })
+  it('gives standalone directives their own block', () => {
+    expect(pagesOf('[A]\n"드럼 4마디"\n| C |')[0].blocks.map((b) => b.type)).toEqual([
+      'label',
+      'directive',
+      'row'
+    ])
   })
 })

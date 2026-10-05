@@ -91,14 +91,6 @@ body {
   margin-top: var(--section-gap);
 }
 
-.row {
-  height: var(--row-h);
-}
-
-.row.has-cue {
-  height: calc(var(--row-h) + var(--cue-h));
-}
-
 /* Song-form part boxes (a) → A). On a bar line the box sits in the left margin. */
 .part {
   display: inline-flex;
@@ -115,14 +107,99 @@ body {
   border-radius: 0.6mm;
 }
 
-.row {
+/* A row, top to bottom: colour memos, the "above" band, the bars, the lyric cue.
+   Its total height comes from layout() (inline style). */
+.bar-row {
   position: relative;
+  height: var(--row-h);
 }
 
-.row > .part {
+.bar-row > .part {
   position: absolute;
   right: calc(100% + 2mm);
   top: calc((var(--row-h) - 6.4mm) / 2);
+}
+
+.memo {
+  height: var(--memo-h);
+  padding-left: 1.5mm;
+  font-size: 3.4mm;
+  font-weight: 600;
+  line-height: var(--memo-h);
+  white-space: nowrap;
+}
+
+.memo-teal {
+  color: #0f8b8d;
+}
+.memo-red {
+  color: #d0312d;
+}
+.memo-blue {
+  color: #2563eb;
+}
+.memo-green {
+  color: #15803d;
+}
+.memo-orange {
+  color: #e06c00;
+}
+.memo-purple {
+  color: #7c3aed;
+}
+.memo-gray {
+  color: #6b7280;
+}
+
+/* Ending bracket and texts over bars share a band laid out like the bars below it. */
+.above {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--slots), 1fr);
+  height: var(--above-h);
+}
+
+.above-cell {
+  align-self: end;
+  padding: 0 0 0.6mm 2mm;
+  font-size: 3.2mm;
+  font-style: italic;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ending {
+  position: absolute;
+  left: 0;
+  top: 0.6mm;
+  bottom: 0;
+  box-sizing: border-box;
+  padding: 0.3mm 0 0 1.2mm;
+  font-size: 3.2mm;
+  font-weight: 700;
+  border-top: 0.35mm solid #111;
+  border-left: 0.35mm solid #111;
+}
+
+.above.has-ending .above-cell:first-of-type {
+  padding-left: 7mm;
+}
+
+/* Standalone directive line: "드럼 4마디". */
+.directive {
+  height: var(--directive-h);
+  display: flex;
+  align-items: center;
+  font-size: 3.6mm;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.label-directive {
+  margin-left: 2.5mm;
+  font-size: 3.4mm;
+  font-style: italic;
+  font-weight: 500;
 }
 
 /* A line of parts only: the song form, e.g. A A B A. */
@@ -147,11 +224,10 @@ body {
   padding: 0 2mm;
 }
 
-/* Barlines: shorter than the row and bold, centred on the bar edge. */
+/* Barlines: shorter than the row and bold, centred on the bar edge.
+   ::before draws a bar's left barline, ::after its right one (see barHtml). */
 .bar::before,
-.bar.end::after,
-.bar.final::after {
-  content: '';
+.bar::after {
   position: absolute;
   top: 50%;
   height: var(--barline-h);
@@ -159,22 +235,23 @@ body {
   background: #111;
 }
 
-.bar::before {
+.bar[data-left='plain']::before,
+.bar[data-left='repeat-start']::before {
+  content: '';
   left: calc(var(--barline-w) / -2);
   width: var(--barline-w);
 }
 
-.bar.after-final::before {
-  display: none;
-}
-
-.bar.end::after {
+.bar[data-right='plain']::after {
+  content: '';
   right: calc(var(--barline-w) / -2);
   width: var(--barline-w);
 }
 
-/* Final barline: thin + thick, ending at the bar edge. */
-.bar.final::after {
+/* Final barline and repeat end: thin + thick, ending at the bar edge. */
+.bar[data-right='final']::after,
+.bar[data-right='repeat-end']::after {
+  content: '';
   right: calc(var(--barline-w) / -2);
   width: calc(var(--barline-w) * 3);
   background: linear-gradient(
@@ -183,6 +260,45 @@ body {
     transparent calc(var(--barline-w) * 0.5) calc(var(--barline-w) * 1.3),
     #111 calc(var(--barline-w) * 1.3)
   );
+}
+
+/* Repeat start: thick + thin, starting at the bar edge. */
+.bar[data-left='repeat-start']::before {
+  width: calc(var(--barline-w) * 3);
+  background: linear-gradient(
+    to right,
+    #111 0 calc(var(--barline-w) * 1.7),
+    transparent calc(var(--barline-w) * 1.7) calc(var(--barline-w) * 2.5),
+    #111 calc(var(--barline-w) * 2.5)
+  );
+}
+
+/* Repeat dots, beside the thin line. */
+.dots {
+  position: absolute;
+  top: 50%;
+  width: 1.1mm;
+  height: 4.2mm;
+  transform: translateY(-50%);
+  background:
+    radial-gradient(circle, #111 0.5mm, transparent 0.55mm) center top / 1.1mm 1.1mm no-repeat,
+    radial-gradient(circle, #111 0.5mm, transparent 0.55mm) center bottom / 1.1mm 1.1mm no-repeat;
+}
+
+.dots.start {
+  left: calc(var(--barline-w) * 3);
+}
+
+.dots.end {
+  right: calc(var(--barline-w) * 3);
+}
+
+.bar[data-left='repeat-start'] {
+  padding-left: calc(2mm + var(--barline-w) * 3);
+}
+
+.bar[data-right='repeat-end'] {
+  padding-right: calc(2mm + var(--barline-w) * 3);
 }
 
 /* Chords share the bar evenly, each starting at its own share; a long chord takes the room
@@ -224,6 +340,46 @@ body {
 
 .chord sup .acc {
   margin: 0 0.08em;
+}
+
+/* Marks on a chord: accent (*) above it, breath (') before it, N.C., needs checking (?). */
+.chord {
+  position: relative;
+}
+
+.chord .accent,
+.chord .breath {
+  position: absolute;
+  top: -0.62em;
+  font-size: 0.55em;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chord .accent {
+  left: 0.12em;
+  transform: scaleX(1.3);
+}
+
+.chord .breath {
+  left: -0.05em;
+  top: -0.7em;
+  font-size: 0.5em;
+}
+
+/* With both marks, the accent moves over the rest of the chord. */
+.chord .breath + .accent {
+  left: 0.75em;
+}
+
+.chord.no-chord {
+  font-size: 0.8em;
+  letter-spacing: 0.02em;
+}
+
+.chord.uncertain {
+  text-decoration: underline dotted #e06c00;
+  text-underline-offset: 0.18em;
 }
 
 .chord .bass {
