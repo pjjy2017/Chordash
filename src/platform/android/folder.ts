@@ -188,3 +188,54 @@ export async function chooseInFolder(
     dialog.showModal()
   })
 }
+
+/**
+ * Asks for a file name in the app's own dialog: Android's built-in prompt leaves out the
+ * suggested name. Enter saves; the name comes back without changes, null when cancelled.
+ */
+export function askFileName(suggested: string, extension: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const dialog = document.createElement('dialog')
+    dialog.className = 'import-dialog folder-dialog'
+    const form = document.createElement('form')
+    form.method = 'dialog'
+    const heading = document.createElement('h2')
+    heading.textContent = '파일 이름'
+    const where = document.createElement('p')
+    where.textContent = `휴대폰의 문서/${FOLDER} 폴더에 ${extension} 파일로 저장해요.`
+    const input = document.createElement('input')
+    input.className = 'file-name-input'
+    input.value = suggested
+    input.spellcheck = false
+    input.enterKeyHint = 'done'
+    const actions = document.createElement('div')
+    actions.className = 'import-actions'
+    const spacer = document.createElement('span')
+    spacer.className = 'spacer'
+    const cancel = document.createElement('button')
+    cancel.type = 'button'
+    cancel.textContent = '취소'
+    const save = document.createElement('button')
+    save.className = 'primary'
+    save.textContent = '저장'
+    actions.append(spacer, cancel, save)
+    form.append(heading, where, input, actions)
+    dialog.append(form)
+
+    let result: string | null = null
+    cancel.addEventListener('click', () => dialog.close())
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+      if (!input.value.trim()) return input.focus()
+      result = input.value
+      dialog.close()
+    })
+    dialog.addEventListener('close', () => {
+      dialog.remove()
+      resolve(result)
+    })
+    document.body.append(dialog)
+    dialog.showModal()
+    input.select()
+  })
+}

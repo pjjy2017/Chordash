@@ -278,3 +278,13 @@
 - **뒤로 가기 버튼:** 열린 창(대화상자)이 있으면 닫기(Esc와 같음 — AI가 읽는 중이면 멈춤), 없으면 저장 안 한 내용을 확인한 뒤 앱 종료.
 - **개발용:** `npm run dev:web` 후 `?platform=android`를 붙이면 브라우저에서 안드로이드 화면을 흉내 냄(플러그인이 웹 대체 구현으로 동작, 파일은 브라우저 저장소). 개발 모드에서만.
 - **빌드:** `npm run android:apk` → `android/app/build/outputs/apk/debug/app-debug.apk`. Android Studio(JDK·SDK 포함)가 필요. 디버그 서명은 이 PC의 디버그 키로 하므로, 같은 PC에서 만든 APK끼리만 덮어 설치(업데이트) 가능.
+
+## 2026-10-07 (Phase 12 — APK 빌드, 로고)
+- **로고 확정(사용자 결정, 시안 G2):** 남색(#1d3f9e) 둥근 네모 안에 흰 마디선 두 줄 — 윗줄 `| |`, 아랫줄 `| ‖`(가는 선 + 굵은 선의 마침줄). 마침줄의 굵은 선 오른쪽 끝을 윗줄 오른쪽 마디선의 오른쪽 끝에 맞춤. 앱의 핵심(마디선 입력, `.` = 마침줄)을 그대로 보여 주고 작게 봐도 또렷함. 원본은 `resources/logo.svg`.
+- **아이콘 만들기:** `npm run icons`(scripts/make-icons.cjs) — Electron의 Chromium으로 SVG를 PNG로 그려서 데스크톱(`resources/icon.png`, `build/icon.png`, `build/icon.ico`), 안드로이드(런처 아이콘·둥근 아이콘·적응형 아이콘 앞면 + 배경색, 시작 화면), 웹(`favicon.svg`)을 한 번에 만듦. 이미지 도구(`@capacitor/assets`/sharp)는 설치 스크립트 허용이 새로 필요해서 쓰지 않음.
+- **Gradle 9.2.1로 올림:** Android Studio에 들어 있는 Java가 25인데, Capacitor 기본 Gradle 8.14는 Java 25에서 돌지 않음. 일부 플러그인은 Java 21로 컴파일하도록 정해져 있어서, Gradle의 foojay 도구(settings.gradle)로 Java 21을 필요할 때 자동으로 내려받게 함.
+- **빌드 환경:** `JAVA_HOME`을 Android Studio의 Java(`C:\Program Files\Android\Android Studio\jbr`)로, `android/local.properties`(저장소에 안 올림)에 SDK 위치를 적음.
+- **파일 이름 묻기를 앱 안의 창으로:** 안드로이드 WebView의 기본 입력 창(`window.prompt`)이 기본값(곡 제목)을 보여 주지 않고, 키보드가 뜨면 창이 움직여 누르기 어려움. 앱 안의 대화상자로 바꿔 곡 제목을 미리 채우고 Enter로 저장.
+- **인쇄 안내 문구:** 안드로이드 인쇄 화면은 기기 설정에 따라 종이가 Letter로 잡힐 수 있어서 "A4로 골라 주세요"로 바꿈(웹과 공통 문구).
+- **에뮬레이터 확인:** 앱 실행, 곡 입력, 저장(문서/Chordash 폴더에 파일 생성 확인), 목록에서 열기, 뒤로 가기로 창 닫기, PDF 인쇄 화면(글꼴 포함 미리보기)까지 확인.
+- APK는 `dist\Chordash-android.apk`로 복사해 둠(저장소에는 안 올림).

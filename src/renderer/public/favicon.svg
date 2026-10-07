@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140">
+  <!-- Chordash logo (DECISIONS: 로고 G2): two rows of barlines, the lower one ending in a final barline. -->
+  <rect width="140" height="140" rx="30" fill="#1d3f9e"/>
+  <g fill="#fff">
+    <rect x="32" y="22" width="10" height="40" rx="2"/>
+    <rect x="98" y="22" width="10" height="40" rx="2"/>
+    <rect x="32" y="78" width="10" height="40" rx="2"/>
+    <rect x="83" y="78" width="5" height="40" rx="1"/>
+    <rect x="94" y="78" width="14" height="40" rx="2"/>
+  </g>
+</svg>

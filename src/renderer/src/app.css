@@ -742,3 +742,12 @@ body {
 .folder-files li.chosen {
   background: #eef3ff;
 }
+
+.file-name-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+}

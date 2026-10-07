@@ -12,7 +12,14 @@ import type { RecognizeFailure } from '../../core/recognize'
 import { formatSetlist, parseSetlist } from '../../core/setlist'
 import type { FileRef, ImportKind, Platform, RecognizeResult, SetlistSong } from '../types'
 import { pickWithInput, printTip, withoutBom, type PickerType } from '../web'
-import { chooseInFolder, existsInFolder, readFromFolder, safeName, writeToFolder } from './folder'
+import {
+  askFileName,
+  chooseInFolder,
+  existsInFolder,
+  readFromFolder,
+  safeName,
+  writeToFolder
+} from './folder'
 
 const SONG = '.chord'
 const SETLIST = '.setlist'
@@ -53,7 +60,7 @@ async function readText(file: FileRef): Promise<string | null> {
 /** Asks for a file name in the folder; confirms before replacing another file. */
 async function askName(suggested: string, extension: string): Promise<string | null> {
   for (;;) {
-    const typed = window.prompt(`파일 이름 (문서/Chordash 폴더에 저장)`, suggested)
+    const typed = await askFileName(suggested, extension)
     if (typed === null) return null
     const name = safeName(typed, extension)
     if (!(await existsInFolder(name))) return name
