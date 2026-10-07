@@ -62,3 +62,14 @@ npm run build:web     # GitHub Pages에 올릴 파일을 dist-web 폴더에 만�
 npm run preview:web   # 만든 dist-web을 브라우저로 미리 보기
 ```
 - GitHub에 올리면(`main` 브랜치) GitHub Actions가 자동으로 테스트·빌드·배포합니다. 저장소 **Settings → Pages → Source**를 **GitHub Actions**로 한 번 맞춰 두어야 합니다.
+
+## 9. 안드로이드 앱 (Phase 12부터)
+1. **Android Studio**를 설치합니다: https://developer.android.com/studio → 내려받아 기본값으로 설치.
+2. Android Studio를 한 번 실행해 첫 설정 마법사에서 **Standard**를 고르고, SDK 내려받기가 끝날 때까지 기다립니다(몇 GB, 시간이 걸림).
+3. APK 만들기:
+```powershell
+cd C:\src\chordash
+npm run android:apk   # 웹 빌드 → 안드로이드 프로젝트에 복사 → APK 생성
+```
+- 결과: `android\app\build\outputs\apk\debug\app-debug.apk` — 휴대폰에 옮겨 설치합니다(처음엔 "출처를 알 수 없는 앱 설치 허용"이 필요).
+- 명령이 Java나 SDK를 못 찾으면 Claude Code에 알려 주세요(설치 위치를 이어 줍니다).

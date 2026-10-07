@@ -1,6 +1,6 @@
 # ROADMAP
 
-**현재 단계: Phase 11** (구현 완료 — 사용자 확인 대기)
+**현재 단계: Phase 12** (코드 완료 — Android Studio 설치 후 APK 빌드·휴대폰 확인 대기)
 
 각 단계는 "완료 기준"을 사용자가 직접 확인하면 끝납니다.
 
@@ -82,8 +82,16 @@
 - [x] 곡별 키 바꾸기(PDF에서만 조옮김)
 - **완료 기준:** 3곡 셋리스트를 저장했다가 다시 열어 PDF로 뽑으면 목차의 쪽 번호와 각 곡의 키가 맞다.
 
-## Phase 11 — 웹 버전 (GitHub Pages)
+## Phase 11 — 웹 버전 (GitHub Pages) ✅ https://pjjy2017.github.io/Chordash/
 - [x] 웹 플랫폼 구현체(`src/platform/web`): 브라우저 파일 열기·저장(Chrome·Edge는 같은 파일에 다시 저장, 그 밖은 다운로드), 인쇄 창으로 PDF
 - [x] 웹에서 못 하는 기능 숨기기(AI 가져오기, 설정), 셋리스트는 곡 내용을 담아 저장
 - [x] 웹 빌드(`npm run build:web`)와 GitHub Actions 자동 배포
 - **완료 기준:** GitHub Pages 주소에서 곡을 입력·저장·다시 열기, PDF 저장, 셋리스트 PDF가 된다.
+
+## Phase 12 — 안드로이드 앱 (Capacitor)
+- [x] 안드로이드 플랫폼 구현체(`src/platform/android`): 문서/Chordash 폴더에 저장·목록에서 열기·공유, 다른 곳의 파일은 시스템 파일 선택 창
+- [x] PDF는 안드로이드 인쇄 화면("PDF로 저장"), 뒤로 가기 버튼(창 닫기 → 저장 확인 후 종료)
+- [x] AI 가져오기: 키는 안드로이드 보안 저장소(Keystore), 호출은 네이티브 HTTP, 사진은 카메라로도
+- [x] Capacitor 프로젝트(`android/`), `npm run android:apk`
+- [ ] Android Studio 설치 → APK 빌드 → 휴대폰 설치·확인
+- **완료 기준:** 휴대폰에서 곡 입력·저장·다시 열기, PDF 저장, 셋리스트 PDF, 사진으로 AI 가져오기가 된다.

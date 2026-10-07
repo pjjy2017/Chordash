@@ -260,3 +260,21 @@
 - **PDF(웹):** 숨긴 iframe에 데스크톱과 같은 인쇄용 HTML(글꼴 내장)을 넣고 글꼴이 준비되면 `print()`. 페이지 보안 정책에 `font-src data:` 추가(내장 글꼴).
 - **좁은 화면 툴바:** 버튼 글자가 한 글자씩 쪼개지던 것을 한 줄 버튼 + 옆으로 밀기로 고침(웹은 휴대폰에서 많이 쓰므로).
 - **빌드·배포:** `vite.web.config.ts`(`base: './'` — `https://아이디.github.io/저장소/` 아래에서도 동작), `npm run build:web` → `dist-web`. GitHub Actions(`.github/workflows/pages.yml`)가 main에 올릴 때마다 테스트 → 빌드 → Pages 배포. 웹 빌드에는 Electron이 필요 없어 설치 스크립트 없이(`npm ci --ignore-scripts`) 설치.
+
+## 2026-10-07 (Phase 11 확인, Phase 12 — 안드로이드 앱)
+- Phase 11: 사용자가 https://pjjy2017.github.io/Chordash/ 에서 정상 동작 확인. GitHub 저장소에 먼저 올려 두었던 예전 페이지(index.html, 글꼴)는 저장 기록에만 남기고 새 앱으로 교체(사용자 결정). 저장 기록의 메일 주소는 그대로 공개(사용자 결정).
+
+사용자 결정(Phase 12):
+- **곡 보관:** 휴대폰의 **문서/Chordash 폴더**. "열기"는 그 폴더의 곡 목록(최근 순)을 보여 주고, 카톡·드라이브 등의 파일은 "다른 곳에서 가져오기…"(시스템 파일 선택 창). 목록에서 곡 파일을 "공유"로 보낼 수 있음.
+- **AI 가져오기 넣음:** 키는 안드로이드 보안 저장소(Keystore, `@aparajita/capacitor-secure-storage`)에 암호화 보관. 사진은 파일 선택 창에서 카메라로 바로 찍을 수도 있음.
+- **배포:** APK 파일 직접 설치(플레이 스토어는 나중에 필요하면).
+
+구현:
+- **Capacitor 8**, 앱 ID `com.chordash.app`. 웹 빌드(`dist-web`)를 그대로 앱에 넣음 — 같은 화면 코드, 플랫폼만 `src/platform/android`. 시작할 때 Electron → Capacitor(네이티브) → 웹 순서로 고름.
+- **파일:** `@capacitor/filesystem`의 Documents 폴더. 새로 저장하면 곡 제목을 기본 이름으로 묻고, 같은 이름이 있으면 바꿔 쓸지 확인. 다른 곳에서 연 파일을 "저장"하면 폴더에 새로 저장. 안드로이드 9 이하용 저장소 권한만 매니페스트에 추가(10 이상은 앱이 만든 파일에 권한 불필요). 앱을 지웠다 다시 설치하면 예전 파일은 "다른 곳에서 가져오기"로 열어야 할 수 있음(안드로이드 저장소 규칙).
+- **셋리스트:** 폴더 안의 곡은 이름으로 적고 다시 읽음(데스크톱과 같음). 다른 곳에서 넣은 곡만 셋리스트에 내용을 담음(Phase 11 형식).
+- **PDF:** `@capgo/capacitor-printer`의 `printHtml` → 안드로이드 인쇄 화면에서 "PDF로 저장". 처음 한 번 사용법 안내(웹과 같은 문구).
+- **AI 호출:** Capacitor 네이티브 HTTP(`CapacitorHttp`)로 Anthropic API를 직접 부름(브라우저 CORS 제한 없음, SDK 불필요). 키 저장 전 모델 목록 요청으로 확인. HTTP 요청은 중간에 끊을 수 없어서 "멈추기"는 기다리지 않고 바로 취소로 처리하고 늦게 온 답은 버림. pdf.js 보조 파일은 웹 빌드에도 넣음(빌드 설정 플러그인을 `vite.pdfjs.ts`로 분리해 공유).
+- **뒤로 가기 버튼:** 열린 창(대화상자)이 있으면 닫기(Esc와 같음 — AI가 읽는 중이면 멈춤), 없으면 저장 안 한 내용을 확인한 뒤 앱 종료.
+- **개발용:** `npm run dev:web` 후 `?platform=android`를 붙이면 브라우저에서 안드로이드 화면을 흉내 냄(플러그인이 웹 대체 구현으로 동작, 파일은 브라우저 저장소). 개발 모드에서만.
+- **빌드:** `npm run android:apk` → `android/app/build/outputs/apk/debug/app-debug.apk`. Android Studio(JDK·SDK 포함)가 필요. 디버그 서명은 이 PC의 디버그 키로 하므로, 같은 PC에서 만든 APK끼리만 덮어 설치(업데이트) 가능.

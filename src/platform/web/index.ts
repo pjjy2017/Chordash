@@ -8,7 +8,7 @@ import { formatSetlist, parseSetlist } from '../../core/setlist'
 import { appTitle } from '../../core/version'
 import type { FileRef, OpenedFile, Platform, SetlistSong } from '../types'
 
-interface PickerType {
+export interface PickerType {
   description: string
   accept: Record<string, string[]>
 }
@@ -46,10 +46,10 @@ const newRef = (name: string): FileRef => ({ id: `web-${nextId++}`, name })
 const isAbort = (error: unknown): boolean =>
   error instanceof DOMException && error.name === 'AbortError'
 
-const withoutBom = (text: string): string => text.replace(/^\uFEFF/, '')
+export const withoutBom = (text: string): string => text.replace(/^\uFEFF/, '')
 
 /** A plain file picker, for browsers without the File System Access API. */
-function pickWithInput(type: PickerType, multiple: boolean): Promise<File[]> {
+export function pickWithInput(type: PickerType, multiple: boolean): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -144,7 +144,7 @@ async function readSong(file: FileRef): Promise<string | null> {
 
 /** Shown before the first print of this browser: how to get a PDF out of the print dialog. */
 const PRINT_TIP_SHOWN = 'chordash.printTipShown'
-function printTip(): void {
+export function printTip(): void {
   try {
     if (localStorage.getItem(PRINT_TIP_SHOWN)) return
     localStorage.setItem(PRINT_TIP_SHOWN, '1')

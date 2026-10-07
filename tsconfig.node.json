@@ -3,6 +3,9 @@
   "include": [
     "electron.vite.config.*",
     "vitest.config.*",
+    "vite.web.config.*",
+    "vite.pdfjs.*",
+    "capacitor.config.*",
     "src/main/**/*",
     "src/preload/**/*",
     "src/core/**/*",

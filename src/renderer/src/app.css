@@ -716,3 +716,29 @@ body {
 [data-needs][hidden] {
   display: none !important;
 }
+
+/* Android: the Documents/Chordash file list. */
+.folder-dialog p {
+  margin: 0 0 6px;
+}
+
+.folder-files li {
+  gap: 8px;
+}
+
+.folder-files .folder-file {
+  padding: 6px 4px;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+}
+
+.folder-files small {
+  color: #888;
+  white-space: nowrap;
+}
+
+.folder-files li.chosen {
+  background: #eef3ff;
+}
