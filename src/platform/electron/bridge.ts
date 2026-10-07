@@ -8,8 +8,10 @@ import type {
   ImportedFile,
   ImportKind,
   OpenedFile,
+  OpenedSetlist,
   RecognizeRequest,
-  RecognizeResult
+  RecognizeResult,
+  Setlist
 } from '../types'
 
 export interface ElectronBridge {
@@ -24,6 +26,10 @@ export interface ElectronBridge {
   onCloseRequested(callback: () => void): void
   /** Closes the window without asking again. */
   closeWindow(): void
+  pickSongs(): Promise<FileRef[]>
+  readSong(file: FileRef): Promise<string | null>
+  openSetlist(): Promise<OpenedSetlist | null>
+  saveSetlist(file: FileRef | null, setlist: Setlist): Promise<FileRef | null>
   hasApiKey(): Promise<boolean>
   setApiKey(key: string | null): Promise<string | null>
   recognize(request: RecognizeRequest): Promise<RecognizeResult>
@@ -40,6 +46,10 @@ export const IPC = {
   documentState: 'doc:state',
   closeRequested: 'app:closeRequested',
   close: 'app:close',
+  pickSongs: 'setlist:pickSongs',
+  readSong: 'setlist:readSong',
+  openSetlist: 'setlist:open',
+  saveSetlist: 'setlist:save',
   hasApiKey: 'ai:hasKey',
   setApiKey: 'ai:setKey',
   recognize: 'ai:recognize',

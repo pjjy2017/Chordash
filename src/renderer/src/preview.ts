@@ -158,32 +158,88 @@ function metricVars(theme: Theme): string {
     .join(';')
 }
 
+const pageNumberHtml = (n: number | null): string =>
+  n === null ? '' : `<div class="page-number">${n}</div>`
+
+/** The pages of one song. With `firstNumber`, pages carry numbers from it (setlists). */
+function songPagesHtml(model: PageModel, theme: Theme, firstNumber: number | null): string {
+  return model.pages
+    .map(
+      (page, i) =>
+        `<section class="page">` +
+        `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
+        (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
+        `</header>` +
+        `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
+        pageNumberHtml(firstNumber === null ? null : firstNumber + i) +
+        `</section>`
+    )
+    .join('')
+}
+
+const pagesHtml = (inner: string, theme: Theme): string =>
+  `<div class="pages theme-${theme.id}" style="${metricVars(theme)}">${inner}</div>`
+
 export function renderPages(model: PageModel, theme: Theme): string {
-  const pages = model.pages.map(
-    (page) =>
-      `<section class="page">` +
-      `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
-      (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
-      `</header>` +
-      `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
+  return pagesHtml(songPagesHtml(model, theme, null), theme)
+}
+
+/** One row of a setlist's contents page. */
+export interface ContentsRow {
+  title: string
+  /** Key it is printed in, e.g. `G`; null when the song has no key. */
+  key: string | null
+  /** The song's own key when it is printed in another one. */
+  originalKey: string | null
+  page: number
+}
+
+/** A whole setlist: contents page(s), then every song from a new page, all pages numbered. */
+export function renderSetlistPages(
+  title: string,
+  rows: ContentsRow[],
+  contentsPages: number,
+  songs: { model: PageModel; firstPage: number }[],
+  theme: Theme
+): string {
+  const perPage = Math.ceil(rows.length / contentsPages) || 1
+  const contents = Array.from({ length: contentsPages }, (_, i) => {
+    const items = rows
+      .slice(i * perPage, (i + 1) * perPage)
+      .map(
+        (row, j) =>
+          `<li><span class="setlist-no">${i * perPage + j + 1}</span>` +
+          `<span class="setlist-song">${escapeHtml(row.title)}</span>` +
+          `<span class="setlist-key">${row.key ? withAccidentals(row.key) : ''}` +
+          (row.originalKey ? ` <small>(원래 ${withAccidentals(row.originalKey)})</small>` : '') +
+          `</span><span class="setlist-page">${row.page}</span></li>`
+      )
+    return (
+      `<section class="page setlist-contents">` +
+      `<header class="${i === 0 ? 'title' : 'heading'}">${escapeHtml(i === 0 ? title : `${title} ${i + 1}`)}</header>` +
+      `<ol>${items.join('')}</ol>` +
+      pageNumberHtml(i + 1) +
       `</section>`
-  )
-  return `<div class="pages theme-${theme.id}" style="${metricVars(theme)}">${pages.join('')}</div>`
+    )
+  })
+  const pages = songs.map((song) => songPagesHtml(song.model, theme, song.firstPage))
+  return pagesHtml(contents.join('') + pages.join(''), theme)
 }
 
 /**
  * A standalone HTML document of the pages — styles and fonts embedded — for platform.exportPdf.
  * Same HTML as the preview, so the PDF matches what is on screen.
  */
-export async function buildPrintDocument(
-  model: PageModel,
-  theme: Theme,
-  title: string
-): Promise<string> {
+export function buildPrintDocument(model: PageModel, theme: Theme, title: string): Promise<string> {
+  return buildPrintHtml(renderPages(model, theme), title)
+}
+
+/** A standalone HTML document around pages from renderPages() or renderSetlistPages(). */
+export async function buildPrintHtml(pagesHtml: string, title: string): Promise<string> {
   const fonts = await embeddedFontCss()
   return (
     `<!doctype html><html lang="ko" class="print"><head><meta charset="utf-8">` +
     `<title>${escapeHtml(title)}</title><style>${fonts}\n${previewCss}</style></head>` +
-    `<body>${renderPages(model, theme)}</body></html>`
+    `<body>${pagesHtml}</body></html>`
   )
 }

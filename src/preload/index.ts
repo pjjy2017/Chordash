@@ -16,6 +16,10 @@ const bridge: ElectronBridge = {
     ipcRenderer.on(IPC.closeRequested, () => callback())
   },
   closeWindow: () => ipcRenderer.send(IPC.close),
+  pickSongs: () => ipcRenderer.invoke(IPC.pickSongs),
+  readSong: (file) => ipcRenderer.invoke(IPC.readSong, file),
+  openSetlist: () => ipcRenderer.invoke(IPC.openSetlist),
+  saveSetlist: (file, setlist) => ipcRenderer.invoke(IPC.saveSetlist, file, setlist),
   hasApiKey: () => ipcRenderer.invoke(IPC.hasApiKey),
   setApiKey: (key) => ipcRenderer.invoke(IPC.setApiKey, key),
   recognize: (request) => ipcRenderer.invoke(IPC.recognize, request),

@@ -48,6 +48,25 @@ export type RecognizeResult =
     }
   | { ok: false; failure: RecognizeFailure }
 
+/** One song of a setlist. */
+export interface SetlistSong {
+  file: FileRef
+  /** Key to print it in, as typed (`G`, `e-`); null = as written in the song. */
+  key: string | null
+  /** false when the file listed in the setlist is not there any more. */
+  found: boolean
+}
+
+export interface Setlist {
+  title: string | null
+  songs: SetlistSong[]
+}
+
+export interface OpenedSetlist {
+  file: FileRef
+  setlist: Setlist
+}
+
 export type DiscardChoice = 'save' | 'discard' | 'cancel'
 
 export interface DocumentState {
@@ -79,6 +98,17 @@ export interface Platform {
    * The handler resolves true to let it close.
    */
   onBeforeClose(handler: () => Promise<boolean>): void
+  /** Asks for song files to add to a setlist, in the order picked. Empty when cancelled. */
+  pickSongs(): Promise<FileRef[]>
+  /** Reads a song file; null when it cannot be read. */
+  readSong(file: FileRef): Promise<string | null>
+  /** Asks for a setlist file and reads it, finding its songs. null when cancelled. */
+  openSetlist(): Promise<OpenedSetlist | null>
+  /**
+   * Saves a setlist to `file`, or asks where when it is null. Songs are written relative to the
+   * setlist where possible. Returns where it saved, null when cancelled.
+   */
+  saveSetlist(file: FileRef | null, setlist: Setlist): Promise<FileRef | null>
   /** Whether an Anthropic API key is stored on this device. The key itself never comes back. */
   hasApiKey(): Promise<boolean>
   /**

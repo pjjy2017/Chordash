@@ -395,6 +395,7 @@ body {
 /* --- Import ------------------------------------------------------------------- */
 
 .import-dialog {
+  box-sizing: border-box;
   width: min(720px, calc(100vw - 32px));
   padding: 18px 20px;
   border: 1px solid #c8c8c8;
@@ -623,4 +624,82 @@ body {
 
 .key-state.is-saved {
   color: #1a7f37;
+}
+
+/* --- Setlist dialog ------------------------------------------------------------ */
+
+.setlist-file {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #666;
+}
+
+.setlist-songs {
+  max-height: 50vh;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  counter-reset: song;
+}
+
+.setlist-songs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid #e4e4e4;
+  counter-increment: song;
+}
+
+.setlist-songs li::before {
+  content: counter(song) '.';
+  width: 2em;
+  color: #888;
+  text-align: right;
+}
+
+.setlist-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setlist-songs li.missing .setlist-row-name {
+  color: #a01818;
+}
+
+.setlist-row-key {
+  width: 5em;
+  padding: 3px 6px;
+  font: inherit;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+}
+
+.setlist-row-key.bad {
+  border-color: #c62828;
+  background: #fdeeee;
+}
+
+.setlist-songs button {
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.setlist-empty {
+  margin: 10px 0 0;
+  color: #666;
+}
+
+.setlist-empty[hidden] {
+  display: none;
 }

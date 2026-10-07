@@ -446,3 +446,60 @@ body {
 .print .page:last-child {
   break-after: auto;
 }
+
+/* --- Setlists: page numbers and the contents page. --- */
+
+.page {
+  position: relative;
+}
+
+.page-number {
+  position: absolute;
+  right: 0;
+  bottom: 4mm;
+  left: 0;
+  font-size: 3mm;
+  color: #666;
+  text-align: center;
+}
+
+.setlist-contents ol {
+  margin: 4mm 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 4.6mm;
+}
+
+.setlist-contents li {
+  display: flex;
+  align-items: baseline;
+  gap: 3mm;
+  padding: 2.2mm 0;
+  border-bottom: 0.2mm solid #ccc;
+}
+
+.setlist-no {
+  width: 7mm;
+  color: #666;
+  text-align: right;
+}
+
+.setlist-song {
+  flex: 1;
+  font-weight: 600;
+}
+
+.setlist-key {
+  min-width: 26mm;
+  font-weight: 700;
+}
+
+.setlist-key small {
+  font-weight: 400;
+  color: #666;
+}
+
+.setlist-page {
+  width: 10mm;
+  text-align: right;
+}

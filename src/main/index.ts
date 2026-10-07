@@ -6,6 +6,7 @@ import { appTitle } from '../core/version'
 import { guardClose, registerFileHandlers } from './files'
 import { registerPdfHandlers } from './pdf'
 import { registerAiHandlers } from './ai'
+import { registerSetlistHandlers } from './setlist'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -52,6 +53,7 @@ app.whenReady().then(() => {
   registerFileHandlers()
   registerPdfHandlers()
   registerAiHandlers()
+  registerSetlistHandlers()
   createWindow()
 
   app.on('activate', () => {

@@ -24,6 +24,10 @@ export function createElectronPlatform(): Platform {
         if (await handler()) bridge.closeWindow()
       })
     },
+    pickSongs: () => bridge.pickSongs(),
+    readSong: (file) => bridge.readSong(file),
+    openSetlist: () => bridge.openSetlist(),
+    saveSetlist: (file, setlist) => bridge.saveSetlist(file, setlist),
     hasApiKey: () => bridge.hasApiKey(),
     setApiKey: (key) => bridge.setApiKey(key),
     recognize: (request) => bridge.recognize(request),

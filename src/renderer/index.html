@@ -22,6 +22,7 @@
             다른 이름으로 저장
           </button>
           <button data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">PDF</button>
+          <button data-command="setlist" title="여러 곡을 묶어 한 PDF로">셋리스트</button>
           <button data-command="import" title="다른 형식의 악보, 악보 사진·PDF 가져오기">
             가져오기
           </button>
@@ -91,7 +92,7 @@
                 class="action"
                 title="코드 이름을 도수로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
               >
-                도수로
+                123
               </button>
               <button
                 type="button"
@@ -99,7 +100,7 @@
                 class="action"
                 title="도수를 코드 이름으로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
               >
-                음이름으로
+                CDE
               </button>
               <span id="spelling-reading" class="field-reading"></span>
             </div>
@@ -189,6 +190,31 @@
         <div class="import-actions">
           <span class="spacer"></span>
           <button value="close" class="primary">닫기</button>
+        </div>
+      </form>
+    </dialog>
+    <!-- Setlist: song files in order, each printable in another key, into one PDF. -->
+    <dialog id="setlist-dialog" class="import-dialog setlist-dialog">
+      <form method="dialog">
+        <h2>셋리스트<span id="setlist-file" class="setlist-file"></span></h2>
+        <label class="settings-row">
+          <span>제목</span>
+          <input id="setlist-title" type="text" placeholder="예: 10월 공연" spellcheck="false" />
+        </label>
+        <ol id="setlist-songs" class="setlist-songs"></ol>
+        <p id="setlist-empty" class="setlist-empty">
+          [곡 추가…]로 곡 파일을 넣어 주세요. 곡마다 출력할 키를 바꿀 수 있어요(곡 파일은 그대로).
+        </p>
+        <p id="setlist-message" class="ai-message" hidden></p>
+        <div class="import-actions">
+          <button type="button" id="setlist-add">곡 추가…</button>
+          <button type="button" id="setlist-add-current">지금 곡 넣기</button>
+          <button type="button" id="setlist-open">열기…</button>
+          <button type="button" id="setlist-save">저장</button>
+          <button type="button" id="setlist-save-as">다른 이름으로…</button>
+          <span class="spacer"></span>
+          <button value="close">닫기</button>
+          <button type="button" id="setlist-pdf" class="primary">PDF 만들기</button>
         </div>
       </form>
     </dialog>

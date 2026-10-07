@@ -39,6 +39,7 @@ import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { buildPrintDocument, renderPages } from './preview'
 import { modelName, openSettings, recognizeModel } from './settings'
+import { openSetlist } from './setlist'
 
 installFonts()
 
@@ -170,7 +171,8 @@ const commands: Record<string, () => Promise<unknown>> = {
     importText_.value = ''
     importDialog.showModal()
   },
-  settings: openSettings
+  settings: openSettings,
+  setlist: () => openSetlist(() => ({ file, dirty: isDirty() }))
 }
 
 // --- import: text from other formats → a new document; the original stays viewable -------
