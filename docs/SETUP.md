@@ -45,3 +45,11 @@ npm test           # 자동 테스트 실행
 ## 6. 이미지·PDF 임포트용 (Phase 8부터)
 - Anthropic API 키가 필요합니다(https://console.anthropic.com). API 사용 요금은 Claude 구독과 별도로 청구됩니다.
 - 키는 앱의 설정 화면에서만 입력하고, 저장소 파일이나 채팅에 붙여넣지 않습니다.
+
+## 7. 설치 파일 만들기 (v1.0.0부터)
+```powershell
+cd C:\src\chordash
+npm run build:win   # 검사·빌드 후 dist\chordash-버전-setup.exe 설치 파일을 만듦 (몇 분 걸림)
+```
+- 디지털 서명이 없는 설치 파일이라 처음 실행할 때 Windows가 "알 수 없는 앱" 경고를 띄웁니다. **추가 정보 → 실행**을 누르세요.
+- 버전 번호는 `package.json`의 `version`입니다. 고친 판을 낼 때 올립니다(1.0.0 → 1.0.1).
