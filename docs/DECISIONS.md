@@ -244,3 +244,19 @@
 - Phase 5 점검 때 실수로 저장소에 들어간 빈 파일 `applied.chord`를 지움.
 - 배포: `npm run build:win`으로 Windows 설치 파일(NSIS, `dist\chordash-1.0.0-setup.exe`) 생성. 코드 서명 인증서가 없어 서명하지 않음(처음 설치 시 SmartScreen 경고). 앱 아이콘은 프로그램 틀의 기본 그림 그대로(사용자가 그림을 주면 교체).
 - 저장 기록에 `v1.0.0` 태그.
+
+## 2026-10-07 (Phase 11 — 웹 버전, GitHub Pages)
+사용자 결정:
+- 데스크톱 1.0.0 확정 뒤, GitHub Pages로 쓸 **웹 버전**을 만듦. 웹에서 실현 가능한 기능만.
+- **AI 가져오기는 웹에서 뺌** — 공개 웹 페이지에서는 API 키를 암호화해 보관할 수 없음. 설정 화면도 AI 전용이라 숨김. 텍스트 가져오기는 웹에도 있음.
+- **셋리스트는 곡 내용을 담아 저장** — 브라우저는 파일 경로를 기억하지 못해 곡 파일을 다시 찾을 수 없음. 대신 곡을 고쳐도 셋리스트에는 자동 반영되지 않음(빼고 다시 넣기).
+- **PDF는 브라우저 인쇄 창의 "PDF로 저장"** — 글꼴·모양이 데스크톱 PDF와 같음. 처음 한 번 사용법 안내.
+
+구현:
+- **구조:** 같은 화면 코드(`src/renderer`)에 웹 플랫폼 구현체(`src/platform/web`)를 더함. 데스크톱 연결 통로(`window.chordashBridge`)가 있으면 Electron, 없으면 웹 구현체를 고름. 구현체를 화면에서 직접 가져오지 못하게 ESLint 규칙에 `platform/web`도 추가.
+- **기능 표시:** `Platform.features`(`ai`, `printPdf`, `setlistKeepsSongs`). 화면은 `data-needs="…"` 표시가 붙은 요소를 그 기능이 없으면 숨김. 안드로이드 구현체도 같은 방식으로 씀.
+- **파일:** Chrome·Edge는 File System Access API로 연 파일에 그대로 다시 저장. 그 밖의 브라우저는 파일 선택 창으로 열고 저장은 다운로드(다시 저장하면 사본이 하나 더 생김). 닫거나 새로 고칠 때 저장 안 한 내용이 있으면 브라우저 기본 경고.
+- **셋리스트 파일 형식 확장:** 목록 뒤에 `=== 곡: <파일 이름>` 줄 아래로 곡 내용을 담을 수 있음(core `parseSetlist`/`formatSetlist`). 데스크톱도 이 파일을 열 수 있음 — 곡 파일이 없으면 담긴 내용을 쓰고, 다시 저장할 때도 담긴 채로 둠.
+- **PDF(웹):** 숨긴 iframe에 데스크톱과 같은 인쇄용 HTML(글꼴 내장)을 넣고 글꼴이 준비되면 `print()`. 페이지 보안 정책에 `font-src data:` 추가(내장 글꼴).
+- **좁은 화면 툴바:** 버튼 글자가 한 글자씩 쪼개지던 것을 한 줄 버튼 + 옆으로 밀기로 고침(웹은 휴대폰에서 많이 쓰므로).
+- **빌드·배포:** `vite.web.config.ts`(`base: './'` — `https://아이디.github.io/저장소/` 아래에서도 동작), `npm run build:web` → `dist-web`. GitHub Actions(`.github/workflows/pages.yml`)가 main에 올릴 때마다 테스트 → 빌드 → Pages 배포. 웹 빌드에는 Electron이 필요 없어 설치 스크립트 없이(`npm ci --ignore-scripts`) 설치.

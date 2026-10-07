@@ -21,24 +21,44 @@ function songPath(setlistPath: string, songPath: string): string {
   return rel && !isAbsolute(rel) ? rel.split(sep).join('/') : songPath
 }
 
+/**
+ * Copies of songs kept inside setlists made by the web version, by resolved path. Used when
+ * the song file itself is not there, and written back when such a setlist is saved again.
+ */
+const keptSongs = new Map<string, string>()
+
 async function readSetlist(path: string): Promise<OpenedSetlist> {
-  const { title, entries } = parseSetlist(await readFile(path, 'utf8'))
+  const { title, entries, songs } = parseSetlist(await readFile(path, 'utf8'))
   return {
     file: refFor(path),
     setlist: {
       title,
       songs: entries.map((entry) => {
         const song = resolve(dirname(path), entry.path)
-        return { file: refFor(song), key: entry.key, found: existsSync(song) }
+        const kept = songs?.[entry.path]
+        if (kept !== undefined) keptSongs.set(song, kept)
+        return { file: refFor(song), key: entry.key, found: existsSync(song) || kept !== undefined }
       })
     }
   }
 }
 
 async function writeSetlist(path: string, setlist: Setlist): Promise<FileRef> {
+  const entries = setlist.songs.map((song) => ({
+    path: songPath(path, song.file.id),
+    key: song.key
+  }))
+  // Songs that exist only as kept copies stay inside the setlist.
+  const songs = Object.fromEntries(
+    setlist.songs.flatMap((song, i) => {
+      const kept = keptSongs.get(song.file.id)
+      return kept !== undefined && !existsSync(song.file.id) ? [[entries[i].path, kept]] : []
+    })
+  )
   const text = formatSetlist({
     title: setlist.title,
-    entries: setlist.songs.map((song) => ({ path: songPath(path, song.file.id), key: song.key }))
+    entries,
+    ...(Object.keys(songs).length ? { songs } : {})
   })
   await writeFile(path, text, 'utf8')
   return refFor(path)
@@ -68,7 +88,7 @@ export function registerSetlistHandlers(): void {
     try {
       return (await readFile(file.id, 'utf8')).replace(/^\uFEFF/, '')
     } catch {
-      return null
+      return keptSongs.get(file.id) ?? null
     }
   })
 

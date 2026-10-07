@@ -8,6 +8,9 @@
 //
 // Paths are relative to the setlist file when possible, so a folder can be moved as a whole.
 // `|` cannot appear in Windows file names, so it safely separates the path from the key.
+//
+// The web version cannot find files again later, so it keeps the songs inside the setlist,
+// after the list, each under a `=== 곡: <name>` line (Phase 11).
 
 export interface SetlistEntry {
   /** Song file as written in the setlist (relative or absolute). */
@@ -19,13 +22,35 @@ export interface SetlistEntry {
 export interface SetlistText {
   title: string | null
   entries: SetlistEntry[]
+  /** Song texts kept inside the setlist, by entry path (web version). */
+  songs?: Record<string, string>
 }
 
 const HEADER = '// Chordash 셋리스트'
+const SONG_START = /^=== 곡:\s*(.+?)\s*$/
+
+/** Song texts after the list, under `=== 곡: <name>` lines; null when there are none. */
+function readSongs(lines: string[]): Record<string, string> | null {
+  const first = lines.findIndex((l) => SONG_START.test(l))
+  if (first < 0) return null
+  const songs: Record<string, string> = {}
+  let path = ''
+  for (const line of lines.slice(first)) {
+    const start = SONG_START.exec(line)
+    if (start) path = start[1]
+    songs[path] = start ? '' : songs[path] + line + '\n'
+  }
+  for (const p of Object.keys(songs)) songs[p] = songs[p].replace(/\n+$/, '\n')
+  return songs
+}
 
 export function parseSetlist(text: string): SetlistText {
   const result: SetlistText = { title: null, entries: [] }
-  for (const raw of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
+  const all = text.replace(/^\uFEFF/, '').split(/\r?\n/)
+  const songs = readSongs(all)
+  if (songs) result.songs = songs
+  const listEnd = songs ? all.findIndex((l) => SONG_START.test(l)) : all.length
+  for (const raw of all.slice(0, listEnd)) {
     const line = raw.trim()
     if (!line || line.startsWith('//')) continue
     const title = /^title\s*:\s*(.*)$/i.exec(line)
@@ -45,6 +70,9 @@ export function formatSetlist(setlist: SetlistText): string {
   if (setlist.title) lines.push(`title: ${setlist.title}`)
   for (const entry of setlist.entries) {
     lines.push(entry.key ? `${entry.path} | key: ${entry.key}` : entry.path)
+  }
+  for (const [path, text] of Object.entries(setlist.songs ?? {})) {
+    lines.push('', `=== 곡: ${path}`, text.replace(/\n+$/, ''))
   }
   return lines.join('\n') + '\n'
 }

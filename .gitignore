@@ -15,3 +15,4 @@ secrets/
 
 # 문서 세트 원본 압축본 (docs/, examples/ 와 동일)
 chordpad.zip
+dist-web

@@ -165,8 +165,16 @@ body {
     row-gap: 4px;
   }
 
+  /* One row of whole buttons that scrolls sideways, instead of words broken letter by letter. */
   .file-buttons {
+    max-width: 100%;
     overflow-x: auto;
+  }
+
+  .file-buttons button {
+    flex-shrink: 0;
+    padding: 5px 9px;
+    white-space: nowrap;
   }
 
   .view-tabs {
@@ -702,4 +710,9 @@ body {
 
 .setlist-empty[hidden] {
   display: none;
+}
+
+/* Parts a platform cannot do (data-needs) are hidden even where a style sets display. */
+[data-needs][hidden] {
+  display: none !important;
 }

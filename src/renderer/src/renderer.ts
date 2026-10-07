@@ -43,6 +43,13 @@ import { openSetlist } from './setlist'
 
 installFonts()
 
+// Parts the platform cannot do (web version: AI import, settings) are not shown.
+for (const [feature, on] of Object.entries(platform.features)) {
+  document
+    .querySelectorAll<HTMLElement>(`[data-needs="${feature}"]`)
+    .forEach((e) => (e.hidden = !on))
+}
+
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
 
 const app = $<HTMLElement>('app')
@@ -201,9 +208,14 @@ async function runImport(
 ): Promise<void> {
   const result = importText(text, name)
   if (result.format === 'unknown') {
+    const notFound =
+      '코드 악보로 보이는 줄을 찾지 못했어요. (코드 줄, 마디선 |, ChordPro 형식을 읽을 수 있어요.)'
+    if (!platform.features.ai) {
+      window.alert(notFound)
+      return
+    }
     const useAi = window.confirm(
-      '코드 악보로 보이는 줄을 찾지 못했어요. (코드 줄, 마디선 |, ChordPro 형식을 읽을 수 있어요.)\n\n' +
-        'AI에게 이 글을 읽혀 볼까요? 인터넷이 필요하고 API 요금이 나와요.'
+      notFound + '\n\nAI에게 이 글을 읽혀 볼까요? 인터넷이 필요하고 API 요금이 나와요.'
     )
     if (useAi) {
       importDialog.close()

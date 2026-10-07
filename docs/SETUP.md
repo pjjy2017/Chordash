@@ -53,3 +53,12 @@ npm run build:win   # 검사·빌드 후 dist\chordash-버전-setup.exe 설치 �
 ```
 - 디지털 서명이 없는 설치 파일이라 처음 실행할 때 Windows가 "알 수 없는 앱" 경고를 띄웁니다. **추가 정보 → 실행**을 누르세요.
 - 버전 번호는 `package.json`의 `version`입니다. 고친 판을 낼 때 올립니다(1.0.0 → 1.0.1).
+
+## 8. 웹 버전 (Phase 11부터)
+```powershell
+cd C:\src\chordash
+npm run dev:web       # 웹 버전을 개발 모드로 실행 (터미널에 나온 주소를 브라우저로 열기)
+npm run build:web     # GitHub Pages에 올릴 파일을 dist-web 폴더에 만듦
+npm run preview:web   # 만든 dist-web을 브라우저로 미리 보기
+```
+- GitHub에 올리면(`main` 브랜치) GitHub Actions가 자동으로 테스트·빌드·배포합니다. 저장소 **Settings → Pages → Source**를 **GitHub Actions**로 한 번 맞춰 두어야 합니다.

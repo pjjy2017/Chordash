@@ -7,7 +7,7 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
     />
   </head>
 
@@ -30,7 +30,12 @@
         <span class="spacer"></span>
         <span id="status" class="status"></span>
         <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
-        <button data-command="settings" class="settings-button" title="설정 (AI 키, 모델)">
+        <button
+          data-command="settings"
+          data-needs="ai"
+          class="settings-button"
+          title="설정 (AI 키, 모델)"
+        >
           설정
         </button>
         <button
@@ -125,8 +130,10 @@
         <h2>악보 가져오기</h2>
         <p>
           웹에서 복사한 코드 악보(가사 위에 코드), 마디선 텍스트(| C | Am |), ChordPro를 Chordash
-          문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요. 손글씨·인쇄 악보의 사진이나
-          PDF는 <b>사진·PDF (AI)</b>로 가져와요.
+          문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요.
+          <span data-needs="ai"
+            >손글씨·인쇄 악보의 사진이나 PDF는 <b>사진·PDF (AI)</b>로 가져와요.</span
+          >
         </p>
         <textarea
           id="import-text"
@@ -136,7 +143,7 @@
         ></textarea>
         <div class="import-actions">
           <button type="button" id="import-from-file">파일에서 가져오기…</button>
-          <button type="button" id="import-chart">사진·PDF (AI)…</button>
+          <button type="button" id="import-chart" data-needs="ai">사진·PDF (AI)…</button>
           <span class="spacer"></span>
           <button value="cancel">취소</button>
           <button type="button" id="import-paste" class="primary">붙여넣은 글 바꾸기</button>
@@ -204,6 +211,10 @@
         <ol id="setlist-songs" class="setlist-songs"></ol>
         <p id="setlist-empty" class="setlist-empty">
           [곡 추가…]로 곡 파일을 넣어 주세요. 곡마다 출력할 키를 바꿀 수 있어요(곡 파일은 그대로).
+        </p>
+        <p class="setlist-empty" data-needs="setlistKeepsSongs" hidden>
+          웹 버전은 곡 내용을 셋리스트 파일에 담아 저장해요. 곡을 고쳤다면 목록에서 빼고 다시 넣어
+          주세요.
         </p>
         <p id="setlist-message" class="ai-message" hidden></p>
         <div class="import-actions">

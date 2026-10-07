@@ -16,7 +16,7 @@ const electronAndNode = [
 ]
 
 export default defineConfig(
-  { ignores: ['**/node_modules', '**/dist', '**/out'] },
+  { ignores: ['**/node_modules', '**/dist', '**/out', '**/dist-web'] },
   tseslint.configs.recommended,
   {
     files: ['src/renderer/**/*.ts', 'src/core/**/*.ts'],
@@ -28,7 +28,12 @@ export default defineConfig(
           patterns: [
             { group: electronAndNode, message: 'Use the platform interface (src/platform).' },
             {
-              group: ['**/platform/electron', '**/platform/electron/*'],
+              group: [
+                '**/platform/electron',
+                '**/platform/electron/*',
+                '**/platform/web',
+                '**/platform/web/*'
+              ],
               message: 'Import from src/platform, not a specific implementation.'
             }
           ]

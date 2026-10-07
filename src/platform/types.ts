@@ -75,7 +75,18 @@ export interface DocumentState {
   dirty: boolean
 }
 
+/** What this platform can do; the screen hides or explains what it cannot. */
+export interface PlatformFeatures {
+  /** Reading charts with the AI (needs an API key kept safely on the device). */
+  ai: boolean
+  /** PDFs come from the browser's print dialog ("PDF로 저장") instead of a saved file. */
+  printPdf: boolean
+  /** Setlists keep copies of their songs, since song files cannot be found again later. */
+  setlistKeepsSongs: boolean
+}
+
 export interface Platform {
+  features: PlatformFeatures
   /** Asks the user for a file to open. null when cancelled. */
   openFile(): Promise<OpenedFile | null>
   /** Asks for a file to import: text/ChordPro, or an image/PDF (`chart`). null when cancelled. */

@@ -35,6 +35,23 @@ describe('setlist file', () => {
     expect(parseSetlist(text)).toEqual(setlist)
   })
 
+  it('keeps songs inside the setlist (web version)', () => {
+    const setlist = {
+      title: '공연',
+      entries: [
+        { path: 'a.chord', key: 'G' },
+        { path: 'b.chord', key: null }
+      ],
+      songs: { 'a.chord': 'title: A\nkey: F\n\nC, F\n', 'b.chord': 'title: B\n---\nG\n' }
+    }
+    const text = formatSetlist(setlist)
+    expect(text).toBe(
+      '// Chordash 셋리스트\ntitle: 공연\na.chord | key: G\nb.chord\n\n' +
+        '=== 곡: a.chord\ntitle: A\nkey: F\n\nC, F\n\n=== 곡: b.chord\ntitle: B\n---\nG\n'
+    )
+    expect(parseSetlist(text)).toEqual(setlist)
+  })
+
   it('leaves the title out when there is none', () => {
     expect(formatSetlist({ title: null, entries: [] })).toBe('// Chordash 셋리스트\n')
   })
