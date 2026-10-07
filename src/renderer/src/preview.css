@@ -503,3 +503,26 @@ body {
   width: 10mm;
   text-align: right;
 }
+
+/* Lyrics under each bar (`_ 가, 나`): laid out like the bars above. */
+.lyrics {
+  display: grid;
+  grid-template-columns: repeat(var(--slots), 1fr);
+  height: var(--cue-h);
+}
+
+.lyric {
+  min-width: 0;
+  padding-left: 2mm;
+  font-size: 3.1mm;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* `^ 글자` over the whole line: plain ink, lighter than colour memos. */
+.memo-ink {
+  color: #333;
+  font-weight: 500;
+}

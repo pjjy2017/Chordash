@@ -83,6 +83,8 @@ export interface PlatformFeatures {
   printPdf: boolean
   /** Setlists keep copies of their songs, since song files cannot be found again later. */
   setlistKeepsSongs: boolean
+  /** The web version points to the desktop and Android apps in its menu. */
+  offersDesktopApp: boolean
 }
 
 export interface Platform {

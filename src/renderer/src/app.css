@@ -1,4 +1,44 @@
-/* App shell: toolbar, editor pane, preview pane, and editor syntax colours. */
+/* App shell (DECISIONS Phase 13 — 화면 A안): minimal white, hairlines, charcoal ink as the one
+   accent, a light glass on the toolbar, bottom tabs, menu and dialogs only. The editor and the
+   sheet stay solid white. */
+
+:root {
+  --ink: #23272f;
+  --ink-hover: #3a404b;
+  --ink-soft: #eceef1;
+  --teal: #0f8b8d;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --faint: #9ca3af;
+  --line: #e5e7eb;
+  --line-strong: #d1d5db;
+  --surface: #ffffff;
+  --canvas: #f4f5f7;
+  --danger: #c0262d;
+  --danger-soft: #fdeeee;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --glass: rgb(255 255 255 / 0.72);
+  --glass-strong: rgb(255 255 255 / 0.86);
+  --glass-blur: blur(18px) saturate(1.6);
+  --shadow-pop: 0 12px 32px rgb(17 24 39 / 0.14), 0 2px 6px rgb(17 24 39 / 0.08);
+}
+
+/* Without blur (or with "reduce transparency" on), glass falls back to nearly solid white. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: rgb(255 255 255 / 0.96);
+    --glass-strong: rgb(255 255 255 / 0.98);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: rgb(255 255 255 / 0.98);
+    --glass-strong: #fff;
+    --glass-blur: none;
+  }
+}
 
 html,
 body,
@@ -7,8 +47,12 @@ body,
 }
 
 body {
+  margin: 0;
   overflow: hidden;
   font-family: 'Chordash Geist', 'Chordash Pretendard', 'Malgun Gothic', sans-serif;
+  color: var(--text);
+  background: var(--canvas);
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
@@ -16,56 +60,353 @@ body {
   flex-direction: column;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #d8d8d8;
-}
-
-.toolbar button {
-  padding: 5px 12px;
+button,
+input,
+select,
+textarea {
   font: inherit;
-  font-size: 13px;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
-  cursor: pointer;
+  color: inherit;
 }
 
-.toolbar button:hover {
-  background: #eef3ff;
-  border-color: #9bb2e8;
-}
-
-.file-buttons {
-  display: flex;
-  gap: 6px;
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .spacer {
   flex: 1;
 }
 
-.status {
+.icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.8;
+}
+
+/* --- Buttons ------------------------------------------------------------------- */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.icon-button.small {
+  width: 26px;
+  height: 26px;
+}
+
+.icon-button.small .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button:hover {
+  background: var(--ink-soft);
+}
+
+.icon-button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--ink-soft);
+}
+
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px 0 11px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: var(--ink-hover);
+}
+
+.text-button {
+  height: 28px;
+  padding: 0 10px;
   font-size: 13px;
-  color: #777;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.text-button.strong {
+  color: #fff;
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* --- Toolbar ------------------------------------------------------------------- */
+
+.toolbar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-right: 6px;
+}
+
+.brand-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.doc-name {
+  max-width: 220px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A dot after the name: unsaved changes. */
+.doc-name.dirty::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  background: var(--teal);
+  border-radius: 50%;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+.group-sheet {
+  gap: 6px;
+}
+
+.transpose {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 2px 0 8px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.transpose .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.transpose input {
+  width: 4.6em;
+  padding: 0 4px;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.segmented {
+  display: flex;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented button {
+  padding: 0 9px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--line-strong);
+}
+
+.segmented button:hover {
+  background: var(--ink-soft);
+}
+
+.chip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 9px;
+  font-size: 13px;
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.chip-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip-toggle .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.chip-toggle:has(input:checked) {
+  color: var(--ink);
+  background: var(--ink-soft);
+  border-color: transparent;
+}
+
+.chip-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.field-reading {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.field-reading:empty {
+  display: none;
+}
+
+.field-reading.bad {
+  color: var(--danger);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .status.has-errors {
-  color: #c00;
+  color: var(--danger);
   font-weight: 600;
 }
 
-.toggle {
+/* --- ⋯ menu -------------------------------------------------------------------- */
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 250px;
+  padding: 6px;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+}
+
+.menu[hidden] {
+  display: none;
+}
+
+.menu > button,
+.menu > a {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  user-select: none;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
 }
+
+.menu > button:hover,
+.menu > a:hover,
+.menu > button:focus-visible,
+.menu > a:focus-visible {
+  background: var(--ink-soft);
+  outline: none;
+}
+
+.menu .icon {
+  color: var(--muted);
+}
+
+.menu kbd {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.menu hr {
+  margin: 5px 4px;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.narrow-only {
+  display: none !important;
+}
+
+/* --- Panes ------------------------------------------------------------------------ */
 
 .split {
   flex: 1;
@@ -79,8 +420,8 @@ body {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  background: #fff;
-  border-right: 1px solid #d8d8d8;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
 }
 
 .editor-host {
@@ -100,153 +441,52 @@ body {
 .preview-pane {
   min-width: 0;
   overflow: auto;
+  background: var(--canvas);
 }
 
-/* Syntax colours (class names come from core SyntaxKind). */
-.cd-chord {
-  color: #1d3f9e;
-  font-weight: 700;
-}
-.cd-barline {
-  color: #999;
-  font-weight: 700;
-}
-.cd-mark {
-  color: #c2410c;
-  font-weight: 700;
-}
-.cd-ending {
-  color: #7c3aed;
-  font-weight: 700;
-}
-.cd-section {
-  color: #7c3aed;
-  font-weight: 800;
-}
-.cd-meta {
-  color: #0f766e;
-}
-.cd-cue {
-  color: #15803d;
-}
-.cd-memo {
-  color: #0e7490;
-}
-.cd-directive {
-  color: #b45309;
-}
-.cd-pageBreak {
-  color: #999;
-}
-.cd-comment {
-  color: #9a9a9a;
-  font-style: italic;
+/* While transposed, a coloured edge reminds that the sheet is not the key as written. */
+.preview-pane.transposed {
+  box-shadow: inset 3px 0 0 #e8a33d;
 }
 
-.cd-hint {
-  margin-left: 4px;
-  padding: 0 3px;
-  font-size: 0.82em;
-  color: #8a8a8a;
-  background: #f2f2f2;
-  border-radius: 3px;
-  pointer-events: none;
-}
-
-/* --- Narrow screens (phones, narrow windows): one pane at a time, switched by tabs. --- */
-
-.view-tabs {
-  display: none;
-}
-
-@media (max-width: 760px) {
-  .toolbar {
-    flex-wrap: wrap;
-    row-gap: 4px;
-  }
-
-  /* One row of whole buttons that scrolls sideways, instead of words broken letter by letter. */
-  .file-buttons {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-
-  .file-buttons button {
-    flex-shrink: 0;
-    padding: 5px 9px;
-    white-space: nowrap;
-  }
-
-  .view-tabs {
-    display: flex;
-    border-bottom: 1px solid #d8d8d8;
-    background: #f7f7f7;
-  }
-
-  .view-tabs button {
-    flex: 1;
-    padding: 9px 0;
-    font: inherit;
-    font-size: 14px;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    color: #666;
-    cursor: pointer;
-  }
-
-  .view-tabs button[aria-selected='true'] {
-    color: #1d3f9e;
-    font-weight: 700;
-    border-bottom-color: #1d3f9e;
-  }
-
-  .split {
-    grid-template-columns: 1fr;
-  }
-
-  .editor-pane {
-    border-right: none;
-  }
-
-  #app[data-view='editor'] .preview-pane,
-  #app[data-view='preview'] .editor-pane {
-    display: none;
-  }
-}
-
-/* --- Header fields: title / key / theme ------------------------------------------- */
+/* --- Title / key ---------------------------------------------------------------- */
 
 .header-fields {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e4e4e4;
-  background: #fbfbfb;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .field {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #555;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field input {
+  height: 30px;
+  padding: 0 8px;
+  font-size: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.field input:focus {
+  border-color: var(--ink);
+  outline: none;
 }
 
 .field-title {
-  flex: 1 1 220px;
-}
-
-.field input,
-.field select {
-  padding: 4px 6px;
-  font: inherit;
-  font-size: 14px;
-  color: #111;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
-  background: #fff;
+  flex: 1 1 200px;
 }
 
 .field-title input {
@@ -255,20 +495,59 @@ body {
   font-weight: 600;
 }
 
-.preview-toggle {
-  padding: 5px 10px;
-  font: inherit;
-  font-size: 13px;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
-  cursor: pointer;
+.field-key input {
+  width: 6.5em;
 }
 
-.preview-toggle[aria-pressed='true'] {
-  background: #eef3ff;
-  border-color: #9bb2e8;
-  color: #1d3f9e;
+/* --- Editor syntax colours (class names come from core SyntaxKind) ---------------- */
+
+.cd-chord {
+  color: var(--ink);
+  font-weight: 700;
+}
+.cd-barline {
+  color: var(--faint);
+  font-weight: 700;
+}
+.cd-mark {
+  color: #c2410c;
+  font-weight: 700;
+}
+.cd-ending,
+.cd-section,
+.cd-part {
+  color: #6d28d9;
+  font-weight: 700;
+}
+.cd-meta {
+  color: #0f766e;
+}
+.cd-cue {
+  color: var(--teal);
+}
+.cd-memo {
+  color: #0e7490;
+}
+.cd-directive {
+  color: #b45309;
+}
+.cd-pageBreak {
+  color: var(--faint);
+}
+.cd-comment {
+  color: var(--faint);
+  font-style: italic;
+}
+
+/* 코드 풀이: how a shorthand was read, beside it on the line being typed. */
+.cd-hint {
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 0.8em;
+  color: var(--muted);
+  background: var(--ink-soft);
+  border-radius: 4px;
+  pointer-events: none;
 }
 
 /* --- Chords shown as sheet music inside the editor -------------------------------- */
@@ -276,13 +555,10 @@ body {
 .cd-live-chord {
   font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
   font-size: 1.12em;
+  font-weight: 500;
   color: #111;
   cursor: text;
   letter-spacing: -0.01em;
-}
-
-.cd-live-chord {
-  font-weight: 500;
 }
 
 .cd-live-chord sup {
@@ -313,38 +589,13 @@ body {
 .cd-live-bar {
   display: inline-block;
   margin: 0 0.15em;
-  color: #9a9a9a;
+  color: var(--faint);
   font-weight: 700;
   transform: scaleY(1.15);
 }
 
 .cd-live-bar.strong {
   color: #444;
-}
-
-/* Narrow screens use the tabs instead; "hidden" only applies to the wide layout. */
-@media (max-width: 760px) {
-  #app.preview-hidden[data-view='preview'] .preview-pane {
-    display: revert;
-  }
-
-  .preview-toggle {
-    display: none;
-  }
-}
-
-.field-key input {
-  width: 9em;
-}
-
-.field-reading {
-  font-size: 12px;
-  color: #777;
-  white-space: nowrap;
-}
-
-.field-reading.bad {
-  color: #c00;
 }
 
 /* Song-form part (a) → A) boxed in the editor, like on the sheet. */
@@ -363,78 +614,53 @@ body {
   cursor: text;
 }
 
-.cd-part {
-  color: #7c3aed;
-  font-weight: 700;
-}
-
-/* --- Transposition ------------------------------------------------------------- */
-
-.field-transpose input {
-  width: 6em;
-}
-
-.field-transpose .step,
-.field-transpose .action {
-  padding: 3px 8px;
-  font: inherit;
-  font-size: 12px;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.field-transpose .action {
-  font-size: 13px;
-}
-
-.field-transpose #transpose-apply {
-  color: #fff;
-  background: #1d3f9e;
-  border-color: #1d3f9e;
-}
-
-/* While transposed, a coloured edge reminds that the sheet is not the key as written. */
-.preview-pane.transposed {
-  box-shadow: inset 4px 0 0 #e8a33d;
-}
-
-/* --- Import ------------------------------------------------------------------- */
+/* --- Dialogs: one look for all ------------------------------------------------------ */
 
 .import-dialog {
   box-sizing: border-box;
-  width: min(720px, calc(100vw - 32px));
-  padding: 18px 20px;
-  border: 1px solid #c8c8c8;
-  border-radius: 10px;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 0.25);
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 20px 22px;
+  color: var(--text);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
   font-size: 14px;
 }
 
 .import-dialog::backdrop {
-  background: rgb(0 0 0 / 0.3);
+  background: rgb(17 24 39 / 0.28);
 }
 
 .import-dialog h2 {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 17px;
+  font-weight: 700;
+}
+
+.import-dialog h3 {
+  margin: 14px 0 6px;
+  font-size: 14px;
 }
 
 .import-dialog p {
   margin: 0 0 10px;
-  color: #555;
-  line-height: 1.5;
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .import-dialog textarea {
   box-sizing: border-box;
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   font-family: 'D2Coding', 'Consolas', 'Chordash Pretendard', monospace;
   font-size: 13px;
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   resize: vertical;
 }
 
@@ -442,25 +668,43 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
-.import-actions button {
-  padding: 6px 14px;
-  font: inherit;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
+.import-actions button,
+.settings-row button {
+  height: 34px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   cursor: pointer;
+}
+
+.import-actions button:hover,
+.settings-row button:hover {
+  background: var(--ink-soft);
 }
 
 .import-actions button.primary {
   color: #fff;
-  background: #1d3f9e;
-  border-color: #1d3f9e;
+  font-weight: 600;
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
-/* Preview pane after an import: 미리보기 / 원본. */
+.import-actions button.primary:hover {
+  background: var(--ink-hover);
+}
+
+.import-actions button:disabled,
+.settings-row button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* --- Import review: 미리보기 / 원본 ---------------------------------------------------- */
+
 .preview-switch {
   position: sticky;
   top: 0;
@@ -469,8 +713,10 @@ body {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #d8d8d8;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--line);
 }
 
 .preview-switch[hidden] {
@@ -478,24 +724,24 @@ body {
 }
 
 .preview-switch button {
-  padding: 3px 10px;
-  font: inherit;
+  height: 28px;
+  padding: 0 10px;
   font-size: 13px;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .preview-switch button[aria-pressed='true'] {
   color: #fff;
-  background: #1d3f9e;
-  border-color: #1d3f9e;
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .original-info {
   font-size: 12px;
-  color: #666;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -506,14 +752,13 @@ body {
   padding: 14px 16px;
   min-height: 100%;
   box-sizing: border-box;
-  background: #fff;
+  background: var(--surface);
   font-family: 'D2Coding', 'Consolas', 'Chordash Pretendard', monospace;
   font-size: 13px;
   line-height: 1.6;
   white-space: pre-wrap;
 }
 
-/* Image/PDF import: the original pages under "원본". */
 .original-images {
   display: flex;
   flex-direction: column;
@@ -529,10 +774,10 @@ body {
 .original-images img {
   max-width: 100%;
   background: #fff;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.2);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.16);
 }
 
-/* --- AI dialog and settings ---------------------------------------------------- */
+/* --- AI dialog and settings ---------------------------------------------------------- */
 
 .ai-pages {
   display: grid;
@@ -559,7 +804,8 @@ body {
   aspect-ratio: 1 / 1.414;
   object-fit: contain;
   background: #fff;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
 }
 
 .ai-page:has(input:not(:checked)) img {
@@ -568,29 +814,19 @@ body {
 
 .ai-message {
   margin: 10px 0 0;
-  padding: 8px 10px;
-  color: #1d3f9e;
-  background: #eef3ff;
-  border-radius: 6px;
+  padding: 9px 11px;
+  color: var(--ink);
+  background: var(--ink-soft);
+  border-radius: var(--radius);
 }
 
 .ai-message.is-error {
-  color: #a01818;
-  background: #fdeeee;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .ai-message[hidden] {
   display: none;
-}
-
-.import-actions button:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.settings-dialog h3 {
-  margin: 12px 0 6px;
-  font-size: 14px;
 }
 
 .settings-row {
@@ -602,45 +838,38 @@ body {
 }
 
 .settings-row input,
-.settings-row select {
+.settings-row select,
+.file-name-input {
+  box-sizing: border-box;
   flex: 1;
   min-width: 180px;
-  padding: 6px 8px;
-  font: inherit;
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
 }
 
-.settings-row button {
-  padding: 6px 14px;
-  font: inherit;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.settings-row button:disabled {
-  cursor: default;
-  opacity: 0.5;
+.file-name-input {
+  width: 100%;
 }
 
 .key-state {
   font-weight: 600;
-  color: #888;
+  color: var(--faint);
 }
 
 .key-state.is-saved {
-  color: #1a7f37;
+  color: #15803d;
 }
 
-/* --- Setlist dialog ------------------------------------------------------------ */
+/* --- Setlist ------------------------------------------------------------------------- */
 
 .setlist-file {
   margin-left: 6px;
   font-size: 13px;
   font-weight: 400;
-  color: #666;
+  color: var(--muted);
 }
 
 .setlist-songs {
@@ -656,15 +885,15 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 0;
-  border-bottom: 1px solid #e4e4e4;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
   counter-increment: song;
 }
 
 .setlist-songs li::before {
   content: counter(song) '.';
   width: 2em;
-  color: #888;
+  color: var(--faint);
   text-align: right;
 }
 
@@ -677,44 +906,40 @@ body {
 }
 
 .setlist-songs li.missing .setlist-row-name {
-  color: #a01818;
+  color: var(--danger);
 }
 
 .setlist-row-key {
   width: 5em;
-  padding: 3px 6px;
-  font: inherit;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
 }
 
 .setlist-row-key.bad {
-  border-color: #c62828;
-  background: #fdeeee;
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .setlist-songs button {
-  padding: 2px 8px;
-  font: inherit;
+  height: 28px;
+  padding: 0 9px;
   font-size: 12px;
-  background: #fff;
-  border: 1px solid #c8c8c8;
-  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .setlist-empty {
   margin: 10px 0 0;
-  color: #666;
+  color: var(--muted);
 }
 
 .setlist-empty[hidden] {
   display: none;
-}
-
-/* Parts a platform cannot do (data-needs) are hidden even where a style sets display. */
-[data-needs][hidden] {
-  display: none !important;
 }
 
 /* Android: the Documents/Chordash file list. */
@@ -728,26 +953,248 @@ body {
 
 .folder-files .folder-file {
   padding: 6px 4px;
-  font: inherit;
   text-align: left;
   background: none;
   border: none;
 }
 
 .folder-files small {
-  color: #888;
+  color: var(--faint);
   white-space: nowrap;
 }
 
 .folder-files li.chosen {
-  background: #eef3ff;
+  background: var(--ink-soft);
 }
 
-.file-name-input {
-  box-sizing: border-box;
+/* --- Help -------------------------------------------------------------------------- */
+
+.help-dialog {
+  width: min(820px, calc(100vw - 32px));
+}
+
+.help-body {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+}
+
+.help-body section + section {
+  margin-top: 6px;
+}
+
+.help-body p {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.help-body table {
   width: 100%;
-  padding: 8px;
-  font: inherit;
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.help-body td {
+  padding: 6px 8px 6px 0;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line);
+}
+
+.help-body td:first-child {
+  width: 34%;
+}
+
+.help-body code {
+  padding: 2px 6px;
+  font-family: 'D2Coding', 'Consolas', 'Chordash Pretendard', monospace;
+  font-size: 12.5px;
+  background: var(--ink-soft);
+  border-radius: 4px;
+  white-space: pre;
+}
+
+.help-result {
+  width: 18%;
+  text-align: right;
+}
+
+.help-chord {
+  font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.help-chord sup {
+  font-size: 0.62em;
+}
+
+.help-bad {
+  color: var(--danger);
+}
+
+/* --- About ------------------------------------------------------------------------- */
+
+.about-dialog {
+  width: min(460px, calc(100vw - 32px));
+}
+
+.about-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.about-head img {
+  border-radius: 11px;
+}
+
+.about-head h2 {
+  margin: 0;
+}
+
+.about-version {
+  margin: 2px 0 0 !important;
+  font-size: 13px;
+}
+
+.about-links {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  line-height: 1.9;
+}
+
+.about-links a {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.about-small {
+  font-size: 12px;
+}
+
+/* Parts a platform cannot do (data-needs) are hidden even where a style sets display. */
+[data-needs][hidden] {
+  display: none !important;
+}
+
+/* --- Narrow screens (phones): one pane at a time, tabs at the bottom ---------------- */
+
+.view-tabs {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .doc-name {
+    max-width: 40vw;
+  }
+
+  /* Files come from the "곡" tab and the menu; the sheet tools get their own row. */
+  .group-file,
+  .preview-toggle,
+  .status {
+    display: none;
+  }
+
+  .narrow-only {
+    display: flex !important;
+  }
+
+  .group-sheet {
+    order: 10;
+    flex-basis: 100%;
+    padding: 0;
+    border: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .group-sheet > * {
+    flex-shrink: 0;
+  }
+
+  .chip-label {
+    display: none;
+  }
+
+  .header-fields {
+    padding: 8px 10px;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-pane {
+    border-right: none;
+  }
+
+  #app[data-view='editor'] .preview-pane,
+  #app[data-view='preview'] .editor-pane {
+    display: none;
+  }
+
+  #app.preview-hidden[data-view='preview'] .preview-pane {
+    display: revert;
+  }
+
+  .view-tabs {
+    display: flex;
+    padding: 4px 6px max(4px, env(safe-area-inset-bottom));
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--line);
+  }
+
+  .view-tabs button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0 4px;
+    font-size: 11px;
+    color: var(--faint);
+    background: none;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .view-tabs .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .view-tabs button[aria-selected='true'] {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .menu {
+    position: fixed;
+    top: auto;
+    right: 8px;
+    left: 8px;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    min-width: 0;
+  }
+
+  .menu kbd {
+    display: none;
+  }
+
+  .help-body td:first-child {
+    width: auto;
+  }
+
+  .help-result {
+    width: auto;
+  }
 }

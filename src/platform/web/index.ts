@@ -184,7 +184,7 @@ export function createWebPlatform(): Platform {
   })
 
   return {
-    features: { ai: false, printPdf: true, setlistKeepsSongs: true },
+    features: { ai: false, printPdf: true, setlistKeepsSongs: true, offersDesktopApp: true },
 
     async openFile(): Promise<OpenedFile | null> {
       const [picked] = await pick(SONG)

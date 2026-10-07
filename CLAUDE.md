@@ -35,7 +35,8 @@
 - `src/core/` : 파서·화성 계산·조옮김·쪽 나누기·임포트 변환 등 **순수 함수**. Electron, Node, DOM, platform에 의존하지 않습니다. 테스트 대상의 대부분이 여기 있습니다.
 - `src/platform/` : **기기에 맡기는 일의 인터페이스**(`types.ts`의 `Platform`). 파일 입출력, PDF 출력, 키 보관, 외부 API 호출은 모두 이 인터페이스 뒤로 숨깁니다.
   - `src/platform/electron/` : Electron 구현체(인터페이스의 한 구현). 안드로이드는 나중에 같은 인터페이스의 Capacitor 구현체를 추가합니다.
-  - `src/platform/web/` : 웹 버전(GitHub Pages) 구현체. 못 하는 기능은 `Platform.features`로 알리고, 화면은 `data-needs` 요소를 숨깁니다.
+  - `src/platform/android/` : 안드로이드 앱(Capacitor) 구현체. 곡은 휴대폰 문서/Chordash 폴더.
+  - `src/platform/web/` : 웹 버전(https://chordash.app, GitHub Pages) 구현체. 못 하는 기능은 `Platform.features`로 알리고, 화면은 `data-needs` 요소를 숨깁니다.
   - 파일은 경로가 아니라 `FileRef`(식별값 + 표시 이름)로 다룹니다. 안드로이드는 경로 대신 URI를 줍니다.
 - `src/renderer/` : 에디터와 미리보기 UI. **Electron이나 Node API를 직접 부르지 않고 `src/platform`의 `platform`만 씁니다.** (특정 구현체 `platform/electron`을 직접 가져오지도 않음.) ESLint 규칙으로 막혀 있습니다.
 - `src/main/`, `src/preload/` : Electron 구현체의 뒷단(메인 프로세스, 연결 통로). 디스크·대화상자·창 제어는 여기서만 합니다.

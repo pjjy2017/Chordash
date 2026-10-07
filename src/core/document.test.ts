@@ -356,3 +356,65 @@ describe('no chord and bar texts (Phase 6)', () => {
     expect(errors('F7, "Break nc')).toEqual(['닫는 따옴표(")가 없음'])
   })
 })
+
+describe('text below (_) and above (^) a bar line (Phase 13)', () => {
+  const bars = (text: string): BarLine => {
+    const items = parse(text).document.sections.flatMap((s) => s.items)
+    return items.find((i): i is BarLine => i.type === 'bars')!
+  }
+  const warnings = (text: string): string[] =>
+    parse(text)
+      .diagnostics.filter((d) => d.severity === 'warning')
+      .map((d) => d.message)
+
+  it('puts a _ line under the whole bar line', () => {
+    expect(bars('C, F\n_ 그대는 어디에').cue).toBe('그대는 어디에')
+  })
+
+  it('splits a _ line into bars with commas or |, empty cells left out', () => {
+    const line = bars('C, F, G\n_ 그대는, , 있나')
+    expect(line.bars.map((b) => b.lyric)).toEqual(['그대는', null, '있나'])
+    expect(bars('C | F\n_ 가 | 나').bars.map((b) => b.lyric)).toEqual(['가', '나'])
+  })
+
+  it('keeps l: as the same as _', () => {
+    expect(bars('C, F\nl: 첫 소절').cue).toBe('첫 소절')
+    expect(bars('C, F\nl: 가, 나').bars.map((b) => b.lyric)).toEqual(['가', '나'])
+  })
+
+  it('puts a ^ line over the next bar line, whole or per bar', () => {
+    expect(bars('^ 따-닷 따-닷\nC, F').memos).toEqual([
+      { color: 'ink', text: '따-닷 따-닷', line: 1 }
+    ])
+    const line = bars('^ Break, , Fill\nC, F, G')
+    expect(line.bars.map((b) => b.texts)).toEqual([['Break'], [], ['Fill']])
+  })
+
+  it('reads _ and ^ at the end of a bar line', () => {
+    const line = bars('Bb^7, A-7 _ 그대는, 어디에')
+    expect(line.bars.map((b) => b.chords.map((c) => c.source))).toEqual([['Bb^7'], ['A-7']])
+    expect(line.bars.map((b) => b.lyric)).toEqual(['그대는', '어디에'])
+    const both = bars('C, G7. ^ 따-닷 _ 끝')
+    expect(both.bars[1].final).toBe(true)
+    expect(both.memos.map((m) => m.text)).toEqual(['따-닷'])
+    expect(both.cue).toBe('끝')
+  })
+
+  it('keeps ^ stuck to a chord as major 7th, and warns about F ^7', () => {
+    expect(bars('F^7').bars[0].chords[0].chord).not.toBeNull()
+    expect(bars('F^7').memos).toEqual([])
+    expect(bars('F ^7').memos.map((m) => m.text)).toEqual(['7'])
+    expect(warnings('F ^7')).toEqual(['메이저7이라면 F^7처럼 띄우지 말고 붙여 쓰세요'])
+  })
+
+  it('leaves _ inside quoted text alone', () => {
+    expect(bars('"a_b" C').bars[0].texts).toEqual(['a_b'])
+  })
+
+  it('warns about too many cells and text without a bar line', () => {
+    expect(warnings('C\n_ 가, 나')).toEqual(['가사 칸(2)이 마디(1)보다 많음'])
+    expect(warnings('_ 가사')).toEqual(['가사(_) 바로 위에 마디 줄이 없음'])
+    expect(warnings('^ 글자')).toEqual(['위쪽 글자(^) 아래에 마디 줄이 없음'])
+    expect(warnings('C\n_ 가\n_ 나')).toEqual(['이 마디 줄에는 이미 가사가 있음'])
+  })
+})

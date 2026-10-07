@@ -169,22 +169,27 @@ const hintsEnabled = StateField.define<boolean>({
 })
 
 /**
- * A bar (cell) is "being typed" while a cursor is in it or at its edges; its chords stay as typed,
- * with grey hints. Typing the comma that closes it — or moving to another cell or line — finishes
- * it, and its chords are shown as sheet music. Barlines are always shown as symbols (| ‖ ‖: :‖).
+ * The line with the cursor stays exactly as typed, with grey hints (how each chord was read).
+ * Leaving it — Enter, a click or the arrow keys — finishes it: chords, barlines (| ‖ ‖: :‖) and
+ * part markers are shown as sheet music (DECISIONS Phase 13; it used to be per bar, on ",").
  */
 function liveDecorations(state: EditorState): DecorationSet {
   const { document: doc, spans } = state.field(parsed)
   const theme = DEFAULT_THEME
-  const touching = (from: number, to: number): boolean =>
-    state.selection.ranges.some((r) => r.to >= from && r.from <= to)
+  /** Lines with a cursor or selection on them. */
+  const typing = new Set<number>()
+  for (const r of state.selection.ranges) {
+    const first = state.doc.lineAt(r.from).number
+    const last = state.doc.lineAt(r.to).number
+    for (let n = first; n <= last; n++) typing.add(n)
+  }
   const decorations: Range<Decoration>[] = []
 
-  /** A part marker (`a)`) is boxed once the cursor has left it. */
+  /** A part marker (`a)`) is boxed once the cursor has left its line. */
   const addPart = (lineNo: number, part: Part): void => {
+    if (typing.has(lineNo)) return
     const from = offset(state.doc, lineNo, part.from)
     const to = offset(state.doc, lineNo, part.to)
-    if (touching(from, to)) return
     decorations.push(Decoration.replace({ widget: new PartWidget(part.label) }).range(from, to))
   }
 
@@ -193,15 +198,8 @@ function liveDecorations(state: EditorState): DecorationSet {
       if (item.type === 'form') item.parts.forEach((part) => addPart(item.line, part))
       if (item.type !== 'bars') continue
       if (item.part) addPart(item.line, item.part)
-      const line = state.doc.line(item.line)
+      const editing = typing.has(item.line)
       for (const bar of item.bars) {
-        // A bar with no barline after it is still open up to the end of the line, trailing
-        // spaces included — so a space alone never closes it; only `,` / `|` / `.` does.
-        const closed = /[,|.:]/.test(line.text.charAt(bar.to))
-        const editing = touching(
-          offset(state.doc, item.line, bar.from),
-          closed ? offset(state.doc, item.line, bar.to) : line.to
-        )
         for (const chord of bar.chords) {
           if (chord.noChord && !editing) {
             const from = offset(state.doc, item.line, chord.from)
@@ -233,7 +231,7 @@ function liveDecorations(state: EditorState): DecorationSet {
   }
 
   for (const span of spans) {
-    if (span.kind !== 'barline') continue
+    if (span.kind !== 'barline' || typing.has(span.line)) continue
     const from = offset(state.doc, span.line, span.from)
     const to = offset(state.doc, span.line, span.to)
     const text = state.doc.sliceString(from, to)

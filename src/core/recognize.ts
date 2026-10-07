@@ -22,14 +22,14 @@ key: F
 
 [Verse]
 a) Bb^7, A-7, Bb^7, F B7*
-l: 그대는 어디에
+_ 그대는 어디에
 Bb, A- D-, G-, Cs B7
-l: 내 맘을 두고
+_ 내 맘을 두고
 Bb, ?A-, Bb, F B7 ?
 
 [Chorus]
 .: D-7, G-7, C7, F^7
-l: 언제나 꿈꾸듯
+_ 언제나 꿈꾸듯
 Bb^7, E7b9, A7, ,
 1. D-, G-, C7, F :.
 2. D-, G-, "Break" nc, nc
@@ -66,7 +66,8 @@ Rows: one line per row of the chart, keeping the chart's rows and bar counts.
 - No chord (N.C.): nc
 - A word written above a bar (Break, Stop, Fill, Tutti, rit., solo…): in double quotes before the chord of that bar, F7, "Break" nc, Bb7
 - A line with only a quoted text is an instruction line: "기타 솔로 8마디"
-- Lyrics written under a row: the next line "l: <first few words>", at most about 15 characters.
+- Lyrics written under a row: the next line "_ <first few words>", at most about 15 characters (no commas). If the lyrics are written under each bar, split them with commas, one per bar: "_ 그대는, 어디에, , 있나요".
+- Plain text written above a whole row: the line before the row, "^ <text>".
 - A note in colored pen above a row: the line before the row, "{teal: 스캣}". Colors: teal red blue green orange purple gray (pick the nearest).
 - Song form letters in boxes (A, B, B2, 가…): start the row with "a) ", "b2) ". A line of only such letters is a form overview: "a) a) b) a)".
 - Anything else worth keeping that does not fit: a comment line "// …".

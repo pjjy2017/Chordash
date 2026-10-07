@@ -53,7 +53,11 @@ export interface PageModel {
   pages: Page[]
 }
 
-/** Row height, top to bottom: colour memos, the "above" band, the bars, the lyric cue. */
+/** A lyric under the whole line or under any of its bars. */
+export const hasBelow = (line: BarLine): boolean =>
+  line.cue !== null || line.bars.some((b) => b.lyric !== null)
+
+/** Row height, top to bottom: memos and ^ texts, the "above" band, the bars, the lyrics. */
 function rowBlock(line: BarLine, m: LayoutMetrics): RowBlock {
   const hasAbove = line.ending !== null || line.bars.some((b) => b.texts.length > 0)
   const above = hasAbove ? m.aboveHeight : 0
@@ -63,7 +67,7 @@ function rowBlock(line: BarLine, m: LayoutMetrics): RowBlock {
     slots: Math.max(m.minBarsPerRow, line.bars.length),
     above,
     height:
-      line.memos.length * m.memoHeight + above + m.rowHeight + (line.cue !== null ? m.cueHeight : 0)
+      line.memos.length * m.memoHeight + above + m.rowHeight + (hasBelow(line) ? m.cueHeight : 0)
   }
 }
 

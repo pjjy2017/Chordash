@@ -38,8 +38,10 @@ export interface Bar {
   repeatEnd: boolean
   /** Final barline (`.`) after this bar. */
   final: boolean
-  /** Quoted texts in the bar (`"Break"`), shown above it. */
+  /** Texts shown above the bar: quoted in it (`"Break"`) or from a `^` line split into bars. */
   texts: string[]
+  /** Lyric under this bar, from a `_` line split into bars (`_ 그대는, 어디에`). */
+  lyric: string | null
   /** 0-based column range of the bar's content (between its barlines). */
   from: number
   to: number
@@ -49,7 +51,8 @@ export const MEMO_COLORS = ['teal', 'red', 'blue', 'green', 'orange', 'purple', 
 export type MemoColor = (typeof MEMO_COLORS)[number]
 
 export interface ColorMemo {
-  color: MemoColor
+  /** `ink`: plain text from a `^` line; the others from `{색: …}`. */
+  color: MemoColor | 'ink'
   text: string
   line: number
 }
@@ -62,9 +65,9 @@ export interface BarLine {
   bars: Bar[]
   /** `?` after the last barline: the whole line needs checking. */
   uncertain: boolean
-  /** Lyric cue (`l:` / `lyric:`) shown under this line. */
+  /** Lyric under the whole line (`_ 가사`, `l: 가사`). Per-bar lyrics are in `Bar.lyric`. */
   cue: string | null
-  /** Colour memos shown above this line. */
+  /** Texts above the whole line: colour memos (`{teal: …}`) and `^ 글자` lines. */
   memos: ColorMemo[]
   /** Song-form part marker at the start of the line (`a) Bb^7, ...`), drawn boxed in the margin. */
   part: Part | null
@@ -151,8 +154,29 @@ const SECTION = /^\[([^\]]*)\]/
 /** Song-form part marker: one letter (or Hangul), optional digits, `)` — `a)`, `b2)`, `ㄱ4)`. */
 const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3])(\d*)\)$/
 const HEADER = /^(title|key|theme)\s*:\s*(.*)$/
-/** Lyric cue: `l: 첫 소절` or `lyric: 첫 소절`. (`>` is kept free for a later feature.) */
+/** Lyric cue: `l: 첫 소절` or `lyric: 첫 소절` (same as `_ 첫 소절`). `>` is kept free. */
 const LYRIC = /^(?:l|lyric)\s*:\s*(.*)$/
+
+/** Text for under (`_`) or over (`^`) a bar line, from its own line or the end of the line. */
+interface Annotation {
+  place: 'below' | 'above'
+  /** The text after the marker. */
+  text: string
+  /** Column of the text (after the marker). */
+  at: number
+  /** Column of the `_` or `^` itself. */
+  marker: number
+}
+
+/**
+ * `그대는 어디에` → the whole line; `그대는, 어디에` or `그대는 | 어디에` → one cell per bar
+ * (empty cells leave a bar without text).
+ */
+export function annotationCells(text: string): { whole: string } | { cells: string[] } {
+  return /[,|]/.test(text)
+    ? { cells: text.split(/[,|]/).map((c) => c.trim()) }
+    : { whole: text.trim() }
+}
 const MEMO = /^\{\s*([^:{}\s]*)\s*:\s*(.*?)\s*\}$/
 /** `|` and `,` are plain barlines, `.` is a final barline. */
 type Barline = 'plain' | 'repeatStart' | 'repeatEnd' | 'final'
@@ -169,6 +193,8 @@ class Parser {
   private lineNo = 0
   private headerOpen = true
   private pendingMemos: ColorMemo[] = []
+  /** A `^` line split into bars, waiting for the bar line below it. */
+  private pendingAbove: { cells: string[]; line: number; at: number; end: number } | null = null
 
   report(severity: Diagnostic['severity'], from: number, to: number, message: string): void {
     this.diagnostics.push({ line: this.lineNo, from, to, severity, message })
@@ -228,6 +254,14 @@ class Parser {
     if (lyric) {
       this.mark('cue', start, end)
       return this.parseCue(lyric[1], start, end)
+    }
+    if (trimmed.startsWith('_') || trimmed.startsWith('^')) {
+      const place = trimmed[0] === '_' ? 'below' : 'above'
+      this.mark(place === 'below' ? 'cue' : 'memo', start, end)
+      const at = start + 1 + (trimmed.slice(1).length - trimmed.slice(1).trimStart().length)
+      const note = { place, text: trimmed.slice(1), at, marker: start } as const
+      if (place === 'below') return this.attachBelow(this.lastBarLine(), note, start, end)
+      return this.holdAbove(note, start, end)
     }
     if (trimmed.startsWith('>')) {
       return this.report('error', start, end, '>는 아직 쓰지 않는 기호예요. 가사 큐는 l: 로 쓰세요')
@@ -343,7 +377,8 @@ class Parser {
     this.doc.sections.push(section)
   }
 
-  private parseBarLine(raw: string, start: number, end: number): void {
+  private parseBarLine(raw: string, start: number, lineEnd: number): void {
+    let end = lineEnd
     const line: BarLine = {
       type: 'bars',
       line: this.lineNo,
@@ -355,6 +390,12 @@ class Parser {
       part: null
     }
     this.pendingMemos = []
+    const pendingAbove = this.pendingAbove
+    this.pendingAbove = null
+
+    // `_ 가사` and ` ^ 글자` at the end of the line belong to this line, not to its bars.
+    const notes = this.inlineAnnotations(raw, start, end)
+    if (notes.length) end = raw.slice(0, notes[0].marker).trimEnd().length
 
     let pos = start
     const first = /^\S+/.exec(raw.slice(start))
@@ -425,7 +466,117 @@ class Parser {
     // Content after the last barline (no closing `|` or `,`) still forms a bar.
     if (raw.slice(contentStart, stop).trim()) closeBar(null, stop)
 
+    if (pendingAbove) this.attachAbove(line, pendingAbove.cells, pendingAbove.line)
+    for (const note of notes) {
+      const noteEnd = note.at + note.text.length
+      if (note.place === 'below') this.attachBelow(line, note, note.marker, noteEnd)
+      else {
+        // `F ^7`: a space before the 7 makes it a text, which is almost always a typo.
+        if (/^\d/.test(note.text.trim()))
+          this.report(
+            'warning',
+            note.marker,
+            noteEnd,
+            '메이저7이라면 F^7처럼 띄우지 말고 붙여 쓰세요'
+          )
+        const parts = annotationCells(note.text)
+        if ('whole' in parts)
+          line.memos.push({ color: 'ink', text: parts.whole, line: this.lineNo })
+        else this.attachAbove(line, parts.cells, this.lineNo)
+      }
+    }
     this.currentSection().items.push(line)
+  }
+
+  /**
+   * Where `_` (anywhere) or `^` (after a space) starts text at the end of a bar line, outside
+   * quotes and `( )`. A `^` stuck to a chord is its major 7th (`F^7`).
+   */
+  private inlineAnnotations(raw: string, start: number, end: number): Annotation[] {
+    const found: { place: Annotation['place']; marker: number }[] = []
+    let depth = 0
+    for (let i = start; i < end; i++) {
+      const c = raw[i]
+      if (c === '"') {
+        const close = raw.indexOf('"', i + 1)
+        if (close < 0) break
+        i = close
+      } else if (c === '(') depth++
+      else if (c === ')') depth = Math.max(0, depth - 1)
+      else if (depth === 0 && c === '_') found.push({ place: 'below', marker: i })
+      else if (depth === 0 && c === '^' && i > start && /\s/.test(raw[i - 1]))
+        found.push({ place: 'above', marker: i })
+    }
+    // Only the first marker of each kind starts a text; later ones are part of the text.
+    const first = (place: Annotation['place']): number | undefined =>
+      found.find((f) => f.place === place)?.marker
+    const marks = [first('below'), first('above')].filter((m): m is number => m !== undefined)
+    marks.sort((a, b) => a - b)
+    return marks.map((marker, i) => {
+      const textEnd = i + 1 < marks.length ? marks[i + 1] : end
+      const body = raw.slice(marker + 1, textEnd)
+      const lead = body.length - body.trimStart().length
+      this.mark(raw[marker] === '_' ? 'cue' : 'memo', marker, textEnd)
+      return {
+        place: raw[marker] === '_' ? 'below' : 'above',
+        text: body.trimEnd().trimStart(),
+        at: marker + 1 + lead,
+        marker
+      }
+    })
+  }
+
+  /** The bar line a `_` or `l:` line belongs to: the one right above it. */
+  private lastBarLine(): BarLine | null {
+    const last = this.section?.items[this.section.items.length - 1]
+    return last && last.type === 'bars' ? last : null
+  }
+
+  /** Lyrics under a bar line: under the whole line, or one per bar. */
+  private attachBelow(line: BarLine | null, note: Annotation, from: number, to: number): void {
+    if (!line) return this.report('warning', from, to, '가사(_) 바로 위에 마디 줄이 없음')
+    if (line.cue !== null || line.bars.some((b) => b.lyric !== null))
+      return this.report('warning', from, to, '이 마디 줄에는 이미 가사가 있음')
+    const parts = annotationCells(note.text)
+    if ('whole' in parts) {
+      line.cue = parts.whole
+      return
+    }
+    if (parts.cells.length > line.bars.length)
+      this.report(
+        'warning',
+        from,
+        to,
+        `가사 칸(${parts.cells.length})이 마디(${line.bars.length})보다 많음`
+      )
+    parts.cells.forEach((cell, i) => {
+      if (i < line.bars.length && cell) line.bars[i].lyric = cell
+    })
+  }
+
+  /** A `^` line: over the whole next bar line (like a memo), or split over its bars. */
+  private holdAbove(note: Annotation, start: number, end: number): void {
+    const parts = annotationCells(note.text)
+    if ('whole' in parts) {
+      this.pendingMemos.push({ color: 'ink', text: parts.whole, line: this.lineNo })
+      return
+    }
+    if (this.pendingAbove) this.report('warning', start, end, '마디마다 나눈 ^ 줄이 두 번 있음')
+    this.pendingAbove = { cells: parts.cells, line: this.lineNo, at: start, end }
+  }
+
+  private attachAbove(line: BarLine, cells: string[], from: number): void {
+    if (cells.length > line.bars.length)
+      this.diagnostics.push({
+        line: from,
+        from: 0,
+        to: 0,
+        severity: 'warning',
+        message: `위쪽 글자 칸(${cells.length})이 마디(${line.bars.length})보다 많음`
+      })
+    cells.forEach((cell, i) => {
+      if (i < line.bars.length && cell) line.bars[i].texts.unshift(cell)
+    })
   }
 
   private parseBar(
@@ -453,6 +604,7 @@ class Parser {
     return {
       chords,
       texts,
+      lyric: null,
       repeatStart: left === 'repeatStart',
       repeatEnd: right === 'repeatEnd',
       final: right === 'final',
@@ -519,13 +671,14 @@ class Parser {
     return item
   }
 
+  /** `l: 가사` works like `_ 가사`. */
   private parseCue(text: string, start: number, end: number): void {
-    const last = this.section?.items[this.section.items.length - 1]
-    if (!last || last.type !== 'bars')
-      return this.report('warning', start, end, '가사 큐(l:) 바로 위에 마디 줄이 없음')
-    if (last.cue !== null)
-      return this.report('warning', start, end, '이 마디 줄에는 이미 가사 큐가 있음')
-    last.cue = text
+    this.attachBelow(
+      this.lastBarLine(),
+      { place: 'below', text, at: start, marker: start },
+      start,
+      end
+    )
   }
 
   private parseMemo(trimmed: string, start: number, end: number): void {
@@ -537,18 +690,23 @@ class Parser {
     this.pendingMemos.push({ color: m[1] as MemoColor, text: m[2], line: this.lineNo })
   }
 
-  /** Memos must be followed by a bar line in the same section. */
+  /** Memos and `^` lines must be followed by a bar line in the same section. */
   private flushMemos(): void {
-    for (const memo of this.pendingMemos) {
+    const lost = [
+      ...this.pendingMemos.map((m) => ({ line: m.line, ink: m.color === 'ink' })),
+      ...(this.pendingAbove ? [{ line: this.pendingAbove.line, ink: true }] : [])
+    ]
+    for (const { line, ink } of lost) {
       this.diagnostics.push({
-        line: memo.line,
+        line,
         from: 0,
         to: 0,
         severity: 'warning',
-        message: '색 메모 아래에 마디 줄이 없음'
+        message: ink ? '위쪽 글자(^) 아래에 마디 줄이 없음' : '색 메모 아래에 마디 줄이 없음'
       })
     }
     this.pendingMemos = []
+    this.pendingAbove = null
   }
 }
 

@@ -31,17 +31,22 @@ import {
   transpositionEdits,
   type Key,
   type LineRange,
-  type ChordDocument
+  type ChordDocument,
+  APP_VERSION,
+  DONATE_URL
 } from '../../core'
 import { platform, type FileRef } from '../../platform'
 import { chartPages, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
+import { openHelp } from './help'
+import { installIcons } from './icons'
 import { buildPrintDocument, renderPages } from './preview'
 import { modelName, openSettings, recognizeModel } from './settings'
 import { openSetlist } from './setlist'
 
 installFonts()
+installIcons()
 
 // Parts the platform cannot do (web version: AI import, settings) are not shown.
 for (const [feature, on] of Object.entries(platform.features)) {
@@ -67,8 +72,14 @@ let savedText = ''
 const isDirty = (): boolean => editor.getText() !== savedText
 const documentName = (): string => file?.name ?? UNTITLED
 
+const docName = $<HTMLElement>('doc-name')
+
 function reportState(): void {
-  platform.setDocumentState({ name: documentName(), dirty: isDirty() })
+  const dirty = isDirty()
+  platform.setDocumentState({ name: documentName(), dirty })
+  docName.textContent = documentName().replace(/.chord$/i, '')
+  docName.classList.toggle('dirty', dirty)
+  docName.title = dirty ? '저장하지 않은 변경 있음' : documentName()
 }
 
 // --- preview -----------------------------------------------------------------
@@ -179,6 +190,8 @@ const commands: Record<string, () => Promise<unknown>> = {
     importDialog.showModal()
   },
   settings: openSettings,
+  help: openHelp,
+  about: openAbout,
   setlist: () => openSetlist(() => ({ file, dirty: isDirty() }))
 }
 
@@ -666,8 +679,52 @@ function run(command: string): void {
 }
 
 document.querySelectorAll<HTMLButtonElement>('[data-command]').forEach((button) => {
-  button.addEventListener('click', () => run(button.dataset.command!))
+  button.addEventListener('click', () => {
+    closeMenu()
+    run(button.dataset.command!)
+  })
 })
+
+// --- ⋯ menu ------------------------------------------------------------------------------
+
+const menu = $<HTMLElement>('menu')
+const menuButton = $<HTMLButtonElement>('menu-button')
+
+function closeMenu(): void {
+  menu.hidden = true
+  menuButton.setAttribute('aria-expanded', 'false')
+}
+
+menuButton.addEventListener('click', (e) => {
+  e.stopPropagation()
+  const open = menu.hidden
+  menu.hidden = !open
+  menuButton.setAttribute('aria-expanded', String(open))
+  if (open) menu.querySelector<HTMLElement>('[role=menuitem]:not([hidden])')?.focus()
+})
+document.addEventListener('click', (e) => {
+  if (!menu.hidden && !menu.contains(e.target as Node)) closeMenu()
+})
+menu.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeMenu()
+    menuButton.focus()
+  }
+})
+menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu))
+
+// --- about ---------------------------------------------------------------------------------
+
+const aboutDialog = $<HTMLDialogElement>('about-dialog')
+$<HTMLElement>('about-version').textContent = `버전 ${APP_VERSION}`
+if (DONATE_URL) {
+  $<HTMLElement>('about-donate').hidden = false
+  $<HTMLAnchorElement>('about-donate-link').href = DONATE_URL
+}
+
+async function openAbout(): Promise<void> {
+  aboutDialog.showModal()
+}
 
 // Keyboard shortcuts (desktop, or Android with a hardware keyboard).
 const SHORTCUTS: Record<string, string> = {
@@ -680,6 +737,11 @@ const SHORTCUTS: Record<string, string> = {
 window.addEventListener(
   'keydown',
   (e) => {
+    if (e.key === 'F1') {
+      e.preventDefault()
+      run('help')
+      return
+    }
     if (!e.ctrlKey || e.altKey) return
     const command = SHORTCUTS[(e.shiftKey ? 'shift+' : '') + e.key.toLowerCase()]
     if (!command) return

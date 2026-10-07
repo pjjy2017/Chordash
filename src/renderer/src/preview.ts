@@ -118,7 +118,15 @@ function blockHtml(block: PageBlock, theme: Theme): string {
   const memos = line.memos
     .map((m) => `<div class="memo memo-${m.color}">${escapeHtml(m.text)}</div>`)
     .join('')
-  const cue = line.cue !== null ? `<div class="cue">${escapeHtml(line.cue)}</div>` : ''
+  // Lyrics: one under the whole line, or one per bar laid out like the bars.
+  const cue =
+    line.cue !== null
+      ? `<div class="cue">${escapeHtml(line.cue)}</div>`
+      : line.bars.some((b) => b.lyric !== null)
+        ? `<div class="lyrics" style="--slots:${block.slots}">` +
+          line.bars.map((b) => `<div class="lyric">${escapeHtml(b.lyric ?? '')}</div>`).join('') +
+          `</div>`
+        : ''
   const bars = line.bars.map((b, i, all) => barHtml(b, i, all, theme)).join('')
   return (
     `<div class="row" style="height:${block.height}mm">` +

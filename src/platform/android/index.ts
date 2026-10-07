@@ -129,7 +129,7 @@ export function createAndroidPlatform(): Platform {
   })
 
   return {
-    features: { ai: true, printPdf: true, setlistKeepsSongs: false },
+    features: { ai: true, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: false },
 
     async openFile() {
       const choice = await chooseInFolder('곡 열기', SONG, false)

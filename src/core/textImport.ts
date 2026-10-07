@@ -110,7 +110,8 @@ const isInlineChordLine = (line: string): boolean =>
 
 /** The start of a lyric line, used as the lyric cue. */
 function cueOf(lyric: string): string {
-  const t = lyric.replace(/\s+/g, ' ').trim()
+  // Commas and | would split the lyric into bars (SYNTAX 3.1).
+  const t = lyric.replace(/[,|]/g, ' ').replace(/\s+/g, ' ').trim()
   if (t.length <= 16) return t
   const cut = t.slice(0, 16)
   const space = cut.lastIndexOf(' ')
@@ -245,7 +246,7 @@ export function importText(source: string, fileName = ''): ImportResult {
       uncertain += bars.uncertain + 1
       body.push(`${bars.text} ?`)
       const lyric = t.replace(INLINE_CHORD, '').trim()
-      if (lyric) body.push(`l: ${cueOf(lyric)}`)
+      if (lyric) body.push(`_ ${cueOf(lyric)}`)
       continue
     }
 
@@ -254,7 +255,7 @@ export function importText(source: string, fileName = ''): ImportResult {
       const bars = convertBarLine(t)
       uncertain += bars.uncertain
       body.push(bars.text)
-      if (isLyric(lines[i + 1])) body.push(`l: ${cueOf(lines[++i])}`)
+      if (isLyric(lines[i + 1])) body.push(`_ ${cueOf(lines[++i])}`)
       continue
     }
 
@@ -263,7 +264,7 @@ export function importText(source: string, fileName = ''): ImportResult {
       const bars = chordsToBars(words(t))
       uncertain += bars.uncertain + 1
       body.push(`${bars.text} ?`)
-      if (isLyric(lines[i + 1])) body.push(`l: ${cueOf(lines[++i])}`)
+      if (isLyric(lines[i + 1])) body.push(`_ ${cueOf(lines[++i])}`)
       continue
     }
 

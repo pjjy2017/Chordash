@@ -61,7 +61,7 @@ describe('sample: bar-line text (CP949)', () => {
         '[A]',
         '.: Cm7, F7, Bbmaj7, Ebmaj7',
         'Am7b5, D7, Gm6, :.',
-        'l: 여기는 가사 첫 줄 연습용',
+        '_ 여기는 가사 첫 줄 연습용',
         '[B]',
         'Am7b5, D7(b9), Gm, Gm',
         'Cm7, F7, Bbmaj7, Ebmaj7',
@@ -84,17 +84,17 @@ describe('sample: chords over lyrics', () => {
         '',
         '[Verse]',
         'Bbmaj7, Am7 ?',
-        'l: 여기는 첫 번째 줄 가사예요',
+        '_ 여기는 첫 번째 줄 가사예요',
         'Bbmaj7, F, B7 ?',
-        'l: 두 번째 줄도 연습용 가사',
+        '_ 두 번째 줄도 연습용 가사',
         'Gm7, C7sus4, C7 ?',
-        'l: 세 번째 줄',
+        '_ 세 번째 줄',
         '',
         '[Chorus]',
         'Dm7, Gm7, C7, Fmaj7 ?',
-        'l: 후렴 첫 줄 연습용 가사입니다',
+        '_ 후렴 첫 줄 연습용 가사입니다',
         'Bbmaj7, E7(b9), A7 ?',
-        'l: 후렴 두 번째 줄',
+        '_ 후렴 두 번째 줄',
         ''
       ].join('\n')
     )
@@ -115,15 +115,15 @@ describe('sample: ChordPro', () => {
         '// ChordPro sample with invented lyrics',
         '[Verse]',
         'G, Em ?',
-        'l: Walking down…',
+        '_ Walking down…',
         'C, D7 ?',
-        'l: Thinking of the…',
+        '_ Thinking of the…',
         '',
         '[Chorus]',
         'C, D, G, Em ?',
-        'l: Sing along now',
+        '_ Sing along now',
         'Am7, D7sus4, G ?',
-        'l: Everybody',
+        '_ Everybody',
         '"Repeat chorus"',
         ''
       ].join('\n')
@@ -140,12 +140,15 @@ describe('importText rules', () => {
   })
   it('keeps unknown text as comments so nothing is lost', () => {
     expect(importText('Title\nC G\nla la\nsome note\n').text).toBe(
-      'title: Title\n\nC, G ?\nl: la la\n// some note\n'
+      'title: Title\n\nC, G ?\n_ la la\n// some note\n'
     )
+  })
+  it('keeps a lyric with commas as one lyric, not one per bar', () => {
+    expect(importText('C G\n아, 그대여\n').text).toBe('C, G ?\n_ 아 그대여\n')
   })
   it('does not take a lyric line that starts with a section word as a heading', () => {
     expect(importText('C G\n후렴 같은 가사가 길게 이어지는 줄\n').text).toBe(
-      'C, G ?\nl: 후렴 같은 가사가 길게…\n'
+      'C, G ?\n_ 후렴 같은 가사가 길게…\n'
     )
   })
   it('says unknown when there is no music', () => {

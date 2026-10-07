@@ -10,7 +10,7 @@ const { join } = require('path')
 
 const root = join(__dirname, '..')
 const logo = readFileSync(join(root, 'resources/logo.svg'), 'utf8')
-const BLUE = '#1d3f9e'
+const INK = '#23272f'
 
 /** The barlines alone, from the logo. */
 const bars = logo.match(/<g fill="#fff">[\s\S]*?<\/g>/)[0]
@@ -21,14 +21,14 @@ const SHAPES = {
   /** Rounded tile: desktop, web, older Android launchers. */
   tile: logo,
   /** Round launcher icon. */
-  round: svg(`<circle cx="70" cy="70" r="70" fill="${BLUE}"/>${bars}`),
+  round: svg(`<circle cx="70" cy="70" r="70" fill="${INK}"/>${bars}`),
   /**
    * Adaptive icon foreground: barlines only, small enough for the launcher's mask
    * (the visible circle is the middle 2/3 of the 108dp canvas).
    */
   foreground: svg(`<g transform="translate(70 70) scale(0.6) translate(-70 -70)">${bars}</g>`),
-  /** Splash screen: the barlines on blue, small in the middle (cropped to fit any screen). */
-  splash: svg(`<rect x="-500" y="-500" width="1140" height="1140" fill="${BLUE}"/><g transform="translate(70 70) scale(0.35) translate(-70 -70)">${bars}</g>`)
+  /** Splash screen: the barlines on charcoal, small in the middle (cropped to fit any screen). */
+  splash: svg(`<rect x="-500" y="-500" width="1140" height="1140" fill="${INK}"/><g transform="translate(70 70) scale(0.35) translate(-70 -70)">${bars}</g>`)
 }
 
 async function render(win, shape, width, height = width) {
@@ -104,7 +104,7 @@ app.whenReady().then(async () => {
     }
     writeFileSync(
       join(res, 'values/ic_launcher_background.xml'),
-      `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${BLUE.toUpperCase()}</color>\n</resources>\n`
+      `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${INK.toUpperCase()}</color>\n</resources>\n`
     )
     for (const dir of readdirSync(res).filter((d) => d.startsWith('drawable'))) {
       const file = join(res, dir, 'splash.png')

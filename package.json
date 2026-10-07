@@ -1,9 +1,9 @@
 {
   "name": "chordash",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Chordash — chord chart editor with A4 PDF export",
   "main": "./out/main/index.js",
-  "author": "",
+  "author": "jiyong",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -27,9 +27,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
+    "@electron-toolkit/utils": "^4.0.0"
+  },
+  "devDependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/filesystem": "^8.1.4",
     "@capacitor/share": "^8.0.3",
@@ -40,17 +44,12 @@
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
-    "@electron-toolkit/utils": "^4.0.0",
-    "@fontsource-variable/geist": "^5.3.0",
-    "@fontsource/noto-music": "^5.3.0",
-    "pdfjs-dist": "^6.4.299",
-    "pretendard": "^1.3.9"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^8.5.2",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.1.0",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource/noto-music": "^5.3.0",
+    "@tabler/icons": "^3.49.0",
     "@types/fontkit": "^2.0.9",
     "@types/node": "^22.19.1",
     "electron": "^39.2.6",
@@ -58,6 +57,8 @@
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.1",
     "fontkit": "^2.0.4",
+    "pdfjs-dist": "^6.4.299",
+    "pretendard": "^1.3.9",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
@@ -69,5 +70,11 @@
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "electron-winstaller@5.4.0": true
+  },
+  "license": "MIT",
+  "homepage": "https://chordash.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pjjy2017/Chordash.git"
   }
 }

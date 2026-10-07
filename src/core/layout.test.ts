@@ -141,3 +141,18 @@ describe('Phase 6 heights', () => {
     ])
   })
 })
+
+describe('rows with _ and ^ text (Phase 13)', () => {
+  const rowHeight = (text: string): number => {
+    const block = layout(parse(text).document, M).pages[0].blocks[0]
+    return block.height
+  }
+
+  it('makes room for lyrics under bars and ^ text over the line', () => {
+    expect(rowHeight('C, F')).toBe(10)
+    expect(rowHeight('C, F\n_ 가, 나')).toBe(15)
+    expect(rowHeight('C, F _ 그대는 어디에')).toBe(15)
+    expect(rowHeight('^ 따-닷\nC, F')).toBe(14)
+    expect(rowHeight('^ Break, Fill\nC, F')).toBe(16)
+  })
+})

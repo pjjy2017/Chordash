@@ -14,102 +14,177 @@
 
   <body>
     <div id="app" data-view="editor">
+      <!-- Toolbar (DECISIONS Phase 13, 화면 A안): file / sheet tools / export, the rest in ⋯. -->
       <header class="toolbar">
-        <div class="file-buttons">
-          <button data-command="new" title="새 파일 (Ctrl+N)">새 파일</button>
-          <button data-command="open" title="열기 (Ctrl+O)">열기</button>
-          <button data-command="save" title="저장 (Ctrl+S)">저장</button>
-          <button data-command="saveAs" title="다른 이름으로 저장 (Ctrl+Shift+S)">
-            다른 이름으로 저장
+        <div class="brand">
+          <img class="brand-logo" src="./favicon.svg" alt="" />
+          <span id="doc-name" class="doc-name">제목 없음</span>
+        </div>
+        <div class="tool-group group-file" role="group" aria-label="파일">
+          <button
+            class="icon-button"
+            data-command="new"
+            title="새 파일 (Ctrl+N)"
+            aria-label="새 파일"
+          >
+            <span class="icon" data-icon="file-plus"></span>
           </button>
-          <button data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">PDF</button>
-          <button data-command="setlist" title="여러 곡을 묶어 한 PDF로">셋리스트</button>
-          <button data-command="import" title="다른 형식의 악보, 악보 사진·PDF 가져오기">
-            가져오기
+          <button class="icon-button" data-command="open" title="열기 (Ctrl+O)" aria-label="열기">
+            <span class="icon" data-icon="folder"></span>
           </button>
+          <button class="icon-button" data-command="save" title="저장 (Ctrl+S)" aria-label="저장">
+            <span class="icon" data-icon="device-floppy"></span>
+          </button>
+        </div>
+        <!-- Sheet tools: transposition (preview only until "원본에 적용"), 123/CDE, chord reading. -->
+        <div class="tool-group group-sheet" role="group" aria-label="악보 도구">
+          <div
+            class="transpose"
+            title="조옮김: 목표 키를 쓰거나 ▼▲(반음). 줄을 선택한 채로 하면 그 줄만"
+          >
+            <span class="icon" data-icon="arrows-up-down"></span>
+            <input
+              id="transpose-key"
+              type="text"
+              placeholder="조옮김"
+              aria-label="조옮김할 키"
+              spellcheck="false"
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              id="transpose-down"
+              class="icon-button small"
+              aria-label="반음 내리기"
+              title="반음 내리기"
+            >
+              <span class="icon" data-icon="chevron-down"></span>
+            </button>
+            <button
+              type="button"
+              id="transpose-up"
+              class="icon-button small"
+              aria-label="반음 올리기"
+              title="반음 올리기"
+            >
+              <span class="icon" data-icon="chevron-up"></span>
+            </button>
+          </div>
+          <span id="transpose-reading" class="field-reading"></span>
+          <button type="button" id="transpose-apply" class="text-button strong" hidden>
+            원본에 적용
+          </button>
+          <button type="button" id="transpose-cancel" class="text-button" hidden>취소</button>
+          <div class="segmented" role="group" aria-label="표기 바꾸기">
+            <button
+              type="button"
+              id="to-degrees"
+              title="코드 이름을 도수로 (선택한 줄만, 선택이 없으면 전체)"
+            >
+              123
+            </button>
+            <button
+              type="button"
+              id="to-notes"
+              title="도수를 코드 이름으로 (선택한 줄만, 선택이 없으면 전체)"
+            >
+              CDE
+            </button>
+          </div>
+          <span id="spelling-reading" class="field-reading"></span>
+          <label
+            class="chip-toggle"
+            title="코드 풀이: 입력 중인 줄의 줄임말 코드를 어떻게 읽었는지 옆에 회색으로 보여 줘요 (bb^ → B♭maj7)"
+          >
+            <input id="hints" type="checkbox" checked />
+            <span class="icon" data-icon="bulb"></span>
+            <span class="chip-label">코드 풀이</span>
+          </label>
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
-        <label class="toggle"><input id="hints" type="checkbox" checked /> 힌트</label>
-        <button
-          data-command="settings"
-          data-needs="ai"
-          class="settings-button"
-          title="설정 (AI 키, 모델)"
-        >
-          설정
-        </button>
         <button
           id="toggle-preview"
-          class="preview-toggle"
+          class="icon-button preview-toggle"
           aria-pressed="true"
+          aria-label="미리보기"
           title="인쇄 미리보기 보이기/숨기기"
         >
-          미리보기
+          <span class="icon" data-icon="layout-sidebar-right"></span>
         </button>
+        <button class="primary-button" data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">
+          <span class="icon" data-icon="file-type-pdf"></span><span>PDF</span>
+        </button>
+        <div class="menu-wrap">
+          <button
+            id="menu-button"
+            class="icon-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="menu"
+            aria-label="메뉴"
+            title="메뉴"
+          >
+            <span class="icon" data-icon="dots"></span>
+          </button>
+          <div id="menu" class="menu" role="menu" hidden>
+            <button role="menuitem" data-command="new" class="narrow-only">
+              <span class="icon" data-icon="file-plus"></span>새 파일<kbd>Ctrl+N</kbd>
+            </button>
+            <button role="menuitem" data-command="saveAs">
+              <span class="icon" data-icon="device-floppy"></span>다른 이름으로 저장<kbd
+                >Ctrl+Shift+S</kbd
+              >
+            </button>
+            <hr />
+            <button role="menuitem" data-command="import">
+              <span class="icon" data-icon="file-import"></span>가져오기…
+            </button>
+            <button role="menuitem" data-command="setlist">
+              <span class="icon" data-icon="playlist"></span>셋리스트…
+            </button>
+            <hr />
+            <button role="menuitem" data-command="help">
+              <span class="icon" data-icon="help"></span>입력법 도움말<kbd>F1</kbd>
+            </button>
+            <button role="menuitem" data-command="settings" data-needs="ai">
+              <span class="icon" data-icon="settings"></span>설정 (AI 키, 모델)
+            </button>
+            <a
+              role="menuitem"
+              data-needs="offersDesktopApp"
+              href="https://github.com/pjjy2017/Chordash/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span class="icon" data-icon="download"></span>데스크톱·안드로이드 앱 받기
+            </a>
+            <button role="menuitem" data-command="about">
+              <span class="icon" data-icon="info-circle"></span>Chordash 정보
+            </button>
+          </div>
+        </div>
       </header>
-      <!-- Shown only on narrow screens, where one pane is visible at a time. -->
-      <nav class="view-tabs" role="tablist">
-        <button data-view="editor" role="tab" aria-selected="true">입력</button>
-        <button data-view="preview" role="tab" aria-selected="false">미리보기</button>
-      </nav>
       <main class="split">
         <section class="editor-pane">
-          <!-- Header fields mirror the title:/key:/theme: lines at the top of the file. -->
+          <!-- Header fields mirror the title:/key: lines at the top of the file. -->
           <div class="header-fields">
             <label class="field field-title">
-              제목
+              <span class="field-label">제목</span>
               <input id="field-title" type="text" placeholder="곡 제목" spellcheck="false" />
             </label>
             <label class="field field-key">
-              키
+              <span class="field-label">키</span>
               <input
                 id="field-key"
                 type="text"
-                placeholder="예: F, c-, Bb, F#m"
+                placeholder="F, c-, Bb"
                 spellcheck="false"
                 autocomplete="off"
               />
               <!-- How the typed key was read, e.g. "C 단조"; red when it can't be read. -->
               <span id="field-key-reading" class="field-reading"></span>
             </label>
-            <!-- Transposition shows the sheet in another key; the text changes only on "원본에 적용". -->
-            <div class="field field-transpose">
-              <label for="transpose-key">조옮김</label>
-              <input
-                id="transpose-key"
-                type="text"
-                placeholder="예: G, e-"
-                spellcheck="false"
-                autocomplete="off"
-              />
-              <button type="button" id="transpose-down" class="step" title="반음 내리기">▼</button>
-              <button type="button" id="transpose-up" class="step" title="반음 올리기">▲</button>
-              <span id="transpose-reading" class="field-reading"></span>
-              <button type="button" id="transpose-apply" class="action" hidden>원본에 적용</button>
-              <button type="button" id="transpose-cancel" class="action" hidden>취소</button>
-            </div>
-            <!-- Rewrites chord roots and basses as degrees or note names: selected lines, or all. -->
-            <div class="field field-transpose">
-              <span>표기</span>
-              <button
-                type="button"
-                id="to-degrees"
-                class="action"
-                title="코드 이름을 도수로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
-              >
-                123
-              </button>
-              <button
-                type="button"
-                id="to-notes"
-                class="action"
-                title="도수를 코드 이름으로 바꾸기 (선택한 줄만, 선택이 없으면 전체)"
-              >
-                CDE
-              </button>
-              <span id="spelling-reading" class="field-reading"></span>
-            </div>
           </div>
           <div id="editor" class="editor-host"></div>
         </section>
@@ -125,6 +200,18 @@
           <div id="original-images" class="original-images" hidden></div>
         </section>
       </main>
+      <!-- Narrow screens (phones): one pane at a time, switched from the bottom. -->
+      <nav class="view-tabs" role="tablist">
+        <button data-view="editor" role="tab" aria-selected="true">
+          <span class="icon" data-icon="pencil"></span><span>입력</span>
+        </button>
+        <button data-view="preview" role="tab" aria-selected="false">
+          <span class="icon" data-icon="file-music"></span><span>악보</span>
+        </button>
+        <button data-command="open" role="tab" aria-selected="false">
+          <span class="icon" data-icon="folder"></span><span>곡</span>
+        </button>
+      </nav>
     </div>
     <dialog id="import-dialog" class="import-dialog">
       <form method="dialog">
@@ -227,6 +314,53 @@
           <span class="spacer"></span>
           <button value="close">닫기</button>
           <button type="button" id="setlist-pdf" class="primary">PDF 만들기</button>
+        </div>
+      </form>
+    </dialog>
+    <!-- Input help: every shorthand, line kind and command, examples next to results. -->
+    <dialog id="help-dialog" class="import-dialog help-dialog">
+      <form method="dialog">
+        <h2>입력법 도움말</h2>
+        <div id="help-body" class="help-body"></div>
+        <div class="import-actions">
+          <span class="spacer"></span>
+          <button value="close" class="primary">닫기</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="about-dialog" class="import-dialog about-dialog">
+      <form method="dialog">
+        <div class="about-head">
+          <img src="./favicon.svg" alt="" width="48" height="48" />
+          <div>
+            <h2>Chordash</h2>
+            <p id="about-version" class="about-version"></p>
+          </div>
+        </div>
+        <p>코드 악보를 텍스트로 빠르게 입력하고 A4 악보로 뽑는 앱. 오픈소스(MIT 라이선스)예요.</p>
+        <ul class="about-links">
+          <li>
+            <a href="https://chordash.app" target="_blank" rel="noreferrer">chordash.app</a> — 웹
+            버전
+          </li>
+          <li>
+            <a href="https://github.com/pjjy2017/Chordash" target="_blank" rel="noreferrer"
+              >GitHub</a
+            >
+            — 소스 코드, 앱 내려받기, 의견 남기기
+          </li>
+          <li id="about-donate" hidden>
+            <a id="about-donate-link" target="_blank" rel="noreferrer">후원하기</a> — 도움이
+            되셨다면
+          </li>
+        </ul>
+        <p class="about-small">
+          글꼴: Geist, Pretendard, Noto Music (모두 SIL Open Font License). 아이콘: Tabler Icons
+          (MIT).
+        </p>
+        <div class="import-actions">
+          <span class="spacer"></span>
+          <button value="close" class="primary">닫기</button>
         </div>
       </form>
     </dialog>
