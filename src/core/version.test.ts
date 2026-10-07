@@ -7,7 +7,7 @@ describe('appTitle', () => {
   })
 
   it('prefixes the file name when a file is open', () => {
-    expect(appTitle('샴푸의요정.chord')).toBe('샴푸의요정.chord — Chordash')
+    expect(appTitle('Chordash.chord')).toBe('Chordash.chord — Chordash')
   })
 
   it('marks unsaved changes with *', () => {

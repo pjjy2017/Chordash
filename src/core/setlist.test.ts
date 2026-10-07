@@ -4,11 +4,11 @@ import { formatSetlist, parseSetlist, planSetlist } from './setlist'
 describe('setlist file', () => {
   it('reads title, songs and keys', () => {
     const text =
-      '\uFEFF// Chordash 셋리스트\r\ntitle: 10월 공연\n샴푸의요정.chord\n\nsongs/Autumn Leaves.chord | key: G\n'
+      '\uFEFF// Chordash 셋리스트\r\ntitle: 10월 공연\nChordash.chord\n\nsongs/Autumn Leaves.chord | key: G\n'
     expect(parseSetlist(text)).toEqual({
       title: '10월 공연',
       entries: [
-        { path: '샴푸의요정.chord', key: null },
+        { path: 'Chordash.chord', key: null },
         { path: 'songs/Autumn Leaves.chord', key: 'G' }
       ]
     })
@@ -24,13 +24,13 @@ describe('setlist file', () => {
     const setlist = {
       title: '10월 공연',
       entries: [
-        { path: '샴푸의요정.chord', key: null },
+        { path: 'Chordash.chord', key: null },
         { path: '../곡/B.chord', key: 'Bb' }
       ]
     }
     const text = formatSetlist(setlist)
     expect(text).toBe(
-      '// Chordash 셋리스트\ntitle: 10월 공연\n샴푸의요정.chord\n../곡/B.chord | key: Bb\n'
+      '// Chordash 셋리스트\ntitle: 10월 공연\nChordash.chord\n../곡/B.chord | key: Bb\n'
     )
     expect(parseSetlist(text)).toEqual(setlist)
   })

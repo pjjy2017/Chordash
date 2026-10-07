@@ -1,6 +1,7 @@
-// The Android app keeps songs in the phone's Documents/Chordash folder (DECISIONS Phase 12).
-// "열기" lists that folder in a small dialog; files from elsewhere (KakaoTalk, Drive, …) come
-// in through the system file picker instead.
+// The song library: a "Chordash" folder that "열기" lists in a small dialog. On Android it is the
+// phone's Documents/Chordash folder (DECISIONS Phase 12); in a web browser the same plugin keeps
+// it in the browser's own storage (IndexedDB) — the web "내 곡 보관함" (DECISIONS 1.2).
+// Files from elsewhere come in through the system file picker instead.
 
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
@@ -11,6 +12,18 @@ const directory = Directory.Documents
 export interface FolderFile {
   name: string
   mtime: number
+}
+
+/** How a platform presents its library. */
+export interface LibraryPlace {
+  /** Where the files are, shown in the file list. */
+  where: string
+  /** Where a save goes, for the name dialog: "휴대폰의 문서/Chordash 폴더에". */
+  saveTo: string
+  /** A button on each listed file (Android: 공유, web: 내보내기). */
+  fileAction: { label: string; run(name: string): Promise<void> }
+  /** More buttons under the list (web: 백업 내보내기 / 가져오기). */
+  footer?: { label: string; run(): Promise<void> }[]
 }
 
 let ready: Promise<void> | null = null
@@ -77,7 +90,8 @@ export async function writeToFolder(name: string, text: string): Promise<void> {
   })
 }
 
-async function shareFile(name: string): Promise<void> {
+/** Android: hands a file to another app (KakaoTalk, Drive, …). */
+export async function shareFile(name: string): Promise<void> {
   const { uri } = await Filesystem.getUri({ path: `${FOLDER}/${name}`, directory })
   await Share.share({ title: name, files: [uri] })
 }
@@ -105,7 +119,8 @@ const formatDate = (ms: number): string => {
 export async function chooseInFolder(
   title: string,
   extension: string,
-  multiple: boolean
+  multiple: boolean,
+  place: LibraryPlace
 ): Promise<FolderChoice> {
   const files = await listFolder(extension)
   return new Promise((resolve) => {
@@ -114,7 +129,7 @@ export async function chooseInFolder(
     const heading = document.createElement('h2')
     heading.textContent = title
     const where = document.createElement('p')
-    where.textContent = `휴대폰의 문서/${FOLDER} 폴더`
+    where.textContent = place.where
     const list = document.createElement('ol')
     list.className = 'setlist-songs folder-files'
     const chosen = new Set<string>()
@@ -130,8 +145,8 @@ export async function chooseInFolder(
       date.textContent = formatDate(file.mtime)
       const share = document.createElement('button')
       share.type = 'button'
-      share.textContent = '공유'
-      share.addEventListener('click', () => void shareFile(file.name))
+      share.textContent = place.fileAction.label
+      share.addEventListener('click', () => void place.fileAction.run(file.name))
       name.addEventListener('click', () => {
         if (!multiple) {
           result = { names: [file.name] }
@@ -177,7 +192,17 @@ export async function chooseInFolder(
       result = { names: [...chosen] }
       dialog.close()
     })
-    actions.append(elsewhere, spacer, cancel, ...(multiple ? [open] : []))
+    const extra = (place.footer ?? []).map(({ label, run }) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = label
+      button.addEventListener('click', () => {
+        dialog.close()
+        void run()
+      })
+      return button
+    })
+    actions.append(elsewhere, ...extra, spacer, cancel, ...(multiple ? [open] : []))
 
     dialog.append(heading, where, list, empty, actions)
     dialog.addEventListener('close', () => {
@@ -193,7 +218,11 @@ export async function chooseInFolder(
  * Asks for a file name in the app's own dialog: Android's built-in prompt leaves out the
  * suggested name. Enter saves; the name comes back without changes, null when cancelled.
  */
-export function askFileName(suggested: string, extension: string): Promise<string | null> {
+export function askFileName(
+  suggested: string,
+  extension: string,
+  saveTo: string
+): Promise<string | null> {
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog')
     dialog.className = 'import-dialog folder-dialog'
@@ -201,8 +230,8 @@ export function askFileName(suggested: string, extension: string): Promise<strin
     form.method = 'dialog'
     const heading = document.createElement('h2')
     heading.textContent = '파일 이름'
-    const where = document.createElement('p')
-    where.textContent = `휴대폰의 문서/${FOLDER} 폴더에 ${extension} 파일로 저장해요.`
+    const note = document.createElement('p')
+    note.textContent = `${saveTo} ${extension} 파일로 저장해요.`
     const input = document.createElement('input')
     input.className = 'file-name-input'
     input.value = suggested
@@ -219,7 +248,7 @@ export function askFileName(suggested: string, extension: string): Promise<strin
     save.className = 'primary'
     save.textContent = '저장'
     actions.append(spacer, cancel, save)
-    form.append(heading, where, input, actions)
+    form.append(heading, note, input, actions)
     dialog.append(form)
 
     let result: string | null = null

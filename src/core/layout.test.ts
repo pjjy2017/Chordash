@@ -70,8 +70,8 @@ describe('layout', () => {
   })
 
   it('titles pages 2+ as "title N"', () => {
-    const pages = pagesOf(`title: 샴푸의 요정\n[A]\n${rows(5)}\n[B]\n${rows(5)}\n[C]\n${rows(5)}`)
-    expect(pages.map((p) => p.heading)).toEqual(['샴푸의 요정', '샴푸의 요정 2', '샴푸의 요정 3'])
+    const pages = pagesOf(`title: 가을 연습곡\n[A]\n${rows(5)}\n[B]\n${rows(5)}\n[C]\n${rows(5)}`)
+    expect(pages.map((p) => p.heading)).toEqual(['가을 연습곡', '가을 연습곡 2', '가을 연습곡 3'])
   })
 
   it('counts lyric cues in the row height', () => {
@@ -85,7 +85,7 @@ describe('layout', () => {
   })
 
   it('lays out the example song without overflowing any page', () => {
-    const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
+    const text = readFileSync(resolve(__dirname, '../../examples/Chordash.chord'), 'utf8')
     const m = PLAIN_THEME.metrics
     const pages = layout(parse(text).document, m).pages
     const room = m.pageHeight - m.marginTop - m.marginBottom
@@ -98,7 +98,7 @@ describe('layout', () => {
         )
       expect(used).toBeLessThanOrEqual(room)
     }
-    expect(pages.flatMap((p) => p.blocks).filter((b) => b.type === 'row')).toHaveLength(27)
+    expect(pages.flatMap((p) => p.blocks).filter((b) => b.type === 'row')).toHaveLength(8)
   })
 })
 

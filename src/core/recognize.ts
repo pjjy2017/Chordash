@@ -15,7 +15,7 @@ export const DEFAULT_RECOGNIZE_MODEL: string = RECOGNIZE_MODELS[0].id
 export const MAX_RECOGNIZE_PAGES = 20
 
 /** A worked example, also checked by the tests to be valid Chordash text without errors. */
-export const RECOGNIZE_EXAMPLE = `title: 샴푸의 요정
+export const RECOGNIZE_EXAMPLE = `title: 가을 연습곡
 key: F
 
 [Intro] "드럼 4마디"

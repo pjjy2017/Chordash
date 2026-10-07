@@ -15,6 +15,8 @@ import fileTypePdf from '@tabler/icons/outline/file-type-pdf.svg?raw'
 import folder from '@tabler/icons/outline/folder.svg?raw'
 import help from '@tabler/icons/outline/help.svg?raw'
 import infoCircle from '@tabler/icons/outline/info-circle.svg?raw'
+import keyboard from '@tabler/icons/outline/keyboard.svg?raw'
+import music from '@tabler/icons/outline/music.svg?raw'
 import layoutSidebarRight from '@tabler/icons/outline/layout-sidebar-right.svg?raw'
 import pencil from '@tabler/icons/outline/pencil.svg?raw'
 import playlist from '@tabler/icons/outline/playlist.svg?raw'
@@ -36,6 +38,8 @@ const ICONS: Record<string, string> = {
   help: help,
   'info-circle': infoCircle,
   'layout-sidebar-right': layoutSidebarRight,
+  keyboard,
+  music,
   pencil: pencil,
   playlist: playlist,
   settings: settings

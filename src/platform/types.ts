@@ -6,7 +6,7 @@ import type { RecognizeFailure } from '../core/recognize'
 /** A file chosen by the user. `id` is opaque: a path on desktop, a content URI on Android. */
 export interface FileRef {
   id: string
-  /** File name to show, e.g. `샴푸의요정.chord`. */
+  /** File name to show, e.g. `Chordash.chord`. */
   name: string
 }
 
@@ -70,7 +70,7 @@ export interface OpenedSetlist {
 export type DiscardChoice = 'save' | 'discard' | 'cancel'
 
 export interface DocumentState {
-  /** Name to show, e.g. `샴푸의요정.chord` or `제목 없음`. */
+  /** Name to show, e.g. `Chordash.chord` or `제목 없음`. */
   name: string
   dirty: boolean
 }

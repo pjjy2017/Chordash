@@ -3,7 +3,7 @@
 //
 //   // Chordash 셋리스트
 //   title: 10월 공연
-//   샴푸의요정.chord
+//   Chordash.chord
 //   songs/Autumn Leaves.chord | key: G
 //
 // Paths are relative to the setlist file when possible, so a folder can be moved as a whole.

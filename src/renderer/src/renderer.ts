@@ -39,7 +39,9 @@ import { platform, type FileRef } from '../../platform'
 import { chartPages, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
+import { installChordKeyboard } from './chordKeyboard'
 import { openHelp } from './help'
+import exampleSong from '../../../examples/Chordash.chord?raw'
 import { installIcons } from './icons'
 import { buildPrintDocument, renderPages } from './preview'
 import { modelName, openSettings, recognizeModel } from './settings'
@@ -185,6 +187,9 @@ const commands: Record<string, () => Promise<unknown>> = {
   save,
   saveAs,
   exportPdf,
+  example: async () => {
+    if (await confirmDiscard()) load(exampleSong, null)
+  },
   import: async () => {
     importText_.value = ''
     importDialog.showModal()
@@ -753,9 +758,20 @@ window.addEventListener(
 
 platform.onBeforeClose(confirmDiscard)
 
+installChordKeyboard(editor, () => editor.parsed().document.key)
+
 $<HTMLInputElement>('hints').addEventListener('change', (e) => {
   editor.setHints((e.target as HTMLInputElement).checked)
 })
 
-load('', null)
+// The first time the app opens, it shows the example song; after that, an empty page.
+const SEEN_EXAMPLE = 'chordash.seenExample'
+let firstRun = false
+try {
+  firstRun = !localStorage.getItem(SEEN_EXAMPLE)
+  localStorage.setItem(SEEN_EXAMPLE, '1')
+} catch {
+  // No storage: start empty.
+}
+load(firstRun ? exampleSong : '', null)
 renderPreview()

@@ -40,7 +40,7 @@ describe('removing a header line', () => {
 
 describe('readHeaderLine', () => {
   it('returns the value exactly as typed', () => {
-    expect(readHeaderLine('// x\ntitle: 샴푸의 요정\nkey:  c- \n[V]', 'key')).toBe('c-')
+    expect(readHeaderLine('// x\ntitle: 가을 연습곡\nkey:  c- \n[V]', 'key')).toBe('c-')
     expect(readHeaderLine('title: A', 'title')).toBe('A')
   })
   it('is null without the line, and ignores lines after the header', () => {

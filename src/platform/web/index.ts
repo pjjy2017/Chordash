@@ -1,163 +1,24 @@
-// Platform implementation for the web version (GitHub Pages, ROADMAP Phase 11).
-// Files go through the browser: Chrome and Edge can open and save the same file again
-// (File System Access API); other browsers open with a file picker and save as a download.
-// PDFs come from the browser's print dialog. No AI: an API key cannot be kept safely in a
-// public web page, so that stays in the desktop app (DECISIONS Phase 11).
+// Platform implementation for the web version (https://chordash.app, ROADMAP Phase 11).
+// Songs and setlists live in "내 곡 보관함" — the library folder (../library), which a browser
+// keeps in its own storage (IndexedDB): no downloads on every save (DECISIONS 1.2). Each file can
+// be exported, and the whole library backed up to one file and restored. PDFs come from the
+// browser's print dialog. No AI: an API key cannot be kept safely in a public web page.
 
-import { formatSetlist, parseSetlist } from '../../core/setlist'
 import { appTitle } from '../../core/version'
-import type { FileRef, OpenedFile, Platform, SetlistSong } from '../types'
+import { libraryMethods, listFolder, readFromFolder, writeToFolder } from '../library'
+import { download, pickWithInput, printTip, type PickerType } from '../shared'
+import type { Platform } from '../types'
 
-export interface PickerType {
-  description: string
-  accept: Record<string, string[]>
-}
-
-/** The parts of the File System Access API used here (Chrome, Edge). */
-interface FilePickers {
-  showOpenFilePicker?(options: {
-    types: PickerType[]
-    multiple?: boolean
-  }): Promise<FileSystemFileHandle[]>
-  showSaveFilePicker?(options: {
-    suggestedName: string
-    types: PickerType[]
-  }): Promise<FileSystemFileHandle>
-}
-
-const pickers = window as unknown as FilePickers
-
-const SONG: PickerType = { description: 'Chordash 악보', accept: { 'text/plain': ['.chord'] } }
-const SETLIST: PickerType = {
-  description: 'Chordash 셋리스트',
-  accept: { 'text/plain': ['.setlist'] }
-}
 const IMPORT_TEXT: PickerType = {
   description: '텍스트 악보, ChordPro',
   accept: { 'text/plain': ['.txt', '.cho', '.chopro', '.chordpro', '.crd', '.pro'] }
 }
-
-/** Opened files by id: the browser's handle (to save again) and the text last read or saved. */
-const handles = new Map<string, FileSystemFileHandle>()
-const texts = new Map<string, string>()
-let nextId = 1
-const newRef = (name: string): FileRef => ({ id: `web-${nextId++}`, name })
-
-const isAbort = (error: unknown): boolean =>
-  error instanceof DOMException && error.name === 'AbortError'
-
-export const withoutBom = (text: string): string => text.replace(/^\uFEFF/, '')
-
-/** A plain file picker, for browsers without the File System Access API. */
-export function pickWithInput(type: PickerType, multiple: boolean): Promise<File[]> {
-  return new Promise((resolve) => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.multiple = multiple
-    input.accept = Object.values(type.accept).flat().join(',')
-    input.addEventListener('change', () => resolve([...(input.files ?? [])]))
-    input.addEventListener('cancel', () => resolve([]))
-    input.click()
-  })
+const BACKUP: PickerType = {
+  description: 'Chordash 보관함 백업',
+  accept: { 'application/json': ['.json'] }
 }
 
-async function pick(
-  type: PickerType,
-  multiple = false
-): Promise<{ file: File; handle?: FileSystemFileHandle }[]> {
-  if (pickers.showOpenFilePicker) {
-    try {
-      const picked = await pickers.showOpenFilePicker({ types: [type], multiple })
-      return Promise.all(picked.map(async (handle) => ({ file: await handle.getFile(), handle })))
-    } catch (error) {
-      if (isAbort(error)) return []
-      // Not allowed here (e.g. inside a frame): fall back to the plain picker.
-    }
-  }
-  return (await pickWithInput(type, multiple)).map((file) => ({ file }))
-}
-
-/** Remembers a picked file so it can be read or saved again. */
-function remember(name: string, text: string, handle?: FileSystemFileHandle): FileRef {
-  const ref = newRef(name)
-  texts.set(ref.id, text)
-  if (handle) handles.set(ref.id, handle)
-  return ref
-}
-
-function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
-
-/** Saves over the same file when the browser allows it; otherwise asks where, or downloads. */
-async function save(
-  file: FileRef | null,
-  text: string,
-  suggestedName: string,
-  type: PickerType,
-  asNew: boolean
-): Promise<FileRef | null> {
-  const handle = file && !asNew ? handles.get(file.id) : undefined
-  if (handle) {
-    const writer = await handle.createWritable()
-    await writer.write(text)
-    await writer.close()
-    texts.set(file!.id, text)
-    return file
-  }
-  if (pickers.showSaveFilePicker) {
-    try {
-      const chosen = await pickers.showSaveFilePicker({ suggestedName, types: [type] })
-      const writer = await chosen.createWritable()
-      await writer.write(text)
-      await writer.close()
-      return remember(chosen.name, text, chosen)
-    } catch (error) {
-      if (isAbort(error)) return null
-    }
-  }
-  // Downloads folder; saving again makes another copy (the browser numbers it).
-  download(suggestedName, text)
-  if (file && !asNew) {
-    texts.set(file.id, text)
-    return file
-  }
-  return remember(suggestedName, text)
-}
-
-async function readSong(file: FileRef): Promise<string | null> {
-  const handle = handles.get(file.id)
-  if (handle) {
-    try {
-      return withoutBom(await (await handle.getFile()).text())
-    } catch {
-      // Moved or deleted since: use the copy below.
-    }
-  }
-  return texts.get(file.id) ?? null
-}
-
-/** Shown before the first print of this browser: how to get a PDF out of the print dialog. */
-const PRINT_TIP_SHOWN = 'chordash.printTipShown'
-export function printTip(): void {
-  try {
-    if (localStorage.getItem(PRINT_TIP_SHOWN)) return
-    localStorage.setItem(PRINT_TIP_SHOWN, '1')
-  } catch {
-    // No storage: show the tip every time.
-  }
-  window.alert(
-    '인쇄 창이 열려요.\n\n' +
-      "• 대상(프린터)을 'PDF로 저장'으로 고르고 저장을 누르세요.\n" +
-      "• 여백은 '기본' 또는 '없음'이면 돼요(악보에 여백이 들어 있어요).\n" +
-      '• 종이 크기는 A4로 골라 주세요(Letter로 되어 있으면 바꿔 주세요).'
-  )
-}
+let nextImport = 1
 
 /** Prints a standalone HTML document from a hidden frame. */
 async function printHtml(html: string): Promise<void> {
@@ -177,6 +38,68 @@ async function printHtml(html: string): Promise<void> {
   setTimeout(() => frame.remove(), 60_000)
 }
 
+// --- library backup ------------------------------------------------------------------------
+
+/** One file holding every song and setlist in the library. */
+interface Backup {
+  app: 'chordash'
+  version: 1
+  exported: string
+  files: { name: string; text: string }[]
+}
+
+async function exportBackup(): Promise<void> {
+  const names = [...(await listFolder('.chord')), ...(await listFolder('.setlist'))].map(
+    (f) => f.name
+  )
+  if (names.length === 0) {
+    window.alert('보관함이 비어 있어요.')
+    return
+  }
+  const files = await Promise.all(
+    names.map(async (name) => ({ name, text: (await readFromFolder(name)) ?? '' }))
+  )
+  const backup: Backup = { app: 'chordash', version: 1, exported: new Date().toISOString(), files }
+  const day = backup.exported.slice(0, 10)
+  download(`chordash-보관함-${day}.json`, JSON.stringify(backup, null, 1), 'application/json')
+}
+
+async function importBackup(): Promise<void> {
+  const [picked] = await pickWithInput(BACKUP, false)
+  if (!picked) return
+  let backup: Backup
+  try {
+    backup = JSON.parse(await picked.text()) as Backup
+    if (backup.app !== 'chordash' || !Array.isArray(backup.files)) throw new Error()
+  } catch {
+    window.alert('Chordash 보관함 백업 파일이 아니에요.')
+    return
+  }
+  const existing = new Set(
+    [...(await listFolder('.chord')), ...(await listFolder('.setlist'))].map((f) => f.name)
+  )
+  const clashes = backup.files.filter((f) => existing.has(f.name)).length
+  const replace =
+    clashes === 0 ||
+    window.confirm(
+      `같은 이름의 파일이 ${clashes}개 있어요. 백업 내용으로 바꿔 쓸까요?\n(취소하면 그 파일들은 그대로 두고 나머지만 가져와요)`
+    )
+  let count = 0
+  for (const file of backup.files) {
+    if (!/\.(chord|setlist)$/i.test(file.name) || typeof file.text !== 'string') continue
+    if (existing.has(file.name) && !replace) continue
+    await writeToFolder(file.name, file.text)
+    count++
+  }
+  window.alert(`${count}개를 보관함에 가져왔어요.`)
+}
+
+/** One file out of the library, to keep or move to another device. */
+async function exportFile(name: string): Promise<void> {
+  const text = await readFromFolder(name)
+  if (text !== null) download(name, text)
+}
+
 export function createWebPlatform(): Platform {
   let dirty = false
   window.addEventListener('beforeunload', (e) => {
@@ -184,27 +107,27 @@ export function createWebPlatform(): Platform {
   })
 
   return {
-    features: { ai: false, printPdf: true, setlistKeepsSongs: true, offersDesktopApp: true },
+    features: { ai: false, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: true },
 
-    async openFile(): Promise<OpenedFile | null> {
-      const [picked] = await pick(SONG)
-      if (!picked) return null
-      const text = withoutBom(await picked.file.text())
-      return { file: remember(picked.file.name, text, picked.handle), text }
-    },
+    ...libraryMethods({
+      where: `내 곡 보관함 — 이 기기의 이 브라우저에만 저장돼요. 다른 기기로 옮기려면 백업을 내보내세요.`,
+      saveTo: `내 곡 보관함(이 브라우저)에`,
+      fileAction: { label: '내보내기', run: exportFile },
+      footer: [
+        { label: '백업 내보내기', run: exportBackup },
+        { label: '백업 가져오기', run: importBackup }
+      ]
+    }),
 
     async importFile(kind) {
       if (kind !== 'text') return null
-      const [picked] = await pick(IMPORT_TEXT)
+      const [picked] = await pickWithInput(IMPORT_TEXT, false)
       if (!picked) return null
       return {
-        file: newRef(picked.file.name),
-        data: new Uint8Array(await picked.file.arrayBuffer())
+        file: { id: `import:${nextImport++}`, name: picked.name },
+        data: new Uint8Array(await picked.arrayBuffer())
       }
     },
-
-    saveFile: (file, text) => save(file, text, file?.name ?? '제목 없음.chord', SONG, false),
-    saveFileAs: (file, text) => save(file, text, file?.name ?? '제목 없음.chord', SONG, true),
 
     async exportPdf(html) {
       printTip()
@@ -225,56 +148,6 @@ export function createWebPlatform(): Platform {
 
     onBeforeClose() {
       // The browser can only warn before leaving (beforeunload above), not ask and save.
-    },
-
-    async pickSongs() {
-      const picked = await pick(SONG, true)
-      return Promise.all(
-        picked.map(async ({ file, handle }) =>
-          remember(file.name, withoutBom(await file.text()), handle)
-        )
-      )
-    },
-
-    readSong,
-
-    async openSetlist() {
-      const [picked] = await pick(SETLIST)
-      if (!picked) return null
-      const text = await picked.file.text()
-      const { title, entries, songs } = parseSetlist(text)
-      return {
-        file: remember(picked.file.name, text, picked.handle),
-        setlist: {
-          title,
-          songs: entries.map((entry): SetlistSong => {
-            const kept = songs?.[entry.path]
-            const name = entry.path.split(/[\\/]/).pop() || entry.path
-            return {
-              file: kept === undefined ? newRef(name) : remember(name, kept),
-              key: entry.key,
-              found: kept !== undefined
-            }
-          })
-        }
-      }
-    },
-
-    async saveSetlist(file, setlist) {
-      // Songs go inside the setlist under their file names, made unique when two are alike.
-      const used = new Set<string>()
-      const entries: { path: string; key: string | null }[] = []
-      const songs: Record<string, string> = {}
-      for (const song of setlist.songs) {
-        let path = song.file.name
-        for (let n = 2; used.has(path); n++) path = song.file.name.replace(/(\.\w+)?$/, ` (${n})$1`)
-        used.add(path)
-        entries.push({ path, key: song.key })
-        const text = await readSong(song.file)
-        if (text !== null) songs[path] = text
-      }
-      const text = formatSetlist({ title: setlist.title, entries, songs })
-      return save(file, text, `${setlist.title || '셋리스트'}.setlist`, SETLIST, file === null)
     },
 
     hasApiKey: async () => false,

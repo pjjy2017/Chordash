@@ -94,11 +94,20 @@
           <span id="spelling-reading" class="field-reading"></span>
           <label
             class="chip-toggle"
-            title="코드 풀이: 입력 중인 줄의 줄임말 코드를 어떻게 읽었는지 옆에 회색으로 보여 줘요 (bb^ → B♭maj7)"
+            title="코드 풀이: 입력 중인 칸의 줄임말 코드를 어떻게 읽었는지 옆에 회색으로 보여 줘요 (bb^ → B♭maj7)"
           >
             <input id="hints" type="checkbox" checked />
             <span class="icon" data-icon="bulb"></span>
             <span class="chip-label">코드 풀이</span>
+          </label>
+          <!-- Touch screens only: the app's own chord keys instead of the phone keyboard. -->
+          <label
+            class="chip-toggle touch-only"
+            title="코드 키보드: 휴대폰 키보드 대신 코드 입력용 키를 보여 줘요 (가사·제목 줄에서는 휴대폰 키보드)"
+          >
+            <input id="chord-keyboard-toggle" type="checkbox" checked />
+            <span class="icon" data-icon="keyboard"></span>
+            <span class="chip-label">코드 키보드</span>
           </label>
         </div>
         <span class="spacer"></span>
@@ -144,6 +153,9 @@
               <span class="icon" data-icon="playlist"></span>셋리스트…
             </button>
             <hr />
+            <button role="menuitem" data-command="example">
+              <span class="icon" data-icon="music"></span>예제 곡 열기
+            </button>
             <button role="menuitem" data-command="help">
               <span class="icon" data-icon="help"></span>입력법 도움말<kbd>F1</kbd>
             </button>

@@ -17,8 +17,8 @@ const errors = (text: string): string[] =>
 
 describe('header', () => {
   it('reads title and key', () => {
-    const { document } = parse('title: 샴푸의 요정\nkey: F\n')
-    expect(document.title).toBe('샴푸의 요정')
+    const { document } = parse('title: 가을 연습곡\nkey: F\n')
+    expect(document.title).toBe('가을 연습곡')
     expect(document.key).toEqual({ tonic: { letter: 'F', accidental: 0 }, minor: false })
   })
   it('rejects an unknown key', () => {
@@ -246,37 +246,41 @@ describe('syntax spans', () => {
   })
 })
 
-describe('examples/샴푸의요정.chord', () => {
-  const text = readFileSync(resolve(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
+describe('examples/Chordash.chord', () => {
+  const text = readFileSync(resolve(__dirname, '../../examples/Chordash.chord'), 'utf8')
   const { document, diagnostics } = parse(text)
 
   it('parses without errors or warnings', () => expect(diagnostics).toEqual([]))
   it('has the expected structure', () => {
-    expect(document.title).toBe('샴푸의 요정')
-    expect(document.sections.map((s) => s.name)).toEqual([
-      'Intro',
-      'Verse',
-      'Chorus',
-      'Guitar',
-      'Verse 2',
-      'Chorus 2',
-      'Bridge',
-      'Vocal',
-      'Chorus 3',
-      'Outro'
+    expect(document.title).toBe('Chordash')
+    expect(document.sections.map((s) => s.name)).toEqual([null, 'Intro', 'A', 'B', 'A'])
+    expect(barLines(document)).toHaveLength(8)
+  })
+  it('shows the input features a first user meets', () => {
+    const [, intro, a, bridge, last] = document.sections
+    expect(intro.directive).toBe('드럼 2마디')
+    const rows = a.items as BarLine[]
+    expect(rows[0].part?.label).toBe('A')
+    expect(rows[0].bars[0].repeatStart).toBe(true)
+    expect(rows[0].memos[0]).toMatchObject({ color: 'ink' })
+    expect(rows[0].bars.map((b) => b.lyric)).toEqual(['첫 소절', '가사는', '마디마다', '이렇게'])
+    expect(rows[1].ending).toBe(1)
+    expect(rows[1].bars.at(-1)!.repeatEnd).toBe(true)
+    expect(rows[2].bars[3].chords.map((c) => [c.breath, c.accent])).toEqual([
+      [true, false],
+      [false, true]
     ])
-    expect(barLines(document)).toHaveLength(27)
-  })
-  it('keeps empty bars and ends with a final barline', () => {
-    const chorus = document.sections[2].items as BarLine[]
-    expect(chordNames(chorus[1])).toEqual([['B♭maj7'], ['E7♭9'], ['A7'], []])
-    const last = barLines(document).at(-1)!
-    expect(last.bars.map((b) => b.final)).toEqual([false, true])
-  })
-  it('reads the outro memos and breath mark', () => {
-    const outro = document.sections.at(-1)!.items as BarLine[]
-    expect(outro[0].memos[0]).toMatchObject({ color: 'teal', text: '스캣' })
-    expect(outro[2].bars[1].chords[0]).toMatchObject({ source: 'E-9', breath: true })
+    expect(chordNames((bridge.items as BarLine[])[0])).toEqual([
+      ['B♭m7'],
+      ['E♭7'],
+      ['A♭maj7'],
+      ['Fm7']
+    ])
+    expect((bridge.items as BarLine[])[0].memos[0]).toMatchObject({ color: 'teal' })
+    const end = (last.items as BarLine[]).at(-1)!
+    expect(end.bars[1]).toMatchObject({ texts: ['Break'] })
+    expect(end.bars[1].chords[0].noChord).toBe(true)
+    expect(end.bars.at(-1)!.final).toBe(true)
   })
 })
 

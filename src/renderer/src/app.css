@@ -1198,3 +1198,100 @@ textarea {
     width: auto;
   }
 }
+
+/* --- Phone chord keyboard (chordKeyboard.ts) ------------------------------------------ */
+
+/* The keyboard toggle only makes sense on touch screens. */
+@media (pointer: fine) {
+  .touch-only {
+    display: none !important;
+  }
+}
+
+.chord-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 4px max(6px, env(safe-area-inset-bottom));
+  background: #e7e9ed;
+  border-top: 1px solid var(--line-strong);
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.chord-keyboard[hidden] {
+  display: none;
+}
+
+/* While the chord keys are up, they take the place of the bottom tabs. */
+#app.chord-keys-open .view-tabs {
+  display: none;
+}
+
+.ck-suggestions {
+  display: flex;
+  gap: 6px;
+  padding: 0 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ck-suggestions[hidden] {
+  display: none;
+}
+
+.ck-suggestions button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  font-family: 'Chordash Geist', 'Chordash Pretendard', 'Chordash Music', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+
+.ck-row {
+  display: flex;
+  gap: 5px;
+}
+
+.ck-row button {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 42px;
+  padding: 0 2px;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--surface);
+  border: none;
+  border-radius: 7px;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.22);
+}
+
+/* Long labels such as "maj(^)" shrink a little to fit narrow phones. */
+.ck-row:nth-child(n + 3):not(:last-child) button {
+  font-size: 13px;
+}
+
+.ck-row button:active {
+  background: var(--ink-soft);
+}
+
+.ck-text,
+.ck-backspace,
+.ck-enter,
+.ck-lyrics {
+  background: #d3d7de !important;
+}
+
+.ck-bar {
+  color: #fff !important;
+  background: var(--ink) !important;
+}

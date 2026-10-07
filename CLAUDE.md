@@ -36,6 +36,7 @@
 - `src/platform/` : **기기에 맡기는 일의 인터페이스**(`types.ts`의 `Platform`). 파일 입출력, PDF 출력, 키 보관, 외부 API 호출은 모두 이 인터페이스 뒤로 숨깁니다.
   - `src/platform/electron/` : Electron 구현체(인터페이스의 한 구현). 안드로이드는 나중에 같은 인터페이스의 Capacitor 구현체를 추가합니다.
   - `src/platform/android/` : 안드로이드 앱(Capacitor) 구현체. 곡은 휴대폰 문서/Chordash 폴더.
+  - `src/platform/library/` : 안드로이드와 웹이 함께 쓰는 곡 보관함(폴더 목록·저장·셋리스트). 웹에서는 같은 코드가 브라우저 저장소(IndexedDB)에 저장.
   - `src/platform/web/` : 웹 버전(https://chordash.app, GitHub Pages) 구현체. 못 하는 기능은 `Platform.features`로 알리고, 화면은 `data-needs` 요소를 숨깁니다.
   - 파일은 경로가 아니라 `FileRef`(식별값 + 표시 이름)로 다룹니다. 안드로이드는 경로 대신 URI를 줍니다.
 - `src/renderer/` : 에디터와 미리보기 UI. **Electron이나 Node API를 직접 부르지 않고 `src/platform`의 `platform`만 씁니다.** (특정 구현체 `platform/electron`을 직접 가져오지도 않음.) ESLint 규칙으로 막혀 있습니다.

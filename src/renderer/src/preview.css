@@ -7,6 +7,9 @@ body {
 }
 
 .pages {
+  /* Print colours as they are, even with "background graphics" off. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
   --barline-w: 0.9mm;
   --barline-h: 62%;
   display: flex;
@@ -225,27 +228,30 @@ body {
 }
 
 /* Barlines: shorter than the row and bold, centred on the bar edge.
-   ::before draws a bar's left barline, ::after its right one (see barHtml). */
+   ::before draws a bar's left barline, ::after its right one (see barHtml).
+   Drawn with solid borders only — no gradients or background images — so they print in every
+   PDF viewer and printer and with the browser's "background graphics" off (DECISIONS 1.2). */
 .bar::before,
 .bar::after {
   position: absolute;
   top: 50%;
+  box-sizing: border-box;
   height: var(--barline-h);
   transform: translateY(-50%);
-  background: #111;
 }
 
-.bar[data-left='plain']::before,
-.bar[data-left='repeat-start']::before {
+.bar[data-left='plain']::before {
   content: '';
   left: calc(var(--barline-w) / -2);
   width: var(--barline-w);
+  border-left: var(--barline-w) solid #111;
 }
 
 .bar[data-right='plain']::after {
   content: '';
   right: calc(var(--barline-w) / -2);
   width: var(--barline-w);
+  border-right: var(--barline-w) solid #111;
 }
 
 /* Final barline and repeat end: thin + thick, ending at the bar edge. */
@@ -254,35 +260,45 @@ body {
   content: '';
   right: calc(var(--barline-w) / -2);
   width: calc(var(--barline-w) * 3);
-  background: linear-gradient(
-    to right,
-    #111 0 calc(var(--barline-w) * 0.5),
-    transparent calc(var(--barline-w) * 0.5) calc(var(--barline-w) * 1.3),
-    #111 calc(var(--barline-w) * 1.3)
-  );
+  border-left: calc(var(--barline-w) * 0.5) solid #111;
+  border-right: calc(var(--barline-w) * 1.7) solid #111;
 }
 
 /* Repeat start: thick + thin, starting at the bar edge. */
 .bar[data-left='repeat-start']::before {
+  content: '';
+  left: calc(var(--barline-w) / -2);
   width: calc(var(--barline-w) * 3);
-  background: linear-gradient(
-    to right,
-    #111 0 calc(var(--barline-w) * 1.7),
-    transparent calc(var(--barline-w) * 1.7) calc(var(--barline-w) * 2.5),
-    #111 calc(var(--barline-w) * 2.5)
-  );
+  border-left: calc(var(--barline-w) * 1.7) solid #111;
+  border-right: calc(var(--barline-w) * 0.5) solid #111;
 }
 
-/* Repeat dots, beside the thin line. */
+/* Repeat dots, beside the thin line: two round borders (no background, no gradient). */
 .dots {
   position: absolute;
   top: 50%;
   width: 1.1mm;
   height: 4.2mm;
   transform: translateY(-50%);
-  background:
-    radial-gradient(circle, #111 0.5mm, transparent 0.55mm) center top / 1.1mm 1.1mm no-repeat,
-    radial-gradient(circle, #111 0.5mm, transparent 0.55mm) center bottom / 1.1mm 1.1mm no-repeat;
+}
+
+.dots::before,
+.dots::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 0;
+  height: 0;
+  border: 0.55mm solid #111;
+  border-radius: 50%;
+}
+
+.dots::before {
+  top: 0;
+}
+
+.dots::after {
+  bottom: 0;
 }
 
 .dots.start {

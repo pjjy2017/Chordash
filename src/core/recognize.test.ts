@@ -22,7 +22,7 @@ describe('recognize prompt', () => {
 
   it('shows the example song in its document model', () => {
     const { document } = parse(RECOGNIZE_EXAMPLE)
-    expect(document.title).toBe('샴푸의 요정')
+    expect(document.title).toBe('가을 연습곡')
     expect(document.sections.map((s) => s.name)).toEqual([
       'Intro',
       'Verse',

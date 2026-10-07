@@ -75,7 +75,11 @@ describe('spellingEdits', () => {
   })
 
   it('round-trips the example song without changing a chord', () => {
-    const song = readFileSync(join(__dirname, '../../examples/샴푸의요정.chord'), 'utf8')
+    // The example mixes note names and degrees; start from all note names.
+    const song = convert(
+      readFileSync(join(__dirname, '../../examples/Chordash.chord'), 'utf8'),
+      'notes'
+    )
     const degrees = convert(song, 'degrees')
     expect(degrees).not.toBe(song)
     expect(parse(degrees).diagnostics.filter((d) => d.severity === 'error')).toEqual([])

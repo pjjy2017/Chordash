@@ -11,6 +11,7 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { linter, lintGutter, type Diagnostic as LintDiagnostic } from '@codemirror/lint'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
+  Compartment,
   EditorState,
   RangeSetBuilder,
   StateEffect,
@@ -49,7 +50,7 @@ key: F
 
 [Verse]
 Bb^7, A-7, Bb^7, F B7*
-l: 가사 큐
+_ 가사, 마디마다
 
 [Chorus]
 2-7, 5-7, 17, 4^7.`
@@ -169,27 +170,23 @@ const hintsEnabled = StateField.define<boolean>({
 })
 
 /**
- * The line with the cursor stays exactly as typed, with grey hints (how each chord was read).
- * Leaving it — Enter, a click or the arrow keys — finishes it: chords, barlines (| ‖ ‖: :‖) and
- * part markers are shown as sheet music (DECISIONS Phase 13; it used to be per bar, on ",").
+ * A bar (cell) is "being typed" while a cursor is in it or at its edges; its chords stay as typed,
+ * with grey hints. Typing the comma that closes it — or moving to another cell or line — finishes
+ * it, and its chords are shown as sheet music. Barlines are always shown as symbols (| ‖ ‖: :‖).
+ * (1.1 tried whole lines instead; finding a chord to fix got hard, so 1.2 went back — DECISIONS.)
  */
 function liveDecorations(state: EditorState): DecorationSet {
   const { document: doc, spans } = state.field(parsed)
   const theme = DEFAULT_THEME
-  /** Lines with a cursor or selection on them. */
-  const typing = new Set<number>()
-  for (const r of state.selection.ranges) {
-    const first = state.doc.lineAt(r.from).number
-    const last = state.doc.lineAt(r.to).number
-    for (let n = first; n <= last; n++) typing.add(n)
-  }
+  const touching = (from: number, to: number): boolean =>
+    state.selection.ranges.some((r) => r.to >= from && r.from <= to)
   const decorations: Range<Decoration>[] = []
 
-  /** A part marker (`a)`) is boxed once the cursor has left its line. */
+  /** A part marker (`a)`) is boxed once the cursor has left it. */
   const addPart = (lineNo: number, part: Part): void => {
-    if (typing.has(lineNo)) return
     const from = offset(state.doc, lineNo, part.from)
     const to = offset(state.doc, lineNo, part.to)
+    if (touching(from, to)) return
     decorations.push(Decoration.replace({ widget: new PartWidget(part.label) }).range(from, to))
   }
 
@@ -198,8 +195,17 @@ function liveDecorations(state: EditorState): DecorationSet {
       if (item.type === 'form') item.parts.forEach((part) => addPart(item.line, part))
       if (item.type !== 'bars') continue
       if (item.part) addPart(item.line, item.part)
-      const editing = typing.has(item.line)
+      const line = state.doc.line(item.line)
       for (const bar of item.bars) {
+        // A bar with no barline after it is still open up to the end of the line, trailing
+        // spaces included — so a space alone never closes it; only `,` / `|` / `.` does.
+        // Text after it (`_ 가사`, ` ^ 글자`) closes it too, so typing lyrics leaves it alone.
+        const closed =
+          /[,|.:]/.test(line.text.charAt(bar.to)) || /^\s*[_^]/.test(line.text.slice(bar.to))
+        const editing = touching(
+          offset(state.doc, item.line, bar.from),
+          closed ? offset(state.doc, item.line, bar.to) : line.to
+        )
         for (const chord of bar.chords) {
           if (chord.noChord && !editing) {
             const from = offset(state.doc, item.line, chord.from)
@@ -231,7 +237,7 @@ function liveDecorations(state: EditorState): DecorationSet {
   }
 
   for (const span of spans) {
-    if (span.kind !== 'barline' || typing.has(span.line)) continue
+    if (span.kind !== 'barline') continue
     const from = offset(state.doc, span.line, span.from)
     const to = offset(state.doc, span.line, span.to)
     const text = state.doc.sliceString(from, to)
@@ -309,6 +315,13 @@ export interface ChordEditor {
   selection(): { from: number; to: number }
   setHints(on: boolean): void
   parsed(): ParseResult
+  /**
+   * `none` keeps the phone's own keyboard down (the app shows its chord keyboard instead);
+   * `text` brings it back.
+   */
+  setInputMode(mode: 'none' | 'text'): void
+  /** Called after any change: text, cursor or focus. */
+  onUpdate(listener: () => void): void
 }
 
 /** Called after every text change; `changes` maps old offsets to new ones (null on a full reset). */
@@ -316,6 +329,10 @@ export type ChangeListener = (changes: ChangeSet | null) => void
 
 export function createEditor(parent: HTMLElement, onChange: ChangeListener): ChordEditor {
   let hintsOn = true
+  let inputMode: 'none' | 'text' = 'text'
+  const inputModeSlot = new Compartment()
+  const inputModeAttr = (): Extension => EditorView.contentAttributes.of({ inputmode: inputMode })
+  const updateListeners: (() => void)[] = []
   const extensions = (): Extension[] => [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -334,8 +351,10 @@ export function createEditor(parent: HTMLElement, onChange: ChangeListener): Cho
     chordLint,
     lintGutter(),
     editorTheme,
+    inputModeSlot.of(inputModeAttr()),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) onChange(u.changes)
+      if (u.docChanged || u.selectionSet || u.focusChanged) updateListeners.forEach((l) => l())
     })
   ]
 
@@ -359,6 +378,14 @@ export function createEditor(parent: HTMLElement, onChange: ChangeListener): Cho
       hintsOn = on
       view.dispatch({ effects: setHintsEnabled.of(on) })
     },
-    parsed: () => view.state.field(parsed)
+    parsed: () => view.state.field(parsed),
+    setInputMode: (mode) => {
+      if (mode === inputMode) return
+      inputMode = mode
+      view.dispatch({ effects: inputModeSlot.reconfigure(inputModeAttr()) })
+    },
+    onUpdate: (listener) => {
+      updateListeners.push(listener)
+    }
   }
 }
