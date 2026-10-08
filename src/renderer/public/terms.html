@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>서비스 약관 — Chordash</title>
+    <link rel="icon" href="./favicon.svg" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --ink: #1f2328;
+        --muted: #59636e;
+        --line: #d8dee4;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1d20;
+          --ink: #e6e7ea;
+          --muted: #9da3ab;
+          --line: #3a3d42;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.7 system-ui,
+          -apple-system,
+          'Segoe UI',
+          'Malgun Gothic',
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.6em;
+      }
+      h2 {
+        margin-top: 2em;
+        font-size: 1.15em;
+      }
+      a {
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.9em;
+      }
+      hr {
+        margin: 48px 0;
+        border: none;
+        border-top: 1px solid var(--line);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="./favicon.svg" alt="" width="40" height="40" />
+        <h1>서비스 약관</h1>
+      </header>
+      <p class="muted">
+        Chordash · 시행일 2026년 10월 9일 · <a href="#en">English</a> ·
+        <a href="./privacy">개인정보처리방침</a>
+      </p>
+
+      <h2>1. Chordash</h2>
+      <p>
+        Chordash(웹 버전 <a href="https://chordash.app">chordash.app</a>, 데스크톱 앱, 안드로이드
+        앱)는 코드 악보를 입력하고 PDF로 만드는 무료 오픈소스 앱입니다. 소스 코드는
+        <a href="https://github.com/pjjy2017/Chordash">GitHub</a>에서
+        <a href="https://github.com/pjjy2017/Chordash/blob/main/LICENSE">MIT 라이선스</a>로 공개되어
+        있습니다. 앱을 쓰면 이 약관에 동의한 것으로 봅니다.
+      </p>
+
+      <h2>2. 사용자의 곡</h2>
+      <ul>
+        <li>
+          사용자가 입력한 곡과 파일의 권리는 사용자에게 있습니다. 운영자는 이를 가져가지 않습니다.
+        </li>
+        <li>
+          다른 사람의 저작물(가사, 악보 등)을 입력하거나 나눌 때는 저작권법을 지킬 책임이 사용자에게
+          있습니다.
+        </li>
+        <li>
+          곡은 사용자의 기기나 사용자 본인의 구글 드라이브에 저장됩니다. 백업은 사용자가 챙겨
+          주세요.
+        </li>
+      </ul>
+
+      <h2>3. 다른 서비스</h2>
+      <p>
+        구글 드라이브 연결과 AI 악보 읽기(Anthropic API)는 각 회사의 약관과 정책을 함께 따릅니다. AI
+        기능을 쓰는 데 드는 비용은 사용자 본인의 API 키로 청구됩니다. 개인정보는
+        <a href="./privacy">개인정보처리방침</a>을 보세요.
+      </p>
+
+      <h2>4. 보증과 책임</h2>
+      <p>
+        Chordash는 "있는 그대로" 제공되며, 어떤 보증도 하지 않습니다. 법이 허용하는 범위에서
+        운영자는 앱 사용으로 생긴 손해(곡이나 데이터 손실 포함)에 책임지지 않습니다. 기능은 예고
+        없이 바뀌거나 중단될 수 있습니다.
+      </p>
+
+      <h2>5. 바뀌는 경우와 연락처</h2>
+      <p>
+        약관이 바뀌면 이 페이지에 새 시행일과 함께 올립니다. 이 약관은 대한민국 법을 따릅니다. 문의:
+        <a href="mailto:pjjy2017@gmail.com">pjjy2017@gmail.com</a>
+      </p>
+
+      <hr />
+
+      <section id="en" lang="en">
+        <h1>Terms of Service</h1>
+        <p class="muted">Chordash · Effective October 9, 2026</p>
+        <p>
+          Chordash (the web version at <a href="https://chordash.app">chordash.app</a>, the desktop
+          app and the Android app) is a free, open-source app for writing chord charts and making
+          PDFs, published under the
+          <a href="https://github.com/pjjy2017/Chordash/blob/main/LICENSE">MIT License</a>. By using
+          it you agree to these terms.
+        </p>
+        <h2>Your songs</h2>
+        <p>
+          You own the songs and files you create; the developer claims no rights to them. You are
+          responsible for respecting the copyright of others' works (lyrics, charts) that you enter
+          or share. Songs are stored on your device or in your own Google Drive; please keep
+          backups.
+        </p>
+        <h2>Other services</h2>
+        <p>
+          Google Drive and AI chart reading (Anthropic API) are also subject to those companies'
+          terms and policies; AI usage is billed to your own API key. See the
+          <a href="./privacy">Privacy Policy</a>.
+        </p>
+        <h2>No warranty</h2>
+        <p>
+          Chordash is provided "as is", without warranty of any kind. To the extent permitted by
+          law, the developer is not liable for any damages arising from its use, including loss of
+          songs or data. Features may change or stop without notice.
+        </p>
+        <h2>Changes and contact</h2>
+        <p>
+          Changes are posted on this page with a new effective date. These terms are governed by the
+          laws of the Republic of Korea. Contact:
+          <a href="mailto:pjjy2017@gmail.com">pjjy2017@gmail.com</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

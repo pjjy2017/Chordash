@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>개인정보처리방침 — Chordash</title>
+    <link rel="icon" href="./favicon.svg" />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --ink: #1f2328;
+        --muted: #59636e;
+        --line: #d8dee4;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1c1d20;
+          --ink: #e6e7ea;
+          --muted: #9da3ab;
+          --line: #3a3d42;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.7 system-ui,
+          -apple-system,
+          'Segoe UI',
+          'Malgun Gothic',
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.6em;
+      }
+      h2 {
+        margin-top: 2em;
+        font-size: 1.15em;
+      }
+      a {
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.9em;
+      }
+      hr {
+        margin: 48px 0;
+        border: none;
+        border-top: 1px solid var(--line);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="./favicon.svg" alt="" width="40" height="40" />
+        <h1>개인정보처리방침</h1>
+      </header>
+      <p class="muted">
+        Chordash · 시행일 2026년 10월 9일 · <a href="#en">English</a> ·
+        <a href="./terms">서비스 약관</a>
+      </p>
+
+      <p>
+        Chordash(웹 버전 <a href="https://chordash.app">chordash.app</a>, 데스크톱 앱, 안드로이드
+        앱)는 코드 악보를 입력하고 PDF로 만드는 오픈소스 앱입니다. Chordash에는
+        <b>운영자의 서버가 없습니다.</b> 사용자의 곡과 정보를 운영자가 모으거나 보관하지 않습니다.
+      </p>
+
+      <h2>1. 곡이 저장되는 곳</h2>
+      <ul>
+        <li><b>이 브라우저 / 휴대폰 / 컴퓨터:</b> 곡과 설정은 사용자의 기기 안에만 저장됩니다.</li>
+        <li>
+          <b>구글 드라이브 (웹 버전, 사용자가 로그인한 경우):</b> 사용자 본인의 구글 드라이브에 있는
+          <code>Chordash</code> 폴더에 저장됩니다.
+        </li>
+      </ul>
+
+      <h2>2. 구글 계정 정보의 사용</h2>
+      <p>
+        구글로 로그인하면 Chordash는 <code>drive.file</code> 권한만 요청합니다. 이 권한으로는
+        <b>Chordash가 직접 만들거나 연 파일만</b> 볼 수 있고, 드라이브의 다른 파일은 볼 수 없습니다.
+        화면에 로그인 상태를 보여 주기 위해 구글 드라이브가 알려 주는 이름, 이메일 주소, 프로필
+        사진을 브라우저 안에서만 표시할 수 있습니다.
+      </p>
+      <ul>
+        <li>구글 데이터는 사용자가 요청한 곡 열기·저장에만 쓰고, 다른 곳으로 보내지 않습니다.</li>
+        <li>구글 데이터를 팔거나, 광고에 쓰거나, AI 학습에 쓰지 않습니다.</li>
+        <li>로그인 토큰은 브라우저 메모리에만 두고, 탭을 닫으면 사라집니다.</li>
+      </ul>
+      <p>
+        Chordash가 구글 API에서 받은 정보를 쓰고 다른 앱으로 옮기는 방식은
+        <a href="https://developers.google.com/terms/api-services-user-data-policy"
+          >Google API 서비스 사용자 데이터 정책</a
+        >과 그 제한적 사용(Limited Use) 요건을 따릅니다.
+      </p>
+      <p>
+        연결을 끊으려면
+        <a href="https://myaccount.google.com/connections">구글 계정 → 서드파티 연결</a>에서
+        Chordash를 삭제하세요. 드라이브의 Chordash 폴더는 사용자가 직접 지울 수 있습니다.
+      </p>
+
+      <h2>3. AI 악보 읽기 (데스크톱·안드로이드 앱)</h2>
+      <p>
+        사용자가 자기 Anthropic API 키를 넣고 "사진·PDF (AI)" 가져오기를 쓰면, 고른 사진이나 PDF가
+        Anthropic(Claude)에 직접 보내져 글로 바뀝니다. 이때 Anthropic의 개인정보처리방침이
+        적용됩니다. API 키는 사용자 기기 안에만 저장됩니다. 웹 버전에는 이 기능이 없습니다.
+      </p>
+
+      <h2>4. 브라우저 저장소</h2>
+      <p>
+        웹 버전은 곡, 마지막으로 고른 저장 위치, 처음 실행 여부 같은 설정을 브라우저 저장소에
+        둡니다. 광고나 추적용 쿠키·분석 도구는 쓰지 않습니다. 브라우저의 사이트 데이터를 지우면 함께
+        지워집니다.
+      </p>
+
+      <h2>5. 사이트 호스팅</h2>
+      <p>
+        웹 버전은 GitHub Pages로 제공되고, 도메인은 Cloudflare를 거칩니다. 이 회사들은 사이트를 보여
+        주기 위해 접속 기록(IP 주소 등)을 남길 수 있으며, 각 회사의 방침이 적용됩니다.
+      </p>
+
+      <h2>6. 바뀌는 경우와 연락처</h2>
+      <p>
+        이 방침이 바뀌면 이 페이지에 새 시행일과 함께 올립니다. 문의:
+        <a href="mailto:pjjy2017@gmail.com">pjjy2017@gmail.com</a>
+      </p>
+
+      <hr />
+
+      <section id="en" lang="en">
+        <h1>Privacy Policy</h1>
+        <p class="muted">Chordash · Effective October 9, 2026</p>
+        <p>
+          Chordash (the web version at <a href="https://chordash.app">chordash.app</a>, the desktop
+          app and the Android app) is an open-source app for writing chord charts and making PDFs.
+          Chordash has <b>no server of its own</b>; the developer does not collect or keep your
+          songs or personal data.
+        </p>
+        <h2>Where songs are stored</h2>
+        <p>
+          On your own device, or — when you sign in with Google on the web version — in the
+          <code>Chordash</code> folder of your own Google Drive.
+        </p>
+        <h2>Google user data</h2>
+        <p>
+          Chordash requests only the <code>drive.file</code> scope, which lets it see only the files
+          it created or opened, not the rest of your Drive. It may show the name, email address and
+          profile photo that Drive reports, inside your browser only, to show who is signed in.
+          Google data is used only to open and save the songs you ask for; it is never sent
+          elsewhere, sold, used for advertising, or used to train AI models. The access token stays
+          in browser memory and is gone when the tab closes.
+        </p>
+        <p>
+          Chordash's use and transfer of information received from Google APIs will adhere to the
+          <a href="https://developers.google.com/terms/api-services-user-data-policy"
+            >Google API Services User Data Policy</a
+          >, including the Limited Use requirements. You can remove access at
+          <a href="https://myaccount.google.com/connections"
+            >Google Account → Third-party connections</a
+          >.
+        </p>
+        <h2>AI chart reading (desktop and Android apps)</h2>
+        <p>
+          If you enter your own Anthropic API key and import a photo or PDF with AI, that file is
+          sent directly to Anthropic (Claude) and Anthropic's privacy policy applies. The key is
+          stored only on your device. The web version has no AI features.
+        </p>
+        <h2>Browser storage and hosting</h2>
+        <p>
+          The web version keeps songs and settings in browser storage. No advertising or tracking
+          cookies or analytics are used. The site is served by GitHub Pages through Cloudflare,
+          which may keep access logs under their own policies.
+        </p>
+        <h2>Changes and contact</h2>
+        <p>
+          Changes are posted on this page with a new effective date. Contact:
+          <a href="mailto:pjjy2017@gmail.com">pjjy2017@gmail.com</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
