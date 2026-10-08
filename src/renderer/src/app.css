@@ -1160,6 +1160,27 @@ textarea {
   display: none;
 }
 
+/* Web only: small policy links in the bottom corner. */
+.legal-links {
+  position: fixed;
+  right: 10px;
+  bottom: 6px;
+  z-index: 5;
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.legal-links a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.legal-links a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 760px) {
   .toolbar {
     flex-wrap: wrap;
@@ -1174,7 +1195,8 @@ textarea {
   /* Files come from the "곡" tab and the menu; the sheet tools get their own row. */
   .group-file,
   .preview-toggle,
-  .status {
+  .status,
+  .legal-links {
     display: none;
   }
 

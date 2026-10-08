@@ -12,7 +12,13 @@ declare global {
 export function createElectronPlatform(): Platform {
   const bridge = window.chordashBridge
   return {
-    features: { ai: true, printPdf: false, setlistKeepsSongs: false, offersDesktopApp: false },
+    features: {
+      ai: true,
+      printPdf: false,
+      setlistKeepsSongs: false,
+      offersDesktopApp: false,
+      legalLinks: false
+    },
     openFile: () => bridge.openFile(),
     importFile: (kind) => bridge.importFile(kind),
     saveFile: (file, text) => bridge.saveFile(file, text),

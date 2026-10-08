@@ -85,6 +85,8 @@ export interface PlatformFeatures {
   setlistKeepsSongs: boolean
   /** The web version points to the desktop and Android apps in its menu. */
   offersDesktopApp: boolean
+  /** The website shows its privacy policy and terms links on the page (Google sign-in review). */
+  legalLinks: boolean
 }
 
 export interface Platform {

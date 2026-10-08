@@ -71,7 +71,13 @@ export function createAndroidPlatform(): Platform {
   })
 
   return {
-    features: { ai: true, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: false },
+    features: {
+      ai: true,
+      printPdf: true,
+      setlistKeepsSongs: false,
+      offersDesktopApp: false,
+      legalLinks: false
+    },
 
     ...libraryMethods([
       localStore({

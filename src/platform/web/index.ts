@@ -108,7 +108,13 @@ export function createWebPlatform(): Platform {
   })
 
   return {
-    features: { ai: false, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: true },
+    features: {
+      ai: false,
+      printPdf: true,
+      setlistKeepsSongs: false,
+      offersDesktopApp: true,
+      legalLinks: true
+    },
 
     ...libraryMethods([
       localStore({
