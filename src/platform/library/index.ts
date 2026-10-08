@@ -15,7 +15,16 @@ import {
   type LibraryStore
 } from './folder'
 
-export { FOLDER, listFolder, localStore, readFromFolder, shareFile, writeToFolder } from './folder'
+export {
+  FOLDER,
+  lastStore,
+  listFolder,
+  localStore,
+  readFromFolder,
+  rememberStore,
+  shareFile,
+  writeToFolder
+} from './folder'
 export type { FolderFile, LibraryStore } from './folder'
 
 const SONG = '.chord'
@@ -25,6 +34,18 @@ const PICK: Record<'song' | 'setlist', PickerType> = {
   song: { description: 'Chordash 악보', accept: { 'text/plain': ['.chord'] } },
   setlist: { description: 'Chordash 셋리스트', accept: { 'text/plain': ['.setlist'] } }
 }
+
+/** Chart files "열기" also takes, to convert (1.4): text charts, ChordPro. */
+export const TEXT_CHARTS: Record<string, string[]> = {
+  'text/plain': ['.txt', '.cho', '.chopro', '.chordpro', '.crd', '.pro']
+}
+/** Photos and PDFs, for the AI (Android). Images include the camera in Android's chooser. */
+export const CHART_IMAGES: Record<string, string[]> = {
+  'image/*': [],
+  'application/pdf': ['.pdf']
+}
+
+let nextImport = 1
 
 const copies = new Map<string, string>()
 let nextCopy = 1
@@ -41,8 +62,18 @@ type LibraryMethods = Pick<
   'openFile' | 'saveFile' | 'saveFileAs' | 'pickSongs' | 'readSong' | 'openSetlist' | 'saveSetlist'
 >
 
-/** Library methods over the given places; the first is the default. */
-export function libraryMethods(stores: LibraryStore[]): LibraryMethods {
+/**
+ * Library methods over the given places; the first is the default. `opens` is what "다른 파일…"
+ * accepts besides Chordash songs.
+ */
+export function libraryMethods(
+  stores: LibraryStore[],
+  opens: Record<string, string[]>
+): LibraryMethods {
+  const openPick: PickerType = {
+    description: '악보',
+    accept: { ...opens, 'text/plain': ['.chord', ...(opens['text/plain'] ?? [])] }
+  }
   /** A FileRef id is `<place id>:<file name>`, or `copy:<n>` for files from elsewhere. */
   const refIn = (store: LibraryStore, name: string): FileRef => ({
     id: `${store.id}:${name}`,
@@ -88,22 +119,37 @@ export function libraryMethods(stores: LibraryStore[]): LibraryMethods {
     return refIn(at.store, at.name)
   }
 
-  const choose = (title: string, extension: string, multiple: boolean): Promise<FolderChoice> =>
-    chooseInFolder(title, extension, multiple, stores)
+  /** The folder dialog without pasting (setlists). */
+  const choose = async (
+    title: string,
+    extension: string,
+    multiple: boolean
+  ): Promise<Exclude<FolderChoice, 'paste'>> => {
+    const choice = await chooseInFolder(title, extension, multiple, stores)
+    return choice === 'paste' ? null : choice
+  }
 
   return {
     async openFile() {
-      const choice = await choose('곡 열기', SONG, false)
+      const choice = await chooseInFolder('열기', SONG, false, stores, true)
       if (!choice) return null
+      if (choice === 'paste') return { kind: 'paste' }
       if (choice !== 'elsewhere') {
         const name = choice.names[0]
         const text = await choice.store.read(name)
-        return text === null ? null : { file: refIn(choice.store, name), text }
+        return text === null ? null : { kind: 'song', file: refIn(choice.store, name), text }
       }
-      const [picked] = await pickWithInput(PICK.song, false)
+      const [picked] = await pickWithInput(openPick, false)
       if (!picked) return null
-      const text = withoutBom(await picked.text())
-      return { file: copyRef(picked.name, text), text }
+      if (picked.name.toLowerCase().endsWith(SONG)) {
+        const text = withoutBom(await picked.text())
+        return { kind: 'song', file: copyRef(picked.name, text), text }
+      }
+      const data = new Uint8Array(await picked.arrayBuffer())
+      return {
+        kind: 'import',
+        picked: { file: { id: `import:${nextImport++}`, name: picked.name }, data }
+      }
     },
 
     saveFile: (file, text) => saveText(file, text, file?.name ?? songTitle(text), SONG, false),

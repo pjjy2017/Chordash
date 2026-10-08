@@ -8,7 +8,7 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/"
     />
   </head>
 
@@ -32,9 +32,6 @@
           </button>
           <button class="icon-button" data-command="open" title="열기 (Ctrl+O)" aria-label="열기">
             <span class="icon" data-icon="folder"></span>
-          </button>
-          <button class="icon-button" data-command="save" title="저장 (Ctrl+S)" aria-label="저장">
-            <span class="icon" data-icon="device-floppy"></span>
           </button>
         </div>
         <!-- Sheet tools: transposition (preview only until "원본에 적용"), 123/CDE, chord reading. -->
@@ -125,6 +122,9 @@
         <button class="primary-button" data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">
           <span class="icon" data-icon="file-type-pdf"></span><span>PDF</span>
         </button>
+        <button class="save-button" data-command="save" title="저장 (Ctrl+S)" aria-label="저장">
+          <span class="icon" data-icon="device-floppy"></span><span class="save-label">저장</span>
+        </button>
         <div class="menu-wrap">
           <button
             id="menu-button"
@@ -146,10 +146,10 @@
                 >Ctrl+Shift+S</kbd
               >
             </button>
-            <hr />
-            <button role="menuitem" data-command="import">
-              <span class="icon" data-icon="file-import"></span>가져오기…
+            <button role="menuitem" data-command="paste" data-unless="libraryDialog">
+              <span class="icon" data-icon="clipboard-text"></span>글 붙여넣기…
             </button>
+            <hr />
             <button role="menuitem" data-command="setlist">
               <span class="icon" data-icon="playlist"></span>셋리스트…
             </button>
@@ -157,11 +157,8 @@
             <button role="menuitem" data-command="example">
               <span class="icon" data-icon="music"></span>예제 곡 열기
             </button>
-            <button role="menuitem" data-command="tour">
-              <span class="icon" data-icon="pencil"></span>둘러보기
-            </button>
             <button role="menuitem" data-command="help">
-              <span class="icon" data-icon="help"></span>입력법 도움말<kbd>F1</kbd>
+              <span class="icon" data-icon="keyboard"></span>입력법<kbd>F1</kbd>
             </button>
             <button role="menuitem" data-command="settings" data-needs="ai">
               <span class="icon" data-icon="settings"></span>설정 (AI 키, 모델)
@@ -179,6 +176,17 @@
               <span class="icon" data-icon="info-circle"></span>Chordash 정보
             </button>
           </div>
+        </div>
+        <!-- Web only (1.4): Google sign-in at the right end, like other Google-backed sites. -->
+        <div id="account" class="account-wrap" hidden>
+          <button
+            id="account-button"
+            class="account-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="account-menu"
+          ></button>
+          <div id="account-menu" class="menu account-menu" hidden></div>
         </div>
       </header>
       <main class="split">
@@ -229,15 +237,14 @@
         </button>
       </nav>
     </div>
+    <!-- "글 붙여넣기": a chart copied from the web, converted to Chordash (1.4: files come in
+         through "열기"). -->
     <dialog id="import-dialog" class="import-dialog">
       <form method="dialog">
-        <h2>악보 가져오기</h2>
+        <h2>글 붙여넣기</h2>
         <p>
           웹에서 복사한 코드 악보(가사 위에 코드), 마디선 텍스트(| C | Am |), ChordPro를 Chordash
           문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요.
-          <span data-needs="ai"
-            >손글씨·인쇄 악보의 사진이나 PDF는 <b>사진·PDF (AI)</b>로 가져와요.</span
-          >
         </p>
         <textarea
           id="import-text"
@@ -246,11 +253,9 @@
           placeholder="여기에 붙여넣기 (Ctrl+V)"
         ></textarea>
         <div class="import-actions">
-          <button type="button" id="import-from-file">파일에서 가져오기…</button>
-          <button type="button" id="import-chart" data-needs="ai">사진·PDF (AI)…</button>
           <span class="spacer"></span>
           <button value="cancel">취소</button>
-          <button type="button" id="import-paste" class="primary">붙여넣은 글 바꾸기</button>
+          <button type="button" id="import-paste" class="primary">바꾸기</button>
         </div>
       </form>
     </dialog>
@@ -333,24 +338,10 @@
         </div>
       </form>
     </dialog>
-    <!-- First-run tour: a few picture slides, once per device (⋯ → 둘러보기 shows it again). -->
-    <dialog id="tour-dialog" class="import-dialog tour-dialog">
-      <form method="dialog">
-        <div id="tour-stage" class="tour-stage"></div>
-        <div class="import-actions tour-actions">
-          <button value="skip" class="tour-skip">건너뛰기</button>
-          <span class="spacer"></span>
-          <span id="tour-dots" class="tour-dots"></span>
-          <span class="spacer"></span>
-          <button type="button" id="tour-back">이전</button>
-          <button type="button" id="tour-next" class="primary" autofocus>다음</button>
-        </div>
-      </form>
-    </dialog>
-    <!-- Input help: every shorthand, line kind and command, examples next to results. -->
+    <!-- Input: one sheet of keys, each with what it means (1.4), shown once on first run. -->
     <dialog id="help-dialog" class="import-dialog help-dialog">
       <form method="dialog">
-        <h2>입력법 도움말</h2>
+        <h2>입력법</h2>
         <div id="help-body" class="help-body"></div>
         <div class="import-actions">
           <span class="spacer"></span>

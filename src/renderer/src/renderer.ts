@@ -35,13 +35,13 @@ import {
   APP_VERSION,
   DONATE_URL
 } from '../../core'
-import { platform, type FileRef } from '../../platform'
-import { chartPages, type ChartPage } from './chartPages'
+import { platform, type FileRef, type ImportedFile } from '../../platform'
+import { chartPages, isChartFile, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { installChordKeyboard } from './chordKeyboard'
+import { installAccount } from './account'
 import { openHelp } from './help'
-import { openTour } from './tour'
 import exampleSong from '../../../examples/Chordash.chord?raw'
 import { installIcons } from './icons'
 import { buildPrintDocument, renderPages } from './preview'
@@ -51,11 +51,15 @@ import { openSetlist } from './setlist'
 installFonts()
 installIcons()
 
-// Parts the platform cannot do (web version: AI import, settings) are not shown.
+// Parts the platform cannot do (web version: AI import, settings) are not shown;
+// `data-unless` parts only where it cannot.
 for (const [feature, on] of Object.entries(platform.features)) {
   document
     .querySelectorAll<HTMLElement>(`[data-needs="${feature}"]`)
     .forEach((e) => (e.hidden = !on))
+  document
+    .querySelectorAll<HTMLElement>(`[data-unless="${feature}"]`)
+    .forEach((e) => (e.hidden = on))
 }
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
@@ -196,24 +200,29 @@ const commands: Record<string, () => Promise<unknown>> = {
   new: async () => {
     if (await confirmDiscard()) load('', null)
   },
+  // One "열기" for everything (1.4): songs open as they are; other charts are converted.
   open: async () => {
-    if (!(await confirmDiscard())) return
     const opened = await platform.openFile()
-    if (opened) load(opened.text, opened.file)
+    if (!opened) return
+    if (opened.kind === 'paste') return openPaste()
+    if (opened.kind === 'song') {
+      if (await confirmDiscard()) load(opened.text, opened.file)
+      return
+    }
+    const { picked } = opened
+    if (isChartFile(picked)) return importChart(picked)
+    const { text, encoding } = decodeText(picked.data)
+    await runImport(text, picked.file.name, encoding)
   },
+  paste: async () => openPaste(),
   save,
   saveAs,
   exportPdf,
   example: async () => {
     if (await confirmDiscard()) load(exampleSong, null)
   },
-  import: async () => {
-    importText_.value = ''
-    importDialog.showModal()
-  },
   settings: openSettings,
   help: openHelp,
-  tour: () => openTour(installIcons),
   about: openAbout,
   setlist: () => openSetlist(() => ({ file, dirty: isDirty() }))
 }
@@ -269,16 +278,15 @@ async function runImport(
   status.textContent = `가져옴: ${details.join(' · ')}`
 }
 
+/** "글 붙여넣기": a chart copied from the web, converted like a file. */
+function openPaste(): void {
+  importText_.value = ''
+  importDialog.showModal()
+}
+
 $<HTMLButtonElement>('import-paste').addEventListener('click', () => {
   const text = importText_.value
   if (text.trim()) void runImport(text, '붙여넣은 글', null)
-})
-
-$<HTMLButtonElement>('import-from-file').addEventListener('click', async () => {
-  const picked = await platform.importFile('text')
-  if (!picked) return
-  const { text, encoding } = decodeText(picked.data)
-  await runImport(text, picked.file.name, encoding)
 })
 
 function showImportSource(source: ImportSource | null): void {
@@ -453,10 +461,12 @@ aiDialog.addEventListener('close', () => {
   aiPages.replaceChildren()
 })
 
-$<HTMLButtonElement>('import-chart').addEventListener('click', async () => {
-  const picked = await platform.importFile('chart')
-  if (!picked) return
-  importDialog.close()
+/** A photo or PDF of a chart: page images → the AI dialog. */
+async function importChart(picked: ImportedFile): Promise<void> {
+  if (!platform.features.ai) {
+    window.alert('악보 사진·PDF는 데스크톱·안드로이드 앱에서 AI로 읽을 수 있어요.')
+    return
+  }
   aiJob = null
   aiSummary.textContent = `${picked.file.name}: 쪽 그림을 만드는 중…`
   aiPages.replaceChildren()
@@ -471,7 +481,7 @@ $<HTMLButtonElement>('import-chart').addEventListener('click', async () => {
   } catch (error) {
     aiSay(error instanceof Error ? error.message : String(error), true)
   }
-})
+}
 
 /** PDF of the current pages; warns first about errors and `?` marks. */
 async function exportPdf(): Promise<void> {
@@ -777,6 +787,7 @@ window.addEventListener(
 platform.onBeforeClose(confirmDiscard)
 
 installChordKeyboard(editor, () => editor.parsed().document.key)
+if (platform.account) installAccount(platform.account)
 
 $<HTMLInputElement>('hints').addEventListener('change', (e) => {
   editor.setHints((e.target as HTMLInputElement).checked)
@@ -792,6 +803,6 @@ try {
   // No storage: start empty.
 }
 load(firstRun ? exampleSong : '', null)
-// The first time, a short tour comes first (the example song is already behind it).
-if (firstRun) void openTour(installIcons)
+// The first time, the key sheet comes first (the example song is already behind it).
+if (firstRun) void openHelp()
 renderPreview()

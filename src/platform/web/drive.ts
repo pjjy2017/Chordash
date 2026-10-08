@@ -4,6 +4,7 @@
 // The client ID is public by design (it names the app to Google; it is not a secret).
 
 import type { FolderFile, LibraryStore } from '../library'
+import type { Profile } from '../types'
 
 const CLIENT_ID = '976077296536-73snh5ssfobiqatkguk6n1ev7n1lrosv.apps.googleusercontent.com'
 const SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -11,6 +12,8 @@ const API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
 const FOLDER_NAME = 'Chordash'
 const FOLDER_ID = 'chordash.driveFolder'
+/** Who signed in last, to show (dimmed) while signed out (1.4). Only on this device. */
+const PROFILE = 'chordash.driveProfile'
 
 /** The parts of Google Identity Services used here. */
 interface TokenResponse {
@@ -24,7 +27,8 @@ interface GoogleOAuth {
     scope: string
     callback: (response: TokenResponse) => void
     error_callback?: (error: { type: string }) => void
-  }): { requestAccessToken(options?: { prompt?: string }): void }
+  }): { requestAccessToken(options?: { prompt?: string; login_hint?: string }): void }
+  revoke(token: string, done?: () => void): void
 }
 declare global {
   interface Window {
@@ -34,6 +38,72 @@ declare global {
 
 let token: { value: string; expires: number } | null = null
 let gis: Promise<void> | null = null
+let expiryTimer: number | undefined
+
+// --- who is signed in --------------------------------------------------------------------
+
+const listeners = new Set<() => void>()
+const notify = (): void => listeners.forEach((listener) => listener())
+
+/** Runs whenever the sign-in or the profile changes. */
+export const onDriveChange = (listener: () => void): void => void listeners.add(listener)
+
+const storage = {
+  get(key: string): string | null {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  },
+  set(key: string, value: string | null): void {
+    try {
+      if (value === null) localStorage.removeItem(key)
+      else localStorage.setItem(key, value)
+    } catch {
+      // Only a convenience.
+    }
+  }
+}
+
+let profile: Profile | null = (() => {
+  try {
+    return JSON.parse(storage.get(PROFILE) ?? 'null') as Profile | null
+  } catch {
+    return null
+  }
+})()
+
+export const driveProfile = (): Profile | null => profile
+
+/** Asks Drive who signed in (works with the drive.file scope alone). */
+async function loadProfile(): Promise<void> {
+  const response = await call(`${API}/about?fields=user(displayName,emailAddress,photoLink)`)
+  const { user } = (await response.json()) as {
+    user: { displayName?: string; emailAddress?: string; photoLink?: string }
+  }
+  const next: Profile = {
+    name: user.displayName ?? '',
+    email: user.emailAddress ?? '',
+    photo: user.photoLink ?? ''
+  }
+  // Another account's Chordash folder is a different folder.
+  if (profile && profile.email !== next.email) storage.set(FOLDER_ID, null)
+  profile = next
+  storage.set(PROFILE, JSON.stringify(next))
+  notify()
+}
+
+/** Signs out: gives the token back to Google and forgets who it was. */
+export function signOutDrive(): void {
+  if (token) window.google?.accounts.oauth2.revoke(token.value)
+  token = null
+  window.clearTimeout(expiryTimer)
+  profile = null
+  storage.set(PROFILE, null)
+  storage.set(FOLDER_ID, null)
+  notify()
+}
 
 function loadGis(): Promise<void> {
   gis ??= new Promise((resolve, reject) => {
@@ -50,13 +120,15 @@ function loadGis(): Promise<void> {
   return gis
 }
 
-const isConnected = (): boolean => token !== null && token.expires > Date.now() + 30_000
+export const isDriveConnected = (): boolean => token !== null && token.expires > Date.now() + 30_000
+
+export const warmUpDrive = (): void => void loadGis().catch(() => undefined)
 
 /**
  * Signs in with a Google popup. false when the user closed it or the popup was blocked.
  * With the library already loaded (warmUp), the popup opens within the click itself.
  */
-async function connect(): Promise<boolean> {
+export async function connectDrive(): Promise<boolean> {
   if (!window.google) {
     try {
       await loadGis()
@@ -75,6 +147,11 @@ async function connect(): Promise<boolean> {
           value: response.access_token,
           expires: Date.now() + (response.expires_in ?? 3600) * 1000
         }
+        // The button shows "signed out" again when the hour is over.
+        window.clearTimeout(expiryTimer)
+        expiryTimer = window.setTimeout(notify, token.expires - Date.now() - 30_000)
+        notify()
+        void loadProfile().catch(() => undefined)
         resolve(true)
       },
       error_callback: (error) => {
@@ -83,19 +160,22 @@ async function connect(): Promise<boolean> {
         resolve(false)
       }
     })
-    client.requestAccessToken({ prompt: '' })
+    // The last account is suggested, so signing in again is one click.
+    client.requestAccessToken({ prompt: '', login_hint: profile?.email || undefined })
   })
 }
 
 /** A Drive call with the token; signs in again first when the token has run out. */
 async function call(url: string, init: RequestInit = {}): Promise<Response> {
-  if (!isConnected() && !(await connect())) throw new Error('구글 드라이브에 연결되지 않았어요.')
+  if (!isDriveConnected() && !(await connectDrive()))
+    throw new Error('구글 드라이브에 연결되지 않았어요.')
   const response = await fetch(url, {
     ...init,
     headers: { ...init.headers, Authorization: `Bearer ${token!.value}` }
   })
   if (response.status === 401) {
     token = null
+    notify()
     throw new Error('구글 로그인이 만료됐어요. 다시 시도해 주세요.')
   }
   if (!response.ok) throw new Error(`구글 드라이브 오류 (${response.status})`)
@@ -124,12 +204,8 @@ async function search(
 
 /** The Chordash folder in Drive, made the first time. */
 async function folderId(): Promise<string> {
-  try {
-    const known = localStorage.getItem(FOLDER_ID)
-    if (known) return known
-  } catch {
-    // Look it up.
-  }
+  const known = storage.get(FOLDER_ID)
+  if (known) return known
   const [found] = await search(
     `name = ${quote(FOLDER_NAME)} and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
   )
@@ -142,11 +218,7 @@ async function folderId(): Promise<string> {
     })
     id = ((await response.json()) as { id: string }).id
   }
-  try {
-    localStorage.setItem(FOLDER_ID, id)
-  } catch {
-    // Looked up again next time.
-  }
+  storage.set(FOLDER_ID, id)
   return id
 }
 
@@ -207,9 +279,9 @@ export const driveStore: LibraryStore = {
   saveTo: '구글 드라이브의 Chordash 폴더에',
   connectNote:
     '구글로 로그인하면 내 드라이브의 Chordash 폴더에 저장해요. Chordash는 자기가 만든 파일만 볼 수 있어요.',
-  isConnected,
-  connect,
-  warmUp: () => void loadGis().catch(() => undefined),
+  isConnected: isDriveConnected,
+  connect: connectDrive,
+  warmUp: warmUpDrive,
   list,
   read,
   exists: async (name) => (await fileId(name)) !== null,

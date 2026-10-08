@@ -27,6 +27,17 @@ const JPEG_QUALITY = 0.88
 export const isPdf = (file: ImportedFile): boolean =>
   /\.pdf$/i.test(file.file.name) || String.fromCharCode(...file.data.slice(0, 5)) === '%PDF-'
 
+/** A photo or PDF (for the AI), not a text chart: by name, or by the first bytes (1.4). */
+export const isChartFile = (file: ImportedFile): boolean => {
+  const [a, b] = file.data
+  return (
+    isPdf(file) ||
+    /\.(png|jpe?g|webp|heic|gif)$/i.test(file.file.name) ||
+    (a === 0x89 && b === 0x50) || // PNG
+    (a === 0xff && b === 0xd8) // JPEG
+  )
+}
+
 /** The picture on a canvas → a JPEG page. White underneath, so transparent PNGs stay readable. */
 function pageFrom(canvas: HTMLCanvasElement): ChartPage {
   const url = canvas.toDataURL('image/jpeg', JPEG_QUALITY)

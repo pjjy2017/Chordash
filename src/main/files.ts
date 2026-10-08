@@ -5,23 +5,33 @@ import { readFile, writeFile } from 'fs/promises'
 import { basename } from 'path'
 import { appTitle } from '../core/version'
 import { IPC } from '../platform/electron/bridge'
-import type { DiscardChoice, DocumentState, FileRef, ImportKind } from '../platform/types'
+import type { DiscardChoice, DocumentState, FileRef, OpenResult } from '../platform/types'
 
 const FILTERS = [
   { name: 'Chordash 악보', extensions: ['chord'] },
   { name: '모든 파일', extensions: ['*'] }
 ]
 
-const IMPORT_FILTERS: Record<ImportKind, Electron.FileFilter[]> = {
-  text: [
-    {
-      name: '텍스트 악보, ChordPro',
-      extensions: ['txt', 'cho', 'chopro', 'chordpro', 'crd', 'pro']
-    },
-    { name: '모든 파일', extensions: ['*'] }
-  ],
-  chart: [{ name: '악보 사진, PDF', extensions: ['png', 'jpg', 'jpeg', 'pdf'] }]
-}
+/** "열기" takes any chart (1.4): Chordash songs open as they are, the rest are converted. */
+const OPEN_FILTERS: Electron.FileFilter[] = [
+  {
+    name: '악보 (Chordash, 텍스트, ChordPro, 사진, PDF)',
+    extensions: [
+      'chord',
+      'txt',
+      'cho',
+      'chopro',
+      'chordpro',
+      'crd',
+      'pro',
+      'png',
+      'jpg',
+      'jpeg',
+      'pdf'
+    ]
+  },
+  ...FILTERS
+]
 
 const dirtyWindows = new WeakSet<BrowserWindow>()
 const closing = new WeakSet<BrowserWindow>()
@@ -50,27 +60,23 @@ async function saveAs(
 }
 
 export function registerFileHandlers(): void {
-  ipcMain.handle(IPC.open, async (e) => {
-    const win = windowOf(e.sender)
-    const result = await dialog.showOpenDialog(win, { filters: FILTERS, properties: ['openFile'] })
-    if (result.canceled || result.filePaths.length === 0) return null
-    const path = result.filePaths[0]
-    const text = (await readFile(path, 'utf8')).replace(/^\uFEFF/, '')
-    return { file: refFor(path), text }
-  })
-
-  ipcMain.handle(IPC.importFile, async (e, kind: ImportKind) => {
+  ipcMain.handle(IPC.open, async (e): Promise<OpenResult | null> => {
     // Automated checks set this to skip the dialog; normal use never does.
-    const testPath = process.env.CHORDASH_TEST_IMPORT_PATH
-    if (testPath) return { file: refFor(testPath), data: new Uint8Array(await readFile(testPath)) }
-    const result = await dialog.showOpenDialog(windowOf(e.sender), {
-      title: '가져올 악보 파일',
-      filters: IMPORT_FILTERS[kind],
-      properties: ['openFile']
-    })
-    if (result.canceled || result.filePaths.length === 0) return null
-    const path = result.filePaths[0]
-    return { file: refFor(path), data: new Uint8Array(await readFile(path)) }
+    let path = process.env.CHORDASH_TEST_IMPORT_PATH
+    if (!path) {
+      const result = await dialog.showOpenDialog(windowOf(e.sender), {
+        filters: OPEN_FILTERS,
+        properties: ['openFile']
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      path = result.filePaths[0]
+    }
+    if (/\.chord$/i.test(path)) {
+      const text = (await readFile(path, 'utf8')).replace(/^\uFEFF/, '')
+      return { kind: 'song', file: refFor(path), text }
+    }
+    const data = new Uint8Array(await readFile(path))
+    return { kind: 'import', picked: { file: refFor(path), data } }
   })
 
   ipcMain.handle(IPC.save, async (e, file: FileRef | null, text: string) => {

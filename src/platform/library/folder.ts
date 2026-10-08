@@ -155,7 +155,7 @@ export function lastStore(stores: LibraryStore[]): LibraryStore {
   return stores.find((s) => s.id === id) ?? stores[0]
 }
 
-function rememberStore(store: LibraryStore): void {
+export function rememberStore(store: LibraryStore): void {
   try {
     localStorage.setItem(LAST_STORE, store.id)
   } catch {
@@ -196,19 +196,23 @@ const button = (text: string, className = ''): HTMLButtonElement => {
 }
 
 /** What the user chose in the folder dialog. */
-export type FolderChoice = { store: LibraryStore; names: string[] } | 'elsewhere' | null
+export type FolderChoice = { store: LibraryStore; names: string[] } | 'elsewhere' | 'paste' | null
 
 const formatDate = (ms: number): string => {
   const d = new Date(ms)
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** Lists one kind of file in a place; the user picks one (or several), or goes elsewhere. */
+/**
+ * Lists one kind of file in a place; the user picks one (or several), or goes elsewhere.
+ * `paste` adds "글 붙여넣기…" (the song "열기", 1.4).
+ */
 export function chooseInFolder(
   title: string,
   extension: string,
   multiple: boolean,
-  stores: LibraryStore[]
+  stores: LibraryStore[],
+  paste = false
 ): Promise<FolderChoice> {
   return new Promise((resolve) => {
     let store = lastStore(stores)
@@ -224,9 +228,14 @@ export function chooseInFolder(
 
     const actions = document.createElement('div')
     actions.className = 'import-actions'
-    const elsewhere = button('다른 곳에서 가져오기…')
+    const elsewhere = button('다른 파일…')
     elsewhere.addEventListener('click', () => {
       result = 'elsewhere'
+      dialog.close()
+    })
+    const pasteText = button('글 붙여넣기…')
+    pasteText.addEventListener('click', () => {
+      result = 'paste'
       dialog.close()
     })
     const footer = document.createElement('span')
@@ -241,7 +250,14 @@ export function chooseInFolder(
       result = { store, names: [...chosen] }
       dialog.close()
     })
-    actions.append(elsewhere, footer, spacer, cancel, ...(multiple ? [open] : []))
+    actions.append(
+      elsewhere,
+      ...(paste ? [pasteText] : []),
+      footer,
+      spacer,
+      cancel,
+      ...(multiple ? [open] : [])
+    )
 
     /** Shows the current place: its files, or a sign-in button. */
     async function show(): Promise<void> {

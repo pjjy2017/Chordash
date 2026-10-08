@@ -5,21 +5,33 @@
 // browser's print dialog. No AI: an API key cannot be kept safely in a public web page.
 
 import { appTitle } from '../../core/version'
-import { driveStore } from './drive'
-import { libraryMethods, localStore, listFolder, readFromFolder, writeToFolder } from '../library'
+import {
+  connectDrive,
+  driveProfile,
+  driveStore,
+  isDriveConnected,
+  onDriveChange,
+  signOutDrive,
+  warmUpDrive
+} from './drive'
+import {
+  lastStore,
+  libraryMethods,
+  listFolder,
+  localStore,
+  readFromFolder,
+  rememberStore,
+  TEXT_CHARTS,
+  writeToFolder,
+  type LibraryStore
+} from '../library'
 import { download, pickWithInput, printTip, type PickerType } from '../shared'
-import type { Platform } from '../types'
+import type { Account, Platform } from '../types'
 
-const IMPORT_TEXT: PickerType = {
-  description: '텍스트 악보, ChordPro',
-  accept: { 'text/plain': ['.txt', '.cho', '.chopro', '.chordpro', '.crd', '.pro'] }
-}
 const BACKUP: PickerType = {
   description: 'Chordash 보관함 백업',
   accept: { 'application/json': ['.json'] }
 }
-
-let nextImport = 1
 
 /** Prints a standalone HTML document from a hidden frame. */
 async function printHtml(html: string): Promise<void> {
@@ -101,8 +113,44 @@ async function exportFile(name: string): Promise<void> {
   if (text !== null) download(name, text)
 }
 
+/** The Google button at the right end (1.4): signing in also makes Drive the place to save. */
+function driveAccount(local: LibraryStore): Account {
+  const stores = [local, driveStore]
+  return {
+    connected: isDriveConnected,
+    profile: driveProfile,
+    async signIn() {
+      const ok = await connectDrive()
+      if (ok) rememberStore(driveStore)
+      return ok
+    },
+    signOut() {
+      signOutDrive()
+      rememberStore(local)
+    },
+    warmUp: warmUpDrive,
+    onChange: onDriveChange,
+    places: stores.map(({ id, label }) => ({ id, label })),
+    place: () => lastStore(stores).id,
+    setPlace(id) {
+      const store = stores.find((s) => s.id === id)
+      if (store) rememberStore(store)
+    }
+  }
+}
+
 export function createWebPlatform(): Platform {
   let dirty = false
+  const local = localStore({
+    label: '이 브라우저',
+    where: `내 곡 보관함 — 이 기기의 이 브라우저에만 저장돼요. 다른 기기로 옮기려면 백업을 내보내세요.`,
+    saveTo: `내 곡 보관함(이 브라우저)에`,
+    fileAction: { label: '내보내기', run: exportFile },
+    footer: [
+      { label: '백업 내보내기', run: exportBackup },
+      { label: '백업 가져오기', run: importBackup }
+    ]
+  })
   window.addEventListener('beforeunload', (e) => {
     if (dirty) e.preventDefault()
   })
@@ -113,32 +161,12 @@ export function createWebPlatform(): Platform {
       printPdf: true,
       setlistKeepsSongs: false,
       offersDesktopApp: true,
-      legalLinks: true
+      legalLinks: true,
+      libraryDialog: true
     },
 
-    ...libraryMethods([
-      localStore({
-        label: '이 브라우저',
-        where: `내 곡 보관함 — 이 기기의 이 브라우저에만 저장돼요. 다른 기기로 옮기려면 백업을 내보내세요.`,
-        saveTo: `내 곡 보관함(이 브라우저)에`,
-        fileAction: { label: '내보내기', run: exportFile },
-        footer: [
-          { label: '백업 내보내기', run: exportBackup },
-          { label: '백업 가져오기', run: importBackup }
-        ]
-      }),
-      driveStore
-    ]),
-
-    async importFile(kind) {
-      if (kind !== 'text') return null
-      const [picked] = await pickWithInput(IMPORT_TEXT, false)
-      if (!picked) return null
-      return {
-        file: { id: `import:${nextImport++}`, name: picked.name },
-        data: new Uint8Array(await picked.arrayBuffer())
-      }
-    },
+    ...libraryMethods([local, driveStore], TEXT_CHARTS),
+    account: driveAccount(local),
 
     async exportPdf(html) {
       printTip()

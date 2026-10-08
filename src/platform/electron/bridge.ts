@@ -5,9 +5,7 @@ import type {
   DiscardChoice,
   DocumentState,
   FileRef,
-  ImportedFile,
-  ImportKind,
-  OpenedFile,
+  OpenResult,
   OpenedSetlist,
   RecognizeRequest,
   RecognizeResult,
@@ -15,8 +13,7 @@ import type {
 } from '../types'
 
 export interface ElectronBridge {
-  openFile(): Promise<OpenedFile | null>
-  importFile(kind: ImportKind): Promise<ImportedFile | null>
+  openFile(): Promise<OpenResult | null>
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
   exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
@@ -38,7 +35,6 @@ export interface ElectronBridge {
 
 export const IPC = {
   open: 'file:open',
-  importFile: 'file:import',
   save: 'file:save',
   saveAs: 'file:saveAs',
   exportPdf: 'file:exportPdf',

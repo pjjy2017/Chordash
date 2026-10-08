@@ -5,10 +5,10 @@ import arrowsUpDown from '@tabler/icons/outline/arrows-up-down.svg?raw'
 import bulb from '@tabler/icons/outline/bulb.svg?raw'
 import chevronDown from '@tabler/icons/outline/chevron-down.svg?raw'
 import chevronUp from '@tabler/icons/outline/chevron-up.svg?raw'
+import clipboardText from '@tabler/icons/outline/clipboard-text.svg?raw'
 import deviceFloppy from '@tabler/icons/outline/device-floppy.svg?raw'
 import dots from '@tabler/icons/outline/dots.svg?raw'
 import download from '@tabler/icons/outline/download.svg?raw'
-import fileImport from '@tabler/icons/outline/file-import.svg?raw'
 import fileMusic from '@tabler/icons/outline/file-music.svg?raw'
 import filePlus from '@tabler/icons/outline/file-plus.svg?raw'
 import fileTypePdf from '@tabler/icons/outline/file-type-pdf.svg?raw'
@@ -21,16 +21,17 @@ import layoutSidebarRight from '@tabler/icons/outline/layout-sidebar-right.svg?r
 import pencil from '@tabler/icons/outline/pencil.svg?raw'
 import playlist from '@tabler/icons/outline/playlist.svg?raw'
 import settings from '@tabler/icons/outline/settings.svg?raw'
+import userCircle from '@tabler/icons/outline/user-circle.svg?raw'
 
 const ICONS: Record<string, string> = {
   'arrows-up-down': arrowsUpDown,
   bulb: bulb,
   'chevron-down': chevronDown,
   'chevron-up': chevronUp,
+  'clipboard-text': clipboardText,
   'device-floppy': deviceFloppy,
   dots: dots,
   download: download,
-  'file-import': fileImport,
   'file-music': fileMusic,
   'file-plus': filePlus,
   'file-type-pdf': fileTypePdf,
@@ -42,7 +43,8 @@ const ICONS: Record<string, string> = {
   music,
   pencil: pencil,
   playlist: playlist,
-  settings: settings
+  settings: settings,
+  'user-circle': userCircle
 }
 
 /** Fills every `[data-icon]` placeholder with its SVG. */

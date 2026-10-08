@@ -17,10 +17,10 @@ export function createElectronPlatform(): Platform {
       printPdf: false,
       setlistKeepsSongs: false,
       offersDesktopApp: false,
-      legalLinks: false
+      legalLinks: false,
+      libraryDialog: false
     },
     openFile: () => bridge.openFile(),
-    importFile: (kind) => bridge.importFile(kind),
     saveFile: (file, text) => bridge.saveFile(file, text),
     saveFileAs: (file, text) => bridge.saveFileAs(file, text),
     exportPdf: (html, suggestedName) => bridge.exportPdf(html, suggestedName),

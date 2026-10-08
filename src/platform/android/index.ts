@@ -8,24 +8,19 @@ import { CapacitorHttp } from '@capacitor/core'
 import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { Printer } from '@capgo/capacitor-printer'
 import type { RecognizeFailure } from '../../core/recognize'
-import { FOLDER, libraryMethods, localStore, shareFile } from '../library'
-import { pickWithInput, printTip, type PickerType } from '../shared'
-import type { ImportKind, Platform, RecognizeResult } from '../types'
+import {
+  CHART_IMAGES,
+  FOLDER,
+  libraryMethods,
+  localStore,
+  shareFile,
+  TEXT_CHARTS
+} from '../library'
+import { printTip } from '../shared'
+import type { Platform, RecognizeResult } from '../types'
 
 const KEY_NAME = 'anthropic-api-key'
 const API = 'https://api.anthropic.com/v1'
-
-const PICK: Record<ImportKind, PickerType> = {
-  text: {
-    description: '텍스트 악보, ChordPro',
-    accept: { 'text/plain': ['.txt', '.cho', '.chopro', '.chordpro', '.crd', '.pro'] }
-  },
-  // Images include the camera in Android's chooser.
-  chart: { description: '악보 사진, PDF', accept: { 'image/*': [], 'application/pdf': ['.pdf'] } }
-}
-
-/** Files picked for import are read once and not kept. */
-let nextImport = 1
 
 // --- AI ---------------------------------------------------------------------------------
 
@@ -76,26 +71,21 @@ export function createAndroidPlatform(): Platform {
       printPdf: true,
       setlistKeepsSongs: false,
       offersDesktopApp: false,
-      legalLinks: false
+      legalLinks: false,
+      libraryDialog: true
     },
 
-    ...libraryMethods([
-      localStore({
-        label: '휴대폰',
-        where: `휴대폰의 문서/${FOLDER} 폴더`,
-        saveTo: `휴대폰의 문서/${FOLDER} 폴더에`,
-        fileAction: { label: '공유', run: shareFile }
-      })
-    ]),
-
-    async importFile(kind) {
-      const [picked] = await pickWithInput(PICK[kind], false)
-      if (!picked) return null
-      return {
-        file: { id: `import:${nextImport++}`, name: picked.name },
-        data: new Uint8Array(await picked.arrayBuffer())
-      }
-    },
+    ...libraryMethods(
+      [
+        localStore({
+          label: '휴대폰',
+          where: `휴대폰의 문서/${FOLDER} 폴더`,
+          saveTo: `휴대폰의 문서/${FOLDER} 폴더에`,
+          fileAction: { label: '공유', run: shareFile }
+        })
+      ],
+      { ...TEXT_CHARTS, ...CHART_IMAGES }
+    ),
 
     async exportPdf(html, suggestedName) {
       printTip()

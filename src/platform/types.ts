@@ -10,19 +10,54 @@ export interface FileRef {
   name: string
 }
 
-export interface OpenedFile {
-  file: FileRef
-  text: string
-}
-
 /** A file picked for import, unread: the bytes are decoded by the core (UTF-8 / CP949). */
 export interface ImportedFile {
   file: FileRef
   data: Uint8Array
 }
 
-/** What an import file picker offers: text charts, or images and PDFs for the AI. */
-export type ImportKind = 'text' | 'chart'
+/**
+ * What "열기" gives back (1.4: opening and importing are one command): a Chordash song, another
+ * file to convert (a text chart, or a photo/PDF for the AI), or a request to paste text.
+ */
+export type OpenResult =
+  | { kind: 'song'; file: FileRef; text: string }
+  | { kind: 'import'; picked: ImportedFile }
+  | { kind: 'paste' }
+
+/** Who is signed in to a cloud place (web: Google Drive). */
+export interface Profile {
+  name: string
+  email: string
+  /** Picture URL; empty when there is none. */
+  photo: string
+}
+
+/** A place to save new songs, for the account menu's switch. */
+export interface SavePlace {
+  id: string
+  label: string
+}
+
+/** Signing in to the cloud place (web only, 1.4): shown as a button at the right end. */
+export interface Account {
+  /** Signed in right now (the sign-in lasts about an hour). */
+  connected(): boolean
+  /** Who signed in last on this device, kept to show while signed out; null if nobody. */
+  profile(): Profile | null
+  /** Opens Google's sign-in popup; false when closed or blocked. Call from a click. */
+  signIn(): Promise<boolean>
+  /** Signs out and forgets the profile; new songs go back to this device. */
+  signOut(): void
+  /** Gets sign-in ready early, so the popup opens straight from the click. */
+  warmUp(): void
+  /** Runs whenever the sign-in or the profile changes (also when it runs out). */
+  onChange(listener: () => void): void
+  places: SavePlace[]
+  /** Where new songs are saved. */
+  place(): string
+  setPlace(id: string): void
+}
 
 /** A page image sent to the AI, base64 without the `data:` prefix. */
 export interface ChartImage {
@@ -87,14 +122,19 @@ export interface PlatformFeatures {
   offersDesktopApp: boolean
   /** The website shows its privacy policy and terms links on the page (Google sign-in review). */
   legalLinks: boolean
+  /**
+   * "열기" is Chordash's own list (web, Android), which also offers pasting text. The desktop
+   * uses the system's file dialog, so pasting stays in the ⋯ menu there.
+   */
+  libraryDialog: boolean
 }
 
 export interface Platform {
   features: PlatformFeatures
-  /** Asks the user for a file to open. null when cancelled. */
-  openFile(): Promise<OpenedFile | null>
-  /** Asks for a file to import: text/ChordPro, or an image/PDF (`chart`). null when cancelled. */
-  importFile(kind: ImportKind): Promise<ImportedFile | null>
+  /** Asks for a song — or any chart file to convert, or pasting. null when cancelled. */
+  openFile(): Promise<OpenResult | null>
+  /** Signing in to a cloud place; only the web version has one. */
+  account?: Account
   /** Saves to `file`, or asks where when it is null. Returns where it saved, null when cancelled. */
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   /** Always asks where to save. Returns where it saved, null when cancelled. */
