@@ -35,12 +35,6 @@ export const COMMON_SECTIONS = [
   'Coda'
 ]
 
-const KEYWORDS: (CompletionOption & { headerOnly: boolean })[] = [
-  { label: 'title:', insert: 'title: ', detail: '곡 제목', headerOnly: true },
-  { label: 'key:', insert: 'key: ', detail: '조성', headerOnly: true },
-  { label: 'lyric:', insert: 'lyric: ', detail: '가사 큐 (짧게 l:)', headerOnly: false }
-]
-
 const startsWith = (value: string, typed: string): boolean =>
   value.toLowerCase().startsWith(typed.toLowerCase())
 
@@ -85,16 +79,6 @@ export function completionsAt(
     }
   }
 
-  // `t` at the start of a line → `title:` (header keywords only in the header).
-  m = /^(\s*)([a-z]+)$/.exec(before)
-  if (m) {
-    const word = m[2]
-    return result(
-      m[1].length,
-      KEYWORDS.filter(
-        (k) => (!k.headerOnly || context.inHeader) && k.label.startsWith(word) && k.insert !== word
-      ).map(({ label, insert, detail }) => ({ label, insert, detail }))
-    )
-  }
+  // Title and key have their own fields and lyrics start with _, so no keywords here (1.3).
   return null
 }

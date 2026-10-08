@@ -8,7 +8,7 @@ import { CapacitorHttp } from '@capacitor/core'
 import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { Printer } from '@capgo/capacitor-printer'
 import type { RecognizeFailure } from '../../core/recognize'
-import { FOLDER, libraryMethods, shareFile } from '../library'
+import { FOLDER, libraryMethods, localStore, shareFile } from '../library'
 import { pickWithInput, printTip, type PickerType } from '../shared'
 import type { ImportKind, Platform, RecognizeResult } from '../types'
 
@@ -73,11 +73,14 @@ export function createAndroidPlatform(): Platform {
   return {
     features: { ai: true, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: false },
 
-    ...libraryMethods({
-      where: `휴대폰의 문서/${FOLDER} 폴더`,
-      saveTo: `휴대폰의 문서/${FOLDER} 폴더에`,
-      fileAction: { label: '공유', run: shareFile }
-    }),
+    ...libraryMethods([
+      localStore({
+        label: '휴대폰',
+        where: `휴대폰의 문서/${FOLDER} 폴더`,
+        saveTo: `휴대폰의 문서/${FOLDER} 폴더에`,
+        fileAction: { label: '공유', run: shareFile }
+      })
+    ]),
 
     async importFile(kind) {
       const [picked] = await pickWithInput(PICK[kind], false)

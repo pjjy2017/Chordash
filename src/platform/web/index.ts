@@ -5,7 +5,8 @@
 // browser's print dialog. No AI: an API key cannot be kept safely in a public web page.
 
 import { appTitle } from '../../core/version'
-import { libraryMethods, listFolder, readFromFolder, writeToFolder } from '../library'
+import { driveStore } from './drive'
+import { libraryMethods, localStore, listFolder, readFromFolder, writeToFolder } from '../library'
 import { download, pickWithInput, printTip, type PickerType } from '../shared'
 import type { Platform } from '../types'
 
@@ -109,15 +110,19 @@ export function createWebPlatform(): Platform {
   return {
     features: { ai: false, printPdf: true, setlistKeepsSongs: false, offersDesktopApp: true },
 
-    ...libraryMethods({
-      where: `내 곡 보관함 — 이 기기의 이 브라우저에만 저장돼요. 다른 기기로 옮기려면 백업을 내보내세요.`,
-      saveTo: `내 곡 보관함(이 브라우저)에`,
-      fileAction: { label: '내보내기', run: exportFile },
-      footer: [
-        { label: '백업 내보내기', run: exportBackup },
-        { label: '백업 가져오기', run: importBackup }
-      ]
-    }),
+    ...libraryMethods([
+      localStore({
+        label: '이 브라우저',
+        where: `내 곡 보관함 — 이 기기의 이 브라우저에만 저장돼요. 다른 기기로 옮기려면 백업을 내보내세요.`,
+        saveTo: `내 곡 보관함(이 브라우저)에`,
+        fileAction: { label: '내보내기', run: exportFile },
+        footer: [
+          { label: '백업 내보내기', run: exportBackup },
+          { label: '백업 가져오기', run: importBackup }
+        ]
+      }),
+      driveStore
+    ]),
 
     async importFile(kind) {
       if (kind !== 'text') return null

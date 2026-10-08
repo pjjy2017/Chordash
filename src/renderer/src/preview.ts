@@ -2,6 +2,8 @@
 
 import {
   chordParts,
+  layout,
+  parse,
   type Bar,
   type Chord,
   type ChordItem,
@@ -187,6 +189,19 @@ function songPagesHtml(model: PageModel, theme: Theme, firstNumber: number | nul
 
 const pagesHtml = (inner: string, theme: Theme): string =>
   `<div class="pages theme-${theme.id}" style="${metricVars(theme)}">${inner}</div>`
+
+/**
+ * A few lines of sheet drawn exactly like the pages (no page, no title), for the help cards.
+ * `text` is Chordash text; `slots` is how many bars wide a row is.
+ */
+export function snippetHtml(text: string, theme: Theme, slots = 2): string {
+  const metrics = { ...theme.metrics, minBarsPerRow: slots }
+  const blocks = layout(parse(text).document, metrics).pages.flatMap((p) => p.blocks)
+  return (
+    `<div class="pages snippet theme-${theme.id}" style="${metricVars(theme)}">` +
+    `<div class="blocks">${blocks.map((b) => blockHtml(b, theme)).join('')}</div></div>`
+  )
+}
 
 export function renderPages(model: PageModel, theme: Theme): string {
   return pagesHtml(songPagesHtml(model, theme, null), theme)

@@ -8,18 +8,10 @@ const labels = (line: string, context = body, column = line.length): string[] | 
   completionsAt(line, column, context)?.options.map((o) => o.label) ?? null
 
 describe('completionsAt', () => {
-  it('suggests header keywords at the start of a header line', () => {
-    expect(labels('t', header)).toEqual(['title:'])
-    expect(labels('k', header)).toEqual(['key:'])
-    expect(completionsAt('ti', 2, header)).toEqual({
-      from: 0,
-      options: [{ label: 'title:', insert: 'title: ', detail: '곡 제목' }]
-    })
-  })
-
-  it('suggests lyric: anywhere, header keywords only in the header', () => {
-    expect(labels('l')).toEqual(['lyric:'])
-    expect(labels('t')).toBeNull()
+  it('does not suggest title:, key: or lyric: (fields and _ replace them, 1.3)', () => {
+    expect(labels('t', header)).toBeNull()
+    expect(labels('k', header)).toBeNull()
+    expect(labels('l')).toBeNull()
   })
 
   it('stays out of chord typing', () => {
@@ -60,6 +52,6 @@ describe('completionsAt', () => {
   })
 
   it('looks only at the text before the cursor', () => {
-    expect(labels('ti xyz', header, 2)).toEqual(['title:'])
+    expect(labels('[Ve xyz', body, 3)).toEqual(['Verse', 'Verse 2'])
   })
 })

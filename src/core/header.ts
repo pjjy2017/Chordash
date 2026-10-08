@@ -69,3 +69,15 @@ export function headerEndLine(text: string): number {
 export function applyChange(text: string, change: TextChange): string {
   return text.slice(0, change.from) + change.insert + text.slice(change.to)
 }
+
+/**
+ * 1-based numbers of the header lines (`title:`, `key:`, old `theme:`) at the top of the file.
+ * The editor hides them: the title and key fields above it edit them (DECISIONS 1.3).
+ */
+export function headerLineNumbers(text: string): number[] {
+  const lines = text.split('\n')
+  const end = headerEndLine(text)
+  const numbers: number[] = []
+  for (let i = 0; i < end; i++) if (HEADER_LINE.test(lines[i])) numbers.push(i + 1)
+  return numbers
+}

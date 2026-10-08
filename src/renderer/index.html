@@ -8,7 +8,7 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/"
     />
   </head>
 
@@ -19,6 +19,7 @@
         <div class="brand">
           <img class="brand-logo" src="./favicon.svg" alt="" />
           <span id="doc-name" class="doc-name">제목 없음</span>
+          <span id="issue-badge" class="issue-badge" hidden></span>
         </div>
         <div class="tool-group group-file" role="group" aria-label="파일">
           <button
@@ -155,6 +156,9 @@
             <hr />
             <button role="menuitem" data-command="example">
               <span class="icon" data-icon="music"></span>예제 곡 열기
+            </button>
+            <button role="menuitem" data-command="tour">
+              <span class="icon" data-icon="pencil"></span>둘러보기
             </button>
             <button role="menuitem" data-command="help">
               <span class="icon" data-icon="help"></span>입력법 도움말<kbd>F1</kbd>
@@ -326,6 +330,20 @@
           <span class="spacer"></span>
           <button value="close">닫기</button>
           <button type="button" id="setlist-pdf" class="primary">PDF 만들기</button>
+        </div>
+      </form>
+    </dialog>
+    <!-- First-run tour: a few picture slides, once per device (⋯ → 둘러보기 shows it again). -->
+    <dialog id="tour-dialog" class="import-dialog tour-dialog">
+      <form method="dialog">
+        <div id="tour-stage" class="tour-stage"></div>
+        <div class="import-actions tour-actions">
+          <button value="skip" class="tour-skip">건너뛰기</button>
+          <span class="spacer"></span>
+          <span id="tour-dots" class="tour-dots"></span>
+          <span class="spacer"></span>
+          <button type="button" id="tour-back">이전</button>
+          <button type="button" id="tour-next" class="primary" autofocus>다음</button>
         </div>
       </form>
     </dialog>

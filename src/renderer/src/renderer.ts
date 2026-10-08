@@ -41,6 +41,7 @@ import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { installChordKeyboard } from './chordKeyboard'
 import { openHelp } from './help'
+import { openTour } from './tour'
 import exampleSong from '../../../examples/Chordash.chord?raw'
 import { installIcons } from './icons'
 import { buildPrintDocument, renderPages } from './preview'
@@ -79,9 +80,23 @@ const docName = $<HTMLElement>('doc-name')
 function reportState(): void {
   const dirty = isDirty()
   platform.setDocumentState({ name: documentName(), dirty })
-  docName.textContent = documentName().replace(/.chord$/i, '')
+  // Before the first save, the song's title stands in for the file name (1.3).
+  const title = editor.parsed().document.title
+  docName.textContent = file ? file.name.replace(/\.chord$/i, '') : title || UNTITLED
   docName.classList.toggle('dirty', dirty)
   docName.title = dirty ? '저장하지 않은 변경 있음' : documentName()
+}
+
+const issueBadge = $<HTMLElement>('issue-badge')
+
+/** Phones hide the status text, so a small badge by the song name counts problems (1.3). */
+function showIssues(errors: number, warnings: number): void {
+  issueBadge.hidden = errors + warnings === 0
+  issueBadge.textContent = String(errors || warnings)
+  issueBadge.classList.toggle('warning', errors === 0)
+  issueBadge.title = [errors && `오류 ${errors}`, warnings && `경고 ${warnings}`]
+    .filter(Boolean)
+    .join(' · ')
 }
 
 // --- preview -----------------------------------------------------------------
@@ -101,6 +116,8 @@ function renderPreview(): void {
     .filter(Boolean)
     .join(' · ')
   status.classList.toggle('has-errors', errors > 0)
+  showIssues(errors, warnings)
+  reportState()
 }
 
 /** Scales the A4 pages down to the pane width (never up). */
@@ -196,6 +213,7 @@ const commands: Record<string, () => Promise<unknown>> = {
   },
   settings: openSettings,
   help: openHelp,
+  tour: () => openTour(installIcons),
   about: openAbout,
   setlist: () => openSetlist(() => ({ file, dirty: isDirty() }))
 }
@@ -774,4 +792,6 @@ try {
   // No storage: start empty.
 }
 load(firstRun ? exampleSong : '', null)
+// The first time, a short tour comes first (the example song is already behind it).
+if (firstRun) void openTour(installIcons)
 renderPreview()

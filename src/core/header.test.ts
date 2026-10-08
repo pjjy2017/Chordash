@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { applyChange, headerEndLine, readHeaderLine, setHeaderLine } from './header'
+import {
+  applyChange,
+  headerEndLine,
+  readHeaderLine,
+  setHeaderLine,
+  headerLineNumbers
+} from './header'
 import { parse } from './document'
 
 const set = (text: string, value = 'c-'): string =>
@@ -70,5 +76,15 @@ describe('lenient key header', () => {
       tonic: { letter: 'C', accidental: 0 },
       minor: true
     })
+  })
+})
+
+describe('headerLineNumbers', () => {
+  it('finds title and key lines at the top, past comments and blanks', () => {
+    expect(headerLineNumbers('// 메모\ntitle: A\n\nkey: F\n[A]\nC')).toEqual([2, 4])
+  })
+  it('ignores key: lines after the header', () => {
+    expect(headerLineNumbers('C, F\nkey: G')).toEqual([])
+    expect(headerLineNumbers('')).toEqual([])
   })
 })

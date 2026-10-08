@@ -6,51 +6,42 @@
 import { deleteCharBackward } from '@codemirror/commands'
 import { diatonicChords, type Key } from '../../core'
 import type { ChordEditor } from './editor'
+import { KEY_NAMES } from './keyNames'
 
 const ENABLED = 'chordash.chordKeyboard'
 
 /** Lines (or the rest of a line after ` _` / ` ^ `) where words are typed, not chords. */
 const TEXT_LINE = /^\s*(?:_|\^|l:|lyric:|title:|key:|\[|\{|\/\/|")/i
 
-/** Key rows. A key is [label, text to type] or a named action. */
-type KeyDef = [label: string, text: string] | { action: Action; label: string; wide?: number }
+/**
+ * Key rows. A key is [symbol, text to type] or a named action. Keys show their symbol big and
+ * its name small (from KEY_NAMES), like the keycaps in the help.
+ */
+type KeyDef =
+  [symbol: string, text: string] | { action: Action; label: string; sub?: string; wide?: number }
 type Action = 'text' | 'backspace' | 'space' | 'bar' | 'enter' | 'lyrics'
 
+const typed = (symbol: string, text = symbol): KeyDef => [symbol, text]
+
 const ROWS: KeyDef[][] = [
-  ['C', 'D', 'E', 'F', 'G', 'A', 'B'].map((n): KeyDef => [n, n]),
+  ['C', 'D', 'E', 'F', 'G', 'A', 'B'].map((n) => typed(n)),
+  [typed('♭', 'b'), typed('♯', '#'), typed('-'), typed('^'), typed('%'), typed('o'), typed('+')],
+  [typed('7'), typed('9'), typed('6'), typed('11'), typed('13'), typed('s'), typed('/')],
   [
-    ['♭', 'b'],
-    ['♯', '#'],
-    ['m(-)', '-'],
-    ['maj(^)', '^'],
-    ['ø(%)', '%'],
-    ['dim(o)', 'o'],
-    ['aug(+)', '+']
+    typed("'"),
+    typed('*'),
+    typed('('),
+    typed(')'),
+    typed(':'),
+    typed('nc'),
+    { action: 'lyrics', label: '_', sub: '가사' }
   ],
   [
-    ['7', '7'],
-    ['9', '9'],
-    ['6', '6'],
-    ['11', '11'],
-    ['13', '13'],
-    ['sus(s)', 's'],
-    ['/', '/']
-  ],
-  [
-    ["브레스 '", "'"],
-    ['악센트 *', '*'],
-    ['(', '('],
-    [')', ')'],
-    [':', ':'],
-    ['N.C.', 'nc'],
-    { action: 'lyrics', label: '가사 _' }
-  ],
-  [
-    { action: 'text', label: '가' },
+    { action: 'text', label: '가', sub: '글자' },
     { action: 'backspace', label: '⌫' },
-    { action: 'space', label: '띄움', wide: 1.4 },
-    { action: 'bar', label: ', 마디', wide: 2.2 },
-    ['. 끝', '.'],
+    { action: 'space', label: '␣', sub: '띄움', wide: 1.4 },
+    { action: 'bar', label: ',', sub: '마디', wide: 2.2 },
+    typed('.'),
     { action: 'enter', label: '⏎' }
   ]
 ]
@@ -119,7 +110,18 @@ export function installChordKeyboard(editor: ChordEditor, songKey: () => Key | n
     for (const def of row) {
       const key = document.createElement('button')
       key.type = 'button'
-      key.textContent = Array.isArray(def) ? def[0] : def.label
+      const symbol = Array.isArray(def) ? def[0] : def.label
+      const name = Array.isArray(def) ? KEY_NAMES[def[1]] : def.sub
+      const main = document.createElement('span')
+      main.className = 'ck-main'
+      main.textContent = symbol
+      key.append(main)
+      if (name && name !== symbol) {
+        const sub = document.createElement('span')
+        sub.className = 'ck-sub'
+        sub.textContent = name
+        key.append(sub)
+      }
       if (!Array.isArray(def)) {
         key.classList.add('ck-' + def.action)
         if (def.wide) key.style.flexGrow = String(def.wide)

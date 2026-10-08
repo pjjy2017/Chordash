@@ -37,6 +37,7 @@ import {
   chordHint,
   completionsAt,
   headerEndLine,
+  headerLineNumbers,
   parse,
   DEFAULT_THEME,
   type ParseResult,
@@ -45,15 +46,14 @@ import {
 } from '../../core'
 import { chordInnerHtml } from './preview'
 
-const PLACEHOLDER = `title: 곡 제목
-key: F
-
-[Verse]
+const PLACEHOLDER = `[Verse]
 Bb^7, A-7, Bb^7, F B7*
 _ 가사, 마디마다
 
 [Chorus]
-2-7, 5-7, 17, 4^7.`
+.: D-7, G7, C^7, A7 :.
+
+쉼표(,)는 마디선, 마침표(.)는 끝 — 입력법은 ⋯ → 도움말(F1)`
 
 /** Column positions from the parser → document offsets. */
 const offset = (doc: Text, line: number, column: number): number =>
@@ -154,13 +154,52 @@ class HintWidget extends WidgetType {
   eq(other: HintWidget): boolean {
     return other.text === this.text
   }
+  /**
+   * A zero-width anchor at the start of the chord with the reading floating above it, so the
+   * line never shifts sideways (1.3; it used to sit beside the chord).
+   */
   toDOM(): HTMLElement {
+    const anchor = document.createElement('span')
+    anchor.className = 'cd-hint-anchor'
     const el = document.createElement('span')
     el.className = 'cd-hint'
     el.textContent = this.text
-    return el
+    anchor.append(el)
+    return anchor
   }
 }
+
+/** Header lines per document version, so line numbering does not re-scan for every line. */
+const headerLinesOf = new WeakMap<Text, number[]>()
+function hiddenBefore(doc: Text, n: number): number {
+  let lines = headerLinesOf.get(doc)
+  if (!lines) headerLinesOf.set(doc, (lines = headerLineNumbers(doc.toString())))
+  return lines.filter((h) => h < n).length
+}
+
+/**
+ * The title and key lines at the top are edited in the fields above the editor, so the editor
+ * hides them; they stay in the file (DECISIONS 1.3).
+ */
+function hiddenHeader(state: EditorState): DecorationSet {
+  const ranges: Range<Decoration>[] = []
+  for (const n of headerLineNumbers(state.doc.toString())) {
+    const line = state.doc.line(n)
+    const to = n < state.doc.lines ? line.to + 1 : line.to
+    ranges.push(Decoration.replace({ block: true }).range(line.from, to))
+  }
+  return Decoration.set(ranges, true)
+}
+
+const headerHidden = StateField.define<DecorationSet>({
+  create: hiddenHeader,
+  update: (value, tr) => (tr.docChanged ? hiddenHeader(tr.state) : value),
+  provide: (f) => [
+    EditorView.decorations.from(f),
+    // The cursor jumps over hidden lines instead of landing inside them.
+    EditorView.atomicRanges.of((view) => view.state.field(f))
+  ]
+})
 
 export const setHintsEnabled = StateEffect.define<boolean>()
 
@@ -222,7 +261,7 @@ function liveDecorations(state: EditorState): DecorationSet {
             const hint = state.field(hintsEnabled) ? chordHint(chord.source, chord.chord) : null
             if (hint) {
               decorations.push(
-                Decoration.widget({ widget: new HintWidget(hint), side: 1 }).range(to)
+                Decoration.widget({ widget: new HintWidget(hint), side: -1 }).range(from)
               )
             }
             continue
@@ -334,7 +373,10 @@ export function createEditor(parent: HTMLElement, onChange: ChangeListener): Cho
   const inputModeAttr = (): Extension => EditorView.contentAttributes.of({ inputmode: inputMode })
   const updateListeners: (() => void)[] = []
   const extensions = (): Extension[] => [
-    lineNumbers(),
+    // Hidden title/key lines don't count, so the first line you see is line 1.
+    lineNumbers({
+      formatNumber: (n, state) => String(n - hiddenBefore(state.doc, n))
+    }),
     highlightActiveLineGutter(),
     history(),
     drawSelection(),
@@ -347,6 +389,7 @@ export function createEditor(parent: HTMLElement, onChange: ChangeListener): Cho
     syntaxColours,
     hintsEnabled.init(() => hintsOn),
     liveChords,
+    headerHidden,
     autocompletion({ override: [chordashCompletions], icons: false }),
     chordLint,
     lintGutter(),
