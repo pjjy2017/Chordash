@@ -203,6 +203,73 @@ const formatDate = (ms: number): string => {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+const SORT = 'chordash.librarySort'
+
+/**
+ * Search box and sort order over a file list (1.5). Sorting is remembered on this device;
+ * a search matches any part of the name, ignoring case and spaces.
+ */
+function listTools(
+  rows: { file: FolderFile; li: HTMLLIElement }[],
+  list: HTMLElement,
+  empty: HTMLElement
+): HTMLElement {
+  const bar = document.createElement('div')
+  bar.className = 'folder-tools'
+  if (rows.length < 2) return bar
+  const search = document.createElement('input')
+  search.type = 'search'
+  search.placeholder = '이름으로 찾기'
+  search.className = 'folder-search'
+  search.enterKeyHint = 'search'
+  const sort = document.createElement('select')
+  sort.className = 'folder-sort'
+  sort.setAttribute('aria-label', '정렬')
+  for (const [value, label] of [
+    ['recent', '최근순'],
+    ['name', '이름순']
+  ]) {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = label
+    sort.append(option)
+  }
+  try {
+    sort.value = localStorage.getItem(SORT) === 'name' ? 'name' : 'recent'
+  } catch {
+    // Newest first.
+  }
+  const plain = (text: string): string => text.toLowerCase().replace(/\s+/g, '')
+  const refresh = (): void => {
+    const wanted = plain(search.value)
+    const ordered = [...rows].sort((a, b) =>
+      sort.value === 'name'
+        ? a.file.name.localeCompare(b.file.name, 'ko', { numeric: true })
+        : b.file.mtime - a.file.mtime
+    )
+    let shown = 0
+    for (const { file, li } of ordered) {
+      li.hidden = !plain(file.name).includes(wanted)
+      if (!li.hidden) shown++
+      list.append(li)
+    }
+    empty.hidden = shown > 0
+    empty.textContent = '찾는 이름이 없어요.'
+  }
+  search.addEventListener('input', refresh)
+  sort.addEventListener('change', () => {
+    try {
+      localStorage.setItem(SORT, sort.value)
+    } catch {
+      // Not remembered.
+    }
+    refresh()
+  })
+  refresh()
+  bar.append(search, sort)
+  return bar
+}
+
 /**
  * Lists one kind of file in a place; the user picks one (or several), or goes elsewhere.
  * `paste` adds "글 붙여넣기…" (the song "열기", 1.4).
@@ -300,8 +367,10 @@ export function chooseInFolder(
       }
       const list = document.createElement('ol')
       list.className = 'setlist-songs folder-files'
+      const rows: { file: FolderFile; li: HTMLLIElement }[] = []
       for (const file of files) {
         const li = document.createElement('li')
+        rows.push({ file, li })
         const name = button(file.name.slice(0, -extension.length), 'setlist-row-name folder-file')
         const date = document.createElement('small')
         date.textContent = formatDate(file.mtime)
@@ -330,7 +399,7 @@ export function chooseInFolder(
       empty.className = 'setlist-empty'
       empty.textContent = '아직 저장한 파일이 없어요.'
       empty.hidden = files.length > 0
-      body.replaceChildren(list, empty)
+      body.replaceChildren(listTools(rows, list, empty), list, empty)
     }
 
     const switcher = storeSwitch(stores, store, (picked) => {

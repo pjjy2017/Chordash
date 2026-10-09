@@ -9,11 +9,14 @@ import type {
   OpenedSetlist,
   RecognizeRequest,
   RecognizeResult,
-  Setlist
+  Setlist,
+  UpdateInfo
 } from '../types'
 
 export interface ElectronBridge {
   openFile(): Promise<OpenResult | null>
+  recentFiles(): Promise<FileRef[]>
+  openRecent(file: FileRef): Promise<OpenResult | null>
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
   exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
@@ -31,10 +34,15 @@ export interface ElectronBridge {
   setApiKey(key: string | null): Promise<string | null>
   recognize(request: RecognizeRequest): Promise<RecognizeResult>
   cancelRecognize(): void
+  checkUpdate(): Promise<UpdateInfo | null>
+  installUpdate(): Promise<void>
+  onUpdateProgress(callback: (percent: number) => void): void
 }
 
 export const IPC = {
   open: 'file:open',
+  recentFiles: 'file:recent',
+  openRecent: 'file:openRecent',
   save: 'file:save',
   saveAs: 'file:saveAs',
   exportPdf: 'file:exportPdf',
@@ -49,5 +57,8 @@ export const IPC = {
   hasApiKey: 'ai:hasKey',
   setApiKey: 'ai:setKey',
   recognize: 'ai:recognize',
-  cancelRecognize: 'ai:cancel'
+  cancelRecognize: 'ai:cancel',
+  checkUpdate: 'update:check',
+  installUpdate: 'update:install',
+  updateProgress: 'update:progress'
 } as const

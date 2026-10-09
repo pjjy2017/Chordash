@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -7,6 +7,7 @@ import { guardClose, registerFileHandlers } from './files'
 import { registerPdfHandlers } from './pdf'
 import { registerAiHandlers } from './ai'
 import { registerSetlistHandlers } from './setlist'
+import { registerUpdateHandlers } from './updates'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -54,6 +55,9 @@ app.whenReady().then(() => {
   registerPdfHandlers()
   registerAiHandlers()
   registerSetlistHandlers()
+  registerUpdateHandlers()
+  // No built-in menu: its zoom keys (Ctrl + / −) would fight the editor's text size (1.5).
+  Menu.setApplicationMenu(null)
   createWindow()
 
   app.on('activate', () => {

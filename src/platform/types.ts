@@ -25,6 +25,25 @@ export type OpenResult =
   | { kind: 'import'; picked: ImportedFile }
   | { kind: 'paste' }
 
+/** A newer version on GitHub Releases (1.5). */
+export interface UpdateInfo {
+  version: string
+}
+
+/** Updating from inside the app (desktop and Android, 1.5). */
+export interface Updates {
+  /** A newer version than this one, or null. Fails when GitHub cannot be reached. */
+  check(): Promise<UpdateInfo | null>
+  /**
+   * Gets it and installs it. Desktop: downloads, then restarts into the new version.
+   * Android: downloads the APK and opens Android's installer (the user taps "설치").
+   * `progress` gets 0–100 while downloading.
+   */
+  install(progress: (percent: number) => void): Promise<void>
+  /** The button's word: "업데이트" or "받기". */
+  installLabel: string
+}
+
 /** Who is signed in to a cloud place (web: Google Drive). */
 export interface Profile {
   name: string
@@ -133,6 +152,12 @@ export interface Platform {
   features: PlatformFeatures
   /** Asks for a song — or any chart file to convert, or pasting. null when cancelled. */
   openFile(): Promise<OpenResult | null>
+  /** Songs opened or saved lately, newest first (desktop; elsewhere the library lists them). */
+  recentFiles?(): Promise<FileRef[]>
+  /** Opens a song from the recent list; null when it is not there any more. */
+  openRecent?(file: FileRef): Promise<OpenResult | null>
+  /** New versions from inside the app; the web version is always the newest and has none. */
+  updates?: Updates
   /** Signing in to a cloud place; only the web version has one. */
   account?: Account
   /** Saves to `file`, or asks where when it is null. Returns where it saved, null when cancelled. */

@@ -41,6 +41,11 @@ import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { installChordKeyboard } from './chordKeyboard'
 import { installAccount } from './account'
+import { dropDraft, keepDraft, readDraft, type Draft } from './draft'
+import { installEditorZoom, zoomKey } from './editorZoom'
+import { showNotice } from './notice'
+import { chooseTemplate, openChordReplace } from './songDialogs'
+import { checkForUpdate, installUpdateCheck } from './updateCheck'
 import { openHelp } from './help'
 import exampleSong from '../../../examples/Chordash.chord?raw'
 import { installIcons } from './icons'
@@ -122,6 +127,9 @@ function renderPreview(): void {
   status.classList.toggle('has-errors', errors > 0)
   showIssues(errors, warnings)
   reportState()
+  // The sheet was drawn again: mark the cursor's bar on the new one.
+  markedBar = null
+  markCursorBar()
 }
 
 /** Scales the A4 pages down to the pane width (never up). */
@@ -142,9 +150,50 @@ const editor = createEditor($('editor'), (changes) => {
       : null
   }
   reportState()
+  // Typing (not opening a file) keeps an unsaved copy on the device.
+  if (changes) keepDraftSoon()
   window.clearTimeout(renderTimer)
   renderTimer = window.setTimeout(renderPreview, 80)
 })
+
+// --- autosave: an unsaved copy on this device, offered back after a crash (1.5) -----------
+
+let draftTimer: number | undefined
+
+function keepDraftSoon(): void {
+  window.clearTimeout(draftTimer)
+  draftTimer = window.setTimeout(() => {
+    if (isDirty()) keepDraft(editor.getText(), savedText, file)
+    else dropDraft()
+  }, 1500)
+}
+
+function forgetDraft(): void {
+  window.clearTimeout(draftTimer)
+  dropDraft()
+}
+
+function offerDraft(draft: Draft): void {
+  const name =
+    draft.file?.name.replace(/\.chord$/i, '') ?? (readHeaderLine(draft.text, 'title') || UNTITLED)
+  const when = new Date(draft.time)
+  const time = `${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`
+  showNotice(`저장하지 않은 '${name}'(${time})이 남아 있어요.`, [
+    {
+      label: '되살리기',
+      primary: true,
+      run: async () => {
+        if (!(await confirmDiscard())) return false
+        load(draft.text, draft.file)
+        savedText = draft.saved
+        reportState()
+        keepDraftSoon()
+        return true
+      }
+    },
+    { label: '버리기', run: forgetDraft }
+  ])
+}
 
 // --- narrow screens: editor / preview tabs -------------------------------------
 
@@ -159,6 +208,52 @@ function showView(view: 'editor' | 'preview'): void {
 document.querySelectorAll<HTMLButtonElement>('.view-tabs [data-view]').forEach((tab) => {
   tab.addEventListener('click', () => showView(tab.dataset.view as 'editor' | 'preview'))
 })
+
+// --- sheet ↔ editor: a click on a bar goes to where it is typed; the cursor's bar is marked --
+
+pagesHost.addEventListener('click', (e) => {
+  const bar = (e.target as HTMLElement).closest<HTMLElement>('.bar[data-line]')
+  if (!bar) return
+  const doc = editor.view.state.doc
+  const number = Number(bar.dataset.line)
+  if (number < 1 || number > doc.lines) return
+  const line = doc.line(number)
+  // The bar's first chord: past the spaces after its barline.
+  let column = Number(bar.dataset.from)
+  const end = Number(bar.dataset.to)
+  while (column < end && line.text[column] === ' ') column++
+  const anchor = Math.min(line.to, line.from + column)
+  showView('editor')
+  editor.view.dispatch({ selection: { anchor }, scrollIntoView: true })
+  editor.view.focus()
+})
+
+let markedBar: HTMLElement | null = null
+
+/** Marks the bar the cursor is in, and keeps it in sight when the sheet is shown. */
+function markCursorBar(): void {
+  const doc = editor.view.state.doc
+  const { from } = editor.selection()
+  const line = doc.lineAt(from)
+  const column = from - line.from
+  let found: HTMLElement | null = null
+  if (editor.view.hasFocus) {
+    for (const bar of pagesHost.querySelectorAll<HTMLElement>(`.bar[data-line="${line.number}"]`)) {
+      if (column >= Number(bar.dataset.from) && column <= Number(bar.dataset.to)) {
+        found = bar
+        break
+      }
+    }
+  }
+  if (found === markedBar && found?.isConnected) return
+  markedBar?.classList.remove('cursor-bar')
+  markedBar = found
+  if (!found) return
+  found.classList.add('cursor-bar')
+  if (preview.offsetParent !== null) found.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
+editor.onUpdate(markCursorBar)
 
 // --- file commands -----------------------------------------------------------
 
@@ -182,6 +277,7 @@ async function saveWith(write: typeof platform.saveFile): Promise<boolean> {
   file = saved
   savedText = text
   reportState()
+  forgetDraft()
   return true
 }
 
@@ -193,6 +289,7 @@ async function confirmDiscard(): Promise<boolean> {
   if (!isDirty()) return true
   const choice = await platform.confirmDiscard(documentName())
   if (choice === 'save') return save()
+  if (choice === 'discard') forgetDraft()
   return choice === 'discard'
 }
 
@@ -218,9 +315,11 @@ const commands: Record<string, () => Promise<unknown>> = {
   save,
   saveAs,
   exportPdf,
-  example: async () => {
-    if (await confirmDiscard()) load(exampleSong, null)
+  template: async () => {
+    const text = await chooseTemplate(editor.getText())
+    if (text !== null && (await confirmDiscard())) load(text, null)
   },
+  replace: async () => openChordReplace(editor),
   settings: openSettings,
   help: openHelp,
   about: openAbout,
@@ -704,11 +803,13 @@ try {
 
 /** Runs a toolbar command; failures are shown in the status area instead of disappearing. */
 function run(command: string): void {
-  commands[command]().catch((error: unknown) => {
-    console.error(error)
-    status.textContent = `실패: ${error instanceof Error ? error.message : String(error)}`
-    status.classList.add('has-errors')
-  })
+  commands[command]().catch(fail)
+}
+
+function fail(error: unknown): void {
+  console.error(error)
+  status.textContent = `실패: ${error instanceof Error ? error.message : String(error)}`
+  status.classList.add('has-errors')
 }
 
 document.querySelectorAll<HTMLButtonElement>('[data-command]').forEach((button) => {
@@ -728,13 +829,51 @@ function closeMenu(): void {
   menuButton.setAttribute('aria-expanded', 'false')
 }
 
-menuButton.addEventListener('click', (e) => {
+menuButton.addEventListener('click', async (e) => {
   e.stopPropagation()
   const open = menu.hidden
+  if (open) await showRecent()
   menu.hidden = !open
   menuButton.setAttribute('aria-expanded', String(open))
   if (open) menu.querySelector<HTMLElement>('[role=menuitem]:not([hidden])')?.focus()
 })
+
+// Desktop: the songs opened or saved lately, at the top of the menu (1.5).
+const recentBox = $<HTMLElement>('recent-files')
+
+async function showRecent(): Promise<void> {
+  if (!platform.recentFiles) return
+  const files = (await platform.recentFiles()).filter((f) => f.id !== file?.id).slice(0, 6)
+  const title = document.createElement('div')
+  title.className = 'menu-title'
+  title.textContent = '최근 파일'
+  const items = files.map((recent) => {
+    const item = document.createElement('button')
+    item.setAttribute('role', 'menuitem')
+    item.title = recent.id
+    const icon = document.createElement('span')
+    icon.className = 'icon'
+    icon.dataset.icon = 'clock'
+    item.append(icon, recent.name.replace(/\.chord$/i, ''))
+    item.addEventListener('click', () => {
+      closeMenu()
+      openRecent(recent).catch(fail)
+    })
+    return item
+  })
+  recentBox.replaceChildren(title, ...items, document.createElement('hr'))
+  installIcons(recentBox)
+  recentBox.hidden = files.length === 0
+}
+
+async function openRecent(recent: FileRef): Promise<void> {
+  const opened = await platform.openRecent?.(recent)
+  if (!opened) {
+    window.alert(`'${recent.name}'을(를) 찾을 수 없어요. 옮겨졌거나 지워졌을 수 있어요.`)
+    return
+  }
+  if (opened.kind === 'song' && (await confirmDiscard())) load(opened.text, opened.file)
+}
 document.addEventListener('click', (e) => {
   if (!menu.hidden && !menu.contains(e.target as Node)) closeMenu()
 })
@@ -765,7 +904,8 @@ const SHORTCUTS: Record<string, string> = {
   o: 'open',
   s: 'save',
   'shift+s': 'saveAs',
-  p: 'exportPdf'
+  p: 'exportPdf',
+  h: 'replace'
 }
 window.addEventListener(
   'keydown',
@@ -773,6 +913,10 @@ window.addEventListener(
     if (e.key === 'F1') {
       e.preventDefault()
       run('help')
+      return
+    }
+    if (zoomKey(e)) {
+      e.preventDefault()
       return
     }
     if (!e.ctrlKey || e.altKey) return
@@ -788,6 +932,22 @@ platform.onBeforeClose(confirmDiscard)
 
 installChordKeyboard(editor, () => editor.parsed().document.key)
 if (platform.account) installAccount(platform.account)
+if (platform.updates) {
+  // Leaving for the new version: unsaved changes are saved, or let go on purpose.
+  installUpdateCheck(platform.updates, async () => {
+    if (!(await confirmDiscard())) return false
+    savedText = editor.getText()
+    reportState()
+    return true
+  })
+  const box = $<HTMLElement>('about-update')
+  const said = $<HTMLElement>('about-update-status')
+  box.hidden = false
+  $<HTMLButtonElement>('about-update-check').addEventListener('click', async () => {
+    said.textContent = '확인하는 중…'
+    said.textContent = await checkForUpdate()
+  })
+}
 
 $<HTMLInputElement>('hints').addEventListener('change', (e) => {
   editor.setHints((e.target as HTMLInputElement).checked)
@@ -802,7 +962,11 @@ try {
 } catch {
   // No storage: start empty.
 }
+// Read before anything is opened: opening must not replace the copy it offers back.
+const draft = readDraft()
 load(firstRun ? exampleSong : '', null)
+if (draft && draft.text !== editor.getText()) offerDraft(draft)
+installEditorZoom($('editor'))
 // The first time, the key sheet comes first (the example song is already behind it).
 if (firstRun) void openHelp()
 renderPreview()

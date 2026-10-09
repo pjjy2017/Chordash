@@ -138,6 +138,8 @@
             <span class="icon" data-icon="dots"></span>
           </button>
           <div id="menu" class="menu" role="menu" hidden>
+            <!-- Desktop (1.5): songs opened or saved lately, filled when the menu opens. -->
+            <div id="recent-files" class="recent-files" hidden></div>
             <button role="menuitem" data-command="new" class="narrow-only">
               <span class="icon" data-icon="file-plus"></span>새 파일<kbd>Ctrl+N</kbd>
             </button>
@@ -145,6 +147,12 @@
               <span class="icon" data-icon="device-floppy"></span>다른 이름으로 저장<kbd
                 >Ctrl+Shift+S</kbd
               >
+            </button>
+            <button role="menuitem" data-command="template">
+              <span class="icon" data-icon="copy"></span>새 곡 틀…
+            </button>
+            <button role="menuitem" data-command="replace">
+              <span class="icon" data-icon="replace"></span>코드 바꾸기…<kbd>Ctrl+H</kbd>
             </button>
             <button role="menuitem" data-command="paste" data-unless="libraryDialog">
               <span class="icon" data-icon="clipboard-text"></span>글 붙여넣기…
@@ -154,9 +162,6 @@
               <span class="icon" data-icon="playlist"></span>셋리스트…
             </button>
             <hr />
-            <button role="menuitem" data-command="example">
-              <span class="icon" data-icon="music"></span>예제 곡 열기
-            </button>
             <button role="menuitem" data-command="help">
               <span class="icon" data-icon="keyboard"></span>입력법<kbd>F1</kbd>
             </button>
@@ -189,6 +194,8 @@
           <div id="account-menu" class="menu account-menu" hidden></div>
         </div>
       </header>
+      <!-- Things that can wait: an unsaved song to bring back, a new version (1.5). -->
+      <div id="notice" class="notice" role="status" hidden></div>
       <main class="split">
         <section class="editor-pane">
           <!-- Header fields mirror the title:/key: lines at the top of the file. -->
@@ -378,6 +385,10 @@
         <p class="about-small">
           글꼴: Geist, Pretendard, Noto Music (모두 SIL Open Font License). 아이콘: Tabler Icons
           (MIT).
+        </p>
+        <p id="about-update" class="about-update" hidden>
+          <button type="button" id="about-update-check">업데이트 확인</button>
+          <span id="about-update-status"></span>
         </p>
         <p class="about-small">
           <a href="https://chordash.app/privacy" target="_blank" rel="noreferrer"

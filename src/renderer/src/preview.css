@@ -7,6 +7,8 @@ body {
 }
 
 .pages {
+  /* Ink on paper, also when the app around it is dark. */
+  color: #111;
   /* Print colours as they are, even with "background graphics" off. */
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;

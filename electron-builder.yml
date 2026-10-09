@@ -22,3 +22,9 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 npmRebuild: false
+# In-app updates (1.5): the app reads latest.yml from GitHub Releases. Upload latest.yml and the
+# .blockmap with the installer on every release.
+publish:
+  provider: github
+  owner: pjjy2017
+  repo: Chordash

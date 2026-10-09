@@ -1,6 +1,6 @@
 {
   "name": "chordash",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Chordash — chord chart editor with A4 PDF export",
   "main": "./out/main/index.js",
   "author": "jiyong",
@@ -27,7 +27,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
-    "@electron-toolkit/utils": "^4.0.0"
+    "@electron-toolkit/utils": "^4.0.0",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.1",

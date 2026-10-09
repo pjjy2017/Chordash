@@ -18,6 +18,7 @@ import {
 } from '../library'
 import { printTip } from '../shared'
 import type { Platform, RecognizeResult } from '../types'
+import { androidUpdates } from './updates'
 
 const KEY_NAME = 'anthropic-api-key'
 const API = 'https://api.anthropic.com/v1'
@@ -86,6 +87,7 @@ export function createAndroidPlatform(): Platform {
       ],
       { ...TEXT_CHARTS, ...CHART_IMAGES }
     ),
+    updates: androidUpdates,
 
     async exportPdf(html, suggestedName) {
       printTip()

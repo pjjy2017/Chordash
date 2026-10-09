@@ -6,6 +6,8 @@ import bulb from '@tabler/icons/outline/bulb.svg?raw'
 import chevronDown from '@tabler/icons/outline/chevron-down.svg?raw'
 import chevronUp from '@tabler/icons/outline/chevron-up.svg?raw'
 import clipboardText from '@tabler/icons/outline/clipboard-text.svg?raw'
+import clock from '@tabler/icons/outline/clock.svg?raw'
+import copy from '@tabler/icons/outline/copy.svg?raw'
 import deviceFloppy from '@tabler/icons/outline/device-floppy.svg?raw'
 import dots from '@tabler/icons/outline/dots.svg?raw'
 import download from '@tabler/icons/outline/download.svg?raw'
@@ -16,10 +18,11 @@ import folder from '@tabler/icons/outline/folder.svg?raw'
 import help from '@tabler/icons/outline/help.svg?raw'
 import infoCircle from '@tabler/icons/outline/info-circle.svg?raw'
 import keyboard from '@tabler/icons/outline/keyboard.svg?raw'
-import music from '@tabler/icons/outline/music.svg?raw'
 import layoutSidebarRight from '@tabler/icons/outline/layout-sidebar-right.svg?raw'
 import pencil from '@tabler/icons/outline/pencil.svg?raw'
 import playlist from '@tabler/icons/outline/playlist.svg?raw'
+import refresh from '@tabler/icons/outline/refresh.svg?raw'
+import replace from '@tabler/icons/outline/replace.svg?raw'
 import settings from '@tabler/icons/outline/settings.svg?raw'
 import userCircle from '@tabler/icons/outline/user-circle.svg?raw'
 
@@ -29,6 +32,8 @@ const ICONS: Record<string, string> = {
   'chevron-down': chevronDown,
   'chevron-up': chevronUp,
   'clipboard-text': clipboardText,
+  clock,
+  copy,
   'device-floppy': deviceFloppy,
   dots: dots,
   download: download,
@@ -40,9 +45,10 @@ const ICONS: Record<string, string> = {
   'info-circle': infoCircle,
   'layout-sidebar-right': layoutSidebarRight,
   keyboard,
-  music,
   pencil: pencil,
   playlist: playlist,
+  refresh,
+  replace,
   settings: settings,
   'user-circle': userCircle
 }

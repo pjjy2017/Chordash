@@ -62,7 +62,7 @@ type BarlineKind = 'plain' | 'final' | 'repeat-start' | 'repeat-end' | 'none'
  * Each bar draws its left barline, plus its right one when it is the last bar or the right side
  * is special (final, repeat end). A bar after a final or repeat end leaves its left side to it.
  */
-function barHtml(bar: Bar, index: number, bars: Bar[], theme: Theme): string {
+function barHtml(bar: Bar, index: number, bars: Bar[], line: number, theme: Theme): string {
   const previous = index > 0 ? bars[index - 1] : null
   const left: BarlineKind = bar.repeatStart
     ? 'repeat-start'
@@ -80,7 +80,9 @@ function barHtml(bar: Bar, index: number, bars: Bar[], theme: Theme): string {
     (bar.repeatStart ? '<span class="dots start"></span>' : '') +
     (bar.repeatEnd ? '<span class="dots end"></span>' : '')
   const chords = bar.chords.map((c) => chordHtml(c, theme)).join('')
-  return `<div class="bar" data-left="${left}" data-right="${right}">${dots}${chords}</div>`
+  // Where the bar is typed, so a click on the sheet can go there (1.5).
+  const at = `data-line="${line}" data-from="${bar.from}" data-to="${bar.to}"`
+  return `<div class="bar" data-left="${left}" data-right="${right}" ${at}>${dots}${chords}</div>`
 }
 
 /** A song-form part (`a)` → A) in a square box. */
@@ -129,7 +131,7 @@ function blockHtml(block: PageBlock, theme: Theme): string {
           line.bars.map((b) => `<div class="lyric">${escapeHtml(b.lyric ?? '')}</div>`).join('') +
           `</div>`
         : ''
-  const bars = line.bars.map((b, i, all) => barHtml(b, i, all, theme)).join('')
+  const bars = line.bars.map((b, i, all) => barHtml(b, i, all, line.line, theme)).join('')
   return (
     `<div class="row" style="height:${block.height}mm">` +
     memos +

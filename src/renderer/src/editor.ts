@@ -53,7 +53,7 @@ _ 가사, 마디마다
 [Chorus]
 .: D-7, G7, C^7, A7 :.
 
-쉼표(,)는 마디선, 마침표(.)는 끝 — 입력법은 ⋯ → 도움말(F1)`
+쉼표(,)는 마디선, 마침표(.)는 끝 — 입력법은 F1 (⋯ → 입력법)`
 
 /** Column positions from the parser → document offsets. */
 const offset = (doc: Text, line: number, column: number): number =>
@@ -335,7 +335,7 @@ const chordLint = linter(
 )
 
 const editorTheme = EditorView.theme({
-  '&': { height: '100%', fontSize: '16px' },
+  '&': { height: '100%', fontSize: 'var(--editor-font, 16px)' },
   '.cm-scroller': {
     fontFamily: "'D2Coding', 'Consolas', 'Chordash Pretendard', 'Chordash Music', monospace",
     lineHeight: '1.75'
