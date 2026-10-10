@@ -7,8 +7,9 @@ import {
   type Bar,
   type Chord,
   type ChordItem,
+  type LayoutMetrics,
   type PageBlock,
-  type PageModel,
+  type PrintLayout,
   type RowBlock,
   type Theme
 } from '../../core'
@@ -131,7 +132,10 @@ function blockHtml(block: PageBlock, theme: Theme): string {
           line.bars.map((b) => `<div class="lyric">${escapeHtml(b.lyric ?? '')}</div>`).join('') +
           `</div>`
         : ''
-  const bars = line.bars.map((b, i, all) => barHtml(b, i, all, line.line, theme)).join('')
+  // Joined rows (print settings) keep each bar's own line for the sheet ↔ editor link.
+  const bars = line.bars
+    .map((b, i, all) => barHtml(b, i, all, line.barLines?.[i] ?? line.line, theme))
+    .join('')
   return (
     `<div class="row" style="height:${block.height}mm">` +
     memos +
@@ -146,8 +150,7 @@ function blockHtml(block: PageBlock, theme: Theme): string {
 }
 
 /** CSS variables carrying the theme's layout numbers, so the page matches layout(). */
-function metricVars(theme: Theme): string {
-  const m = theme.metrics
+function metricVars(m: LayoutMetrics): string {
   const vars: Record<string, number> = {
     'page-w': m.pageWidth,
     'page-h': m.pageHeight,
@@ -173,24 +176,47 @@ function metricVars(theme: Theme): string {
 const pageNumberHtml = (n: number | null): string =>
   n === null ? '' : `<div class="page-number">${n}</div>`
 
-/** The pages of one song. With `firstNumber`, pages carry numbers from it (setlists). */
-function songPagesHtml(model: PageModel, theme: Theme, firstNumber: number | null): string {
-  return model.pages
-    .map(
-      (page, i) =>
-        `<section class="page">` +
-        `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
-        (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
-        `</header>` +
-        `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
-        pageNumberHtml(firstNumber === null ? null : firstNumber + i) +
-        `</section>`
-    )
-    .join('')
+/** Two pages side by side on landscape A4: each page drawn at 1/√2. */
+const BOOKLET_ZOOM = Math.SQRT1_2
+
+/**
+ * The pages of one song, each carrying its own sizes (a setlist mixes songs fitted at different
+ * scales) and the zoom back to A4. With `firstNumber`, pages carry numbers from it (setlists).
+ */
+function songPages(
+  song: PrintLayout,
+  theme: Theme,
+  firstNumber: number | null,
+  booklet: boolean
+): string[] {
+  const zoom = song.scale * (booklet ? BOOKLET_ZOOM : 1)
+  const style = `${metricVars(song.metrics)};zoom:${zoom}`
+  return song.model.pages.map(
+    (page, i) =>
+      `<section class="page" style="${style}">` +
+      `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
+      (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
+      `</header>` +
+      `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
+      pageNumberHtml(firstNumber === null ? null : firstNumber + i) +
+      `</section>`
+  )
 }
 
-const pagesHtml = (inner: string, theme: Theme): string =>
-  `<div class="pages theme-${theme.id}" style="${metricVars(theme)}">${inner}</div>`
+/** The pages in their container; a booklet pairs them up, 1|2, 3|4 … */
+function sheetsHtml(pages: string[], theme: Theme, booklet: boolean): string {
+  let inner = pages.join('')
+  if (booklet) {
+    const spreads: string[] = []
+    for (let i = 0; i < pages.length; i += 2)
+      spreads.push(`<div class="spread">${pages[i]}${pages[i + 1] ?? ''}</div>`)
+    inner = spreads.join('')
+  }
+  return (
+    `<div class="pages theme-${theme.id}${booklet ? ' booklet' : ''}" style="${metricVars(theme.metrics)}">` +
+    `${inner}</div>`
+  )
+}
 
 /**
  * A few lines of sheet drawn exactly like the pages (no page, no title), for the help cards.
@@ -200,13 +226,13 @@ export function snippetHtml(text: string, theme: Theme, slots = 2): string {
   const metrics = { ...theme.metrics, minBarsPerRow: slots }
   const blocks = layout(parse(text).document, metrics).pages.flatMap((p) => p.blocks)
   return (
-    `<div class="pages snippet theme-${theme.id}" style="${metricVars(theme)}">` +
+    `<div class="pages snippet theme-${theme.id}" style="${metricVars(theme.metrics)}">` +
     `<div class="blocks">${blocks.map((b) => blockHtml(b, theme)).join('')}</div></div>`
   )
 }
 
-export function renderPages(model: PageModel, theme: Theme): string {
-  return pagesHtml(songPagesHtml(model, theme, null), theme)
+export function renderPages(song: PrintLayout, theme: Theme, booklet = false): string {
+  return sheetsHtml(songPages(song, theme, null, booklet), theme, booklet)
 }
 
 /** One row of a setlist's contents page. */
@@ -224,8 +250,9 @@ export function renderSetlistPages(
   title: string,
   rows: ContentsRow[],
   contentsPages: number,
-  songs: { model: PageModel; firstPage: number }[],
-  theme: Theme
+  songs: { layout: PrintLayout; firstPage: number }[],
+  theme: Theme,
+  booklet = false
 ): string {
   const perPage = Math.ceil(rows.length / contentsPages) || 1
   const contents = Array.from({ length: contentsPages }, (_, i) => {
@@ -239,32 +266,44 @@ export function renderSetlistPages(
           (row.originalKey ? ` <small>(원래 ${withAccidentals(row.originalKey)})</small>` : '') +
           `</span><span class="setlist-page">${row.page}</span></li>`
       )
+    const zoom = booklet ? `zoom:${BOOKLET_ZOOM}` : ''
     return (
-      `<section class="page setlist-contents">` +
+      `<section class="page setlist-contents" style="${zoom}">` +
       `<header class="${i === 0 ? 'title' : 'heading'}">${escapeHtml(i === 0 ? title : `${title} ${i + 1}`)}</header>` +
       `<ol>${items.join('')}</ol>` +
       pageNumberHtml(i + 1) +
       `</section>`
     )
   })
-  const pages = songs.map((song) => songPagesHtml(song.model, theme, song.firstPage))
-  return pagesHtml(contents.join('') + pages.join(''), theme)
+  const pages = songs.flatMap((song) => songPages(song.layout, theme, song.firstPage, booklet))
+  return sheetsHtml([...contents, ...pages], theme, booklet)
 }
 
 /**
  * A standalone HTML document of the pages — styles and fonts embedded — for platform.exportPdf.
  * Same HTML as the preview, so the PDF matches what is on screen.
  */
-export function buildPrintDocument(model: PageModel, theme: Theme, title: string): Promise<string> {
-  return buildPrintHtml(renderPages(model, theme), title)
+export function buildPrintDocument(
+  song: PrintLayout,
+  theme: Theme,
+  title: string,
+  booklet = false
+): Promise<string> {
+  return buildPrintHtml(renderPages(song, theme, booklet), title, booklet)
 }
 
 /** A standalone HTML document around pages from renderPages() or renderSetlistPages(). */
-export async function buildPrintHtml(pagesHtml: string, title: string): Promise<string> {
+export async function buildPrintHtml(
+  pagesHtml: string,
+  title: string,
+  booklet = false
+): Promise<string> {
   const fonts = await embeddedFontCss()
+  // A booklet prints on landscape paper.
+  const paper = booklet ? '\n@page { size: A4 landscape; margin: 0; }' : ''
   return (
     `<!doctype html><html lang="ko" class="print"><head><meta charset="utf-8">` +
-    `<title>${escapeHtml(title)}</title><style>${fonts}\n${previewCss}</style></head>` +
+    `<title>${escapeHtml(title)}</title><style>${fonts}\n${previewCss}${paper}</style></head>` +
     `<body>${pagesHtml}</body></html>`
   )
 }

@@ -544,3 +544,39 @@ body {
   color: #333;
   font-weight: 500;
 }
+
+/* --- Booklet (1.6): two pages side by side on landscape A4, like an open book. --- */
+
+.booklet .spread {
+  display: flex;
+  width: 297mm;
+  height: 210mm;
+  box-shadow: 0 1px 6px rgb(0 0 0 / 0.25);
+  background: #fff;
+}
+
+.booklet .spread .page {
+  box-shadow: none;
+}
+
+/* The fold between the two pages, on screen only. */
+.booklet .spread .page + .page {
+  border-left: 0.3mm dashed #ccc;
+}
+
+.print .booklet .spread {
+  box-shadow: none;
+  break-after: page;
+}
+
+.print .booklet .spread:last-child {
+  break-after: auto;
+}
+
+.print .booklet .spread .page {
+  break-after: auto;
+}
+
+.print .booklet .spread .page + .page {
+  border-left: none;
+}

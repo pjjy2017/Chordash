@@ -1,6 +1,7 @@
 // Toolbar and menu icons: Tabler Icons (MIT), outline style, inlined so they follow the text
 // colour. In the page an icon is written as <span class="icon" data-icon="folder"></span>.
 
+import adjustmentsHorizontal from '@tabler/icons/outline/adjustments-horizontal.svg?raw'
 import arrowsUpDown from '@tabler/icons/outline/arrows-up-down.svg?raw'
 import bulb from '@tabler/icons/outline/bulb.svg?raw'
 import chevronDown from '@tabler/icons/outline/chevron-down.svg?raw'
@@ -21,12 +22,15 @@ import keyboard from '@tabler/icons/outline/keyboard.svg?raw'
 import layoutSidebarRight from '@tabler/icons/outline/layout-sidebar-right.svg?raw'
 import pencil from '@tabler/icons/outline/pencil.svg?raw'
 import playlist from '@tabler/icons/outline/playlist.svg?raw'
+import presentation from '@tabler/icons/outline/presentation.svg?raw'
 import refresh from '@tabler/icons/outline/refresh.svg?raw'
 import replace from '@tabler/icons/outline/replace.svg?raw'
 import settings from '@tabler/icons/outline/settings.svg?raw'
+import share from '@tabler/icons/outline/share.svg?raw'
 import userCircle from '@tabler/icons/outline/user-circle.svg?raw'
 
 const ICONS: Record<string, string> = {
+  'adjustments-horizontal': adjustmentsHorizontal,
   'arrows-up-down': arrowsUpDown,
   bulb: bulb,
   'chevron-down': chevronDown,
@@ -47,9 +51,11 @@ const ICONS: Record<string, string> = {
   keyboard,
   pencil: pencil,
   playlist: playlist,
+  presentation,
   refresh,
   replace,
   settings: settings,
+  share,
   'user-circle': userCircle
 }
 

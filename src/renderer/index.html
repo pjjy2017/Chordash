@@ -107,6 +107,16 @@
             <span class="icon" data-icon="keyboard"></span>
             <span class="chip-label">코드 키보드</span>
           </label>
+          <!-- Print settings (1.6): size, spacing, 8-bar rows, one page, booklet. -->
+          <button
+            type="button"
+            class="chip-toggle"
+            data-command="printSettings"
+            title="출력 설정: 글자 크기, 줄 간격, 8마디씩 한 줄, 한 장에 맞추기, 책자"
+          >
+            <span class="icon" data-icon="adjustments-horizontal"></span>
+            <span class="chip-label">출력</span>
+          </button>
         </div>
         <span class="spacer"></span>
         <span id="status" class="status"></span>
@@ -150,6 +160,12 @@
             </button>
             <button role="menuitem" data-command="template">
               <span class="icon" data-icon="copy"></span>새 곡 틀…
+            </button>
+            <button role="menuitem" data-command="stage">
+              <span class="icon" data-icon="presentation"></span>공연 모드<kbd>F5</kbd>
+            </button>
+            <button role="menuitem" data-command="share">
+              <span class="icon" data-icon="share"></span>링크로 공유
             </button>
             <button role="menuitem" data-command="replace">
               <span class="icon" data-icon="replace"></span>코드 바꾸기…<kbd>Ctrl+H</kbd>
@@ -341,6 +357,7 @@
           <button type="button" id="setlist-save-as">다른 이름으로…</button>
           <span class="spacer"></span>
           <button value="close">닫기</button>
+          <button type="button" id="setlist-stage">공연 모드</button>
           <button type="button" id="setlist-pdf" class="primary">PDF 만들기</button>
         </div>
       </form>

@@ -7,7 +7,7 @@ import {
   DEFAULT_THEME,
   formatKey,
   intervalBetween,
-  layout,
+  printLayout,
   parse,
   parseKey,
   planSetlist,
@@ -17,6 +17,8 @@ import {
 } from '../../core'
 import { platform, type FileRef, type Setlist, type SetlistSong } from '../../platform'
 import { buildPrintHtml, renderSetlistPages, type ContentsRow } from './preview'
+import { printOptions } from './printSettings'
+import { openStage } from './stage'
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
 
@@ -211,8 +213,9 @@ async function prepare(row: Row): Promise<PreparedSong | null> {
   }
 }
 
-async function exportPdf(): Promise<void> {
-  if (rows.length === 0) return say('곡을 먼저 넣어 주세요.', true)
+/** The songs that can be read, after asking about problems; null when there is nothing to show. */
+async function readySongs(doing: string): Promise<PreparedSong[] | null> {
+  if (rows.length === 0) return (say('곡을 먼저 넣어 주세요.', true), null)
   const prepared = await Promise.all(rows.map(prepare))
   const songs = prepared.filter((s): s is PreparedSong => s !== null)
   const missing = rows.filter((_, i) => !prepared[i]).map((r) => r.file.name)
@@ -220,12 +223,31 @@ async function exportPdf(): Promise<void> {
     ...(missing.length ? [`찾을 수 없어서 빼는 곡: ${missing.join(', ')}`] : []),
     ...songs.flatMap((s) => s.problems)
   ]
-  if (songs.length === 0) return say('읽을 수 있는 곡이 없어요.', true)
-  if (problems.length && !window.confirm(`${problems.join('\n')}\n\n그래도 PDF로 만들까요?`)) return
+  if (songs.length === 0) return (say('읽을 수 있는 곡이 없어요.', true), null)
+  if (problems.length && !window.confirm(`${problems.join('\n')}\n\n그래도 ${doing}?`)) return null
+  return songs
+}
+
+/** Performance mode through the whole setlist, each song in its printed key (1.6). */
+async function startStage(): Promise<void> {
+  const songs = await readySongs('공연 모드를 열까요')
+  if (!songs) return
+  dialog.close()
+  openStage(
+    songs.map((s) => ({
+      title: s.title,
+      song: printLayout(s.doc, DEFAULT_THEME.metrics, printOptions())
+    }))
+  )
+}
+
+async function exportPdf(): Promise<void> {
+  const songs = await readySongs('PDF로 만들까요')
+  if (!songs) return
 
   const theme = DEFAULT_THEME
-  const models = songs.map((s) => layout(s.doc, theme.metrics))
-  const plan = planSetlist(models.map((m) => m.pages.length))
+  const layouts = songs.map((s) => printLayout(s.doc, theme.metrics, printOptions()))
+  const plan = planSetlist(layouts.map((l) => l.model.pages.length))
   const contents: ContentsRow[] = songs.map((s, i) => ({
     title: s.title,
     key: s.printedKey ? formatKey(s.printedKey) : null,
@@ -239,10 +261,12 @@ async function exportPdf(): Promise<void> {
       title,
       contents,
       plan.contentsPages,
-      models.map((model, i) => ({ model, firstPage: plan.starts[i] })),
-      theme
+      layouts.map((layout, i) => ({ layout, firstPage: plan.starts[i] })),
+      theme,
+      printOptions().booklet
     ),
-    title
+    title,
+    printOptions().booklet
   )
   const saved = await platform.exportPdf(html, `${title}.pdf`)
   if (saved) say(`PDF 저장: ${saved.name} (${songs.length}곡, ${plan.total}쪽)`)
@@ -283,6 +307,7 @@ $<HTMLButtonElement>('setlist-save-as').addEventListener(
   guarded(() => save(true))
 )
 $<HTMLButtonElement>('setlist-pdf').addEventListener('click', guarded(exportPdf))
+$<HTMLButtonElement>('setlist-stage').addEventListener('click', guarded(startStage))
 titleField.addEventListener('input', touch)
 
 /** Opens the setlist dialog. The list stays while the app runs, also after closing it. */

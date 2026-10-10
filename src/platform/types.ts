@@ -156,6 +156,8 @@ export interface Platform {
   recentFiles?(): Promise<FileRef[]>
   /** Opens a song from the recent list; null when it is not there any more. */
   openRecent?(file: FileRef): Promise<OpenResult | null>
+  /** Hands a link to the system share sheet (Android); elsewhere the link is copied. */
+  shareUrl?(url: string, title: string): Promise<void>
   /** New versions from inside the app; the web version is always the newest and has none. */
   updates?: Updates
   /** Signing in to a cloud place; only the web version has one. */

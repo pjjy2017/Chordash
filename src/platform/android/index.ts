@@ -5,6 +5,7 @@
 
 import { App } from '@capacitor/app'
 import { CapacitorHttp } from '@capacitor/core'
+import { Share } from '@capacitor/share'
 import { SecureStorage } from '@aparajita/capacitor-secure-storage'
 import { Printer } from '@capgo/capacitor-printer'
 import type { RecognizeFailure } from '../../core/recognize'
@@ -88,6 +89,9 @@ export function createAndroidPlatform(): Platform {
       { ...TEXT_CHARTS, ...CHART_IMAGES }
     ),
     updates: androidUpdates,
+    shareUrl: async (url, title) => {
+      await Share.share({ title, url })
+    },
 
     async exportPdf(html, suggestedName) {
       printTip()

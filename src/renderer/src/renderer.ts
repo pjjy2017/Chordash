@@ -18,7 +18,10 @@ import {
   type TextEncodingName,
   DEFAULT_THEME,
   formatNote,
-  layout,
+  printLayout,
+  readShareLink,
+  shareLink,
+  type PrintLayout,
   parseKey,
   readHeaderLine,
   setHeaderLine,
@@ -45,6 +48,8 @@ import { dropDraft, keepDraft, readDraft, type Draft } from './draft'
 import { installEditorZoom, zoomKey } from './editorZoom'
 import { showNotice } from './notice'
 import { chooseTemplate, openChordReplace } from './songDialogs'
+import { openPrintSettings, printOptions, printSettingsChanged } from './printSettings'
+import { openStage } from './stage'
 import { checkForUpdate, installUpdateCheck } from './updateCheck'
 import { openHelp } from './help'
 import exampleSong from '../../../examples/Chordash.chord?raw'
@@ -115,7 +120,8 @@ let renderTimer: number | undefined
 function renderPreview(): void {
   const { document: doc, diagnostics } = editor.parsed()
   const theme = DEFAULT_THEME
-  pagesHost.innerHTML = renderPages(layout(shownDocument(), theme.metrics), theme)
+  printed = printLayout(shownDocument(), theme.metrics, printOptions())
+  pagesHost.innerHTML = renderPages(printed, theme, printOptions().booklet)
   syncHeaderFields(doc)
   showTransposition()
   fitPreview()
@@ -130,13 +136,32 @@ function renderPreview(): void {
   // The sheet was drawn again: mark the cursor's bar on the new one.
   markedBar = null
   markCursorBar()
+  printSettingsChanged()
+}
+
+/** The sheet as last drawn with the print settings. */
+let printed: PrintLayout | null = null
+
+/** How the print settings came out, for their panel. */
+function printReport(): string {
+  if (!printed) return ''
+  const pages = printed.model.pages.length
+  const fitted = printOptions().fitOnePage && Math.abs(printed.scale - printOptions().scale) > 0.001
+  const sheets = printOptions().booklet ? ` · 종이 ${Math.ceil(pages / 2)}장` : ''
+  return (
+    `지금 ${pages}쪽${sheets}` +
+    (fitted ? ` · 한 장에 맞춰 ${Math.round(printed.scale * 100)}%` : '') +
+    (printOptions().fitOnePage && pages > 1 ? ' · 가장 작게 해도 한 장에 안 들어가요' : '')
+  )
 }
 
 /** Scales the A4 pages down to the pane width (never up). */
 function fitPreview(): void {
   const pages = preview.querySelector<HTMLElement>('.pages')
   if (!pages || preview.clientWidth === 0) return
-  const pageWidthPx = (DEFAULT_THEME.metrics.pageWidth / 25.4) * 96
+  // A booklet spread is landscape A4.
+  const paperWidth = printOptions().booklet ? 297 : DEFAULT_THEME.metrics.pageWidth
+  const pageWidthPx = (paperWidth / 25.4) * 96
   const available = preview.clientWidth - 24
   pages.style.zoom = String(Math.min(1, available / pageWidthPx))
 }
@@ -320,6 +345,16 @@ const commands: Record<string, () => Promise<unknown>> = {
     if (text !== null && (await confirmDiscard())) load(text, null)
   },
   replace: async () => openChordReplace(editor),
+  share: shareSong,
+  stage: async () => {
+    const song = printLayout(shownDocument(), DEFAULT_THEME.metrics, printOptions())
+    const title = editor.parsed().document.title || documentName().replace(/\.chord$/i, '')
+    openStage([{ title, song }])
+  },
+  printSettings: async () => {
+    showView('preview')
+    openPrintSettings(renderPreview, printReport)
+  },
   settings: openSettings,
   help: openHelp,
   about: openAbout,
@@ -595,7 +630,8 @@ async function exportPdf(): Promise<void> {
   }
   const title = doc.title || documentName().replace(/\.chord$/i, '')
   const theme = DEFAULT_THEME
-  const html = await buildPrintDocument(layout(shownDocument(), theme.metrics), theme, title)
+  const song = printLayout(shownDocument(), theme.metrics, printOptions())
+  const html = await buildPrintDocument(song, theme, title, printOptions().booklet)
   const saved = await platform.exportPdf(html, `${title}.pdf`)
   if (saved) status.textContent = `PDF 저장: ${saved.name}`
 }
@@ -910,6 +946,11 @@ const SHORTCUTS: Record<string, string> = {
 window.addEventListener(
   'keydown',
   (e) => {
+    if (e.key === 'F5') {
+      e.preventDefault()
+      run('stage')
+      return
+    }
     if (e.key === 'F1') {
       e.preventDefault()
       run('help')
@@ -953,6 +994,48 @@ $<HTMLInputElement>('hints').addEventListener('change', (e) => {
   editor.setHints((e.target as HTMLInputElement).checked)
 })
 
+// --- share links (1.6): the song inside a chordash.app address ---------------------------
+
+async function shareSong(): Promise<void> {
+  const text = editor.getText()
+  if (!text.trim()) return void showNotice('공유할 곡이 비어 있어요.', [])
+  const link = await shareLink(text)
+  const title = editor.parsed().document.title || documentName().replace(/\.chord$/i, '')
+  // Phones: the system share sheet (KakaoTalk, messages, …).
+  if (platform.shareUrl) return platform.shareUrl(link, title)
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try {
+      await navigator.share({ title, url: link })
+    } catch {
+      // Closed without sharing.
+    }
+    return
+  }
+  await navigator.clipboard.writeText(link)
+  showNotice(
+    '곡 링크를 복사했어요. 카톡·메일에 붙여 넣어 보내면, 받은 사람은 눌러서 chordash.app에서 바로 열어요.',
+    []
+  )
+}
+
+/** A link with a song in it (web): opens it as a new, unsaved song. true when there was one. */
+async function openSharedLink(): Promise<boolean> {
+  const text = await readShareLink(location.hash)
+  if (text === null) return false
+  history.replaceState(null, '', location.pathname + location.search)
+  if (!(await confirmDiscard())) return true
+  load(text, null)
+  // Not saved anywhere yet: leaving warns, like any unsaved song.
+  savedText = ''
+  reportState()
+  showNotice('링크로 받은 곡이에요. 저장하면 내 곡으로 남아요.', [
+    { label: '저장', primary: true, run: () => save() }
+  ])
+  return true
+}
+
+window.addEventListener('hashchange', () => void openSharedLink().catch(fail))
+
 // The first time the app opens, it shows the example song; after that, an empty page.
 const SEEN_EXAMPLE = 'chordash.seenExample'
 let firstRun = false
@@ -967,6 +1050,11 @@ const draft = readDraft()
 load(firstRun ? exampleSong : '', null)
 if (draft && draft.text !== editor.getText()) offerDraft(draft)
 installEditorZoom($('editor'))
-// The first time, the key sheet comes first (the example song is already behind it).
-if (firstRun) void openHelp()
 renderPreview()
+// A song link opened the app: that song, not the welcome. The first time otherwise, the key
+// sheet comes first (the example song is already behind it).
+void openSharedLink()
+  .then((shared) => {
+    if (firstRun && !shared) void openHelp()
+  })
+  .catch(fail)

@@ -71,6 +71,10 @@ export interface BarLine {
   memos: ColorMemo[]
   /** Song-form part marker at the start of the line (`a) Bb^7, ...`), drawn boxed in the margin. */
   part: Part | null
+  /** Set when print settings join two lines into one row (print.ts): each bar's own line. */
+  barLines?: number[]
+  /** This row already holds two typed lines. */
+  joined?: boolean
 }
 
 /** A song-form part such as `a)`, `b2)`, `ㄱ4)`. */

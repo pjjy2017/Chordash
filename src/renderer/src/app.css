@@ -1974,3 +1974,179 @@ textarea {
   border-radius: var(--radius);
   cursor: pointer;
 }
+
+/* --- Print settings panel (1.6): beside the sheet, which changes as you go. ------------------ */
+
+.print-dialog {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  left: auto;
+  z-index: 30;
+  width: min(360px, calc(100vw - 32px));
+  margin: 0;
+  box-shadow: var(--shadow-pop);
+}
+
+.print-body {
+  display: grid;
+  gap: 10px;
+}
+
+.print-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.print-row > span:first-child {
+  width: 5em;
+  color: var(--muted);
+}
+
+.print-row > button {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.print-row > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.print-row .store-switch {
+  margin: 0;
+}
+
+.print-size {
+  min-width: 3.2em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.print-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.print-check input {
+  margin-top: 3px;
+}
+
+.print-check span {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.print-check small {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.print-status {
+  min-height: 1.3em;
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+@media (max-width: 760px) {
+  .print-dialog {
+    top: auto;
+    right: 8px;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    left: 8px;
+    width: auto;
+  }
+}
+
+/* --- Performance mode (1.6): the sheet filling the screen. ---------------------------------- */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #2a2c31;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.stage-sheet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage .stage-pages {
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+}
+
+.stage .stage-pages[hidden],
+.stage .page[hidden] {
+  display: none;
+}
+
+.stage .page {
+  box-shadow: none;
+}
+
+.stage .page + .page {
+  border-left: 1px solid #ddd;
+}
+
+/* No highlight of the editor's cursor bar on stage. */
+.stage .bar.cursor-bar {
+  background: none;
+}
+
+.stage-info {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  padding: 6px 14px;
+  font-size: 14px;
+  color: #fff;
+  white-space: nowrap;
+  background: rgb(0 0 0 / 0.6);
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.stage-info.shown {
+  opacity: 1;
+}
+
+.stage-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  color: #fff;
+  background: rgb(0 0 0 / 0.45);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
