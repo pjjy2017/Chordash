@@ -272,7 +272,7 @@ function listTools(
 
 /**
  * Lists one kind of file in a place; the user picks one (or several), or goes elsewhere.
- * `paste` adds "글 붙여넣기…" (the song "열기", 1.4).
+ * `paste` adds "복사한 악보 붙여넣기…" (the song "열기", 1.4).
  */
 export function chooseInFolder(
   title: string,
@@ -300,7 +300,7 @@ export function chooseInFolder(
       result = 'elsewhere'
       dialog.close()
     })
-    const pasteText = button('글 붙여넣기…')
+    const pasteText = button('복사한 악보 붙여넣기…')
     pasteText.addEventListener('click', () => {
       result = 'paste'
       dialog.close()

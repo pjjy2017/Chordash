@@ -346,6 +346,9 @@ const commands: Record<string, () => Promise<unknown>> = {
   },
   replace: async () => openChordReplace(editor),
   share: shareSong,
+  toDegrees: async () => respell('degrees'),
+  toNotes: async () => respell('notes'),
+  toggleHints: async () => setHints(hintsItem.getAttribute('aria-checked') !== 'true'),
   stage: async () => {
     const song = printLayout(shownDocument(), DEFAULT_THEME.metrics, printOptions())
     const title = editor.parsed().document.title || documentName().replace(/\.chord$/i, '')
@@ -412,7 +415,7 @@ async function runImport(
   status.textContent = `가져옴: ${details.join(' · ')}`
 }
 
-/** "글 붙여넣기": a chart copied from the web, converted like a file. */
+/** "복사한 악보 붙여넣기": a chart copied from the web, converted like a file. */
 function openPaste(): void {
   importText_.value = ''
   importDialog.showModal()
@@ -810,9 +813,6 @@ function respell(to: ChordSpelling): void {
   )
 }
 
-$<HTMLButtonElement>('to-degrees').addEventListener('click', () => respell('degrees'))
-$<HTMLButtonElement>('to-notes').addEventListener('click', () => respell('notes'))
-
 // --- print preview: shown beside the editor on wide screens, can be hidden ---------------
 
 const previewToggle = $<HTMLButtonElement>('toggle-preview')
@@ -990,9 +990,25 @@ if (platform.updates) {
   })
 }
 
-$<HTMLInputElement>('hints').addEventListener('change', (e) => {
-  editor.setHints((e.target as HTMLInputElement).checked)
-})
+// 코드 풀이 on or off, from the ⋯ menu; remembered on this device.
+const HINTS = 'chordash.hints'
+const hintsItem = $<HTMLButtonElement>('hints-item')
+
+function setHints(on: boolean): void {
+  editor.setHints(on)
+  hintsItem.setAttribute('aria-checked', String(on))
+  try {
+    localStorage.setItem(HINTS, on ? '1' : '0')
+  } catch {
+    // For this visit only.
+  }
+}
+
+try {
+  setHints(localStorage.getItem(HINTS) !== '0')
+} catch {
+  setHints(true)
+}
 
 // --- share links (1.6): the song inside a chordash.app address ---------------------------
 

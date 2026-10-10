@@ -45,7 +45,7 @@ export function openPrintSettings(changed: () => void, report: () => string): vo
   const dialog = document.createElement('dialog')
   dialog.className = 'import-dialog print-dialog'
   const heading = document.createElement('h2')
-  heading.textContent = '출력 설정'
+  heading.textContent = '악보·PDF 출력 설정'
   const body = document.createElement('div')
   body.className = 'print-body'
   const status = document.createElement('p')

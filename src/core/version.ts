@@ -1,6 +1,6 @@
 export const APP_NAME = 'Chordash'
 /** Shown in the about dialog; keep in step with package.json. */
-export const APP_VERSION = '1.6.1'
+export const APP_VERSION = '1.6.2'
 /** Donation page; empty until it is set up (the about dialog hides the link). */
 export const DONATE_URL = ''
 

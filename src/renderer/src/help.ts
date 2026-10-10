@@ -1,6 +1,8 @@
-// Input help (1.4): one sheet of keys — each key with what it means, nothing else — and one
-// example line at the bottom, drawn by the real sheet renderer. Shown once on first run, then
-// from F1 or ⋯ → 입력법. (It replaces 1.3's picture cards and the first-run tour.)
+// Input help: one sheet of keys. Each key that puts a sign on the sheet shows it — the key, an
+// arrow, and a tiny piece of sheet drawn by the real sheet renderer (1.6.2), so the help cannot
+// drift from what the app draws — with a few words beside it. Keys that leave nothing on the
+// sheet (// memo, --- page turn) only have the words. One example line at the bottom.
+// Shown once on first run, then from F1 or ⋯ → 입력법.
 
 import { DEFAULT_THEME } from '../../core'
 import { snippetHtml } from './preview'
@@ -8,8 +10,15 @@ import { snippetHtml } from './preview'
 const escapeHtml = (text: string): string =>
   text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
-/** Keys pressed (each a keycap), and what they mean. */
-type Row = [keys: string[], meaning: string]
+interface Row {
+  /** Keys pressed, each drawn as a keycap. */
+  keys: string[]
+  meaning: string
+  /** Chordash text whose drawing shows the result (in key C); none = nothing on the sheet. */
+  show?: string
+  /** How many bars wide the drawing is. */
+  slots?: number
+}
 
 interface Group {
   title: string
@@ -20,50 +29,51 @@ const GROUPS: Group[] = [
   {
     title: '마디',
     rows: [
-      [[','], '마디선'],
-      [['.'], '끝 (마침줄)'],
-      [['.:'], '반복 시작'],
-      [[':.'], '반복 끝'],
-      [['1.'], '1번 엔딩 (줄 맨 앞)'],
-      [['␣'], '한 마디에 코드 둘'],
-      [[',', ','], '빈 마디 (앞 코드 계속)'],
-      [['nc'], 'N.C. 코드 없음']
+      { keys: [','], meaning: '마디선', show: '| , |', slots: 2 },
+      { keys: ['.'], meaning: '끝 (마침줄)', show: '| , .', slots: 2 },
+      { keys: ['.:'], meaning: '반복 시작', show: '.: , |', slots: 2 },
+      { keys: [':.'], meaning: '반복 끝', show: '| , :.', slots: 2 },
+      { keys: ['1.'], meaning: '1번 엔딩 (줄 맨 앞)', show: '1. | , :.', slots: 2 },
+      { keys: ['␣'], meaning: '한 마디에 코드 둘', show: 'C F', slots: 1 },
+      { keys: [',', ','], meaning: '빈 마디 (앞 코드 계속)', show: 'C, , F', slots: 3 },
+      { keys: ['nc'], meaning: '코드 없음', show: 'nc', slots: 1 }
     ]
   },
   {
     title: '코드 (근음 뒤에)',
     rows: [
-      [['-'], 'm 마이너'],
-      [['^'], 'maj 메이저'],
-      [['%'], 'ø 하프 디미니시'],
-      [['o'], 'dim 디미니시'],
-      [['+'], 'aug 오그멘티드'],
-      [['s'], 'sus4 (s2 = sus2)'],
-      [['b', '#'], '♭ ♯'],
-      [['/'], '베이스 음'],
-      [['1~7'], '도수 (키의 몇 번째 음)']
+      { keys: ['-'], meaning: '마이너', show: 'C-7', slots: 1 },
+      { keys: ['^'], meaning: '메이저', show: 'C^7', slots: 1 },
+      { keys: ['%'], meaning: '하프 디미니시', show: 'C%', slots: 1 },
+      { keys: ['o'], meaning: '디미니시', show: 'Co7', slots: 1 },
+      { keys: ['+'], meaning: '오그멘티드', show: 'C+', slots: 1 },
+      { keys: ['s'], meaning: 'sus4 (s2 = sus2)', show: 'C7s', slots: 1 },
+      { keys: ['b', '#'], meaning: '플랫 · 샵', show: 'Bb, F#', slots: 2 },
+      { keys: ['/'], meaning: '베이스 음', show: 'C/E', slots: 1 },
+      { keys: ['1~7'], meaning: '도수 (C 키에서)', show: '2-7, 57', slots: 2 }
     ]
   },
   {
     title: '글자',
     rows: [
-      [['_'], '가사 (줄 아래, 쉼표로 마디마다)'],
-      [['^'], '줄 위 글자 (줄 맨 앞)'],
-      [['"'], '마디 위 글자 · 지시문'],
-      [['*'], '악센트 (코드 뒤)'],
-      [["'"], '브레스 (코드 앞)'],
-      [['{'], '색 메모 {teal: …}']
+      { keys: ['_'], meaning: '가사 (쉼표로 마디마다)', show: '| , |\n_ 가사, 마디마다', slots: 2 },
+      { keys: ['^'], meaning: '줄 위 글자 (줄 맨 앞)', show: '^ 위에 쓰는 글자\n| , |', slots: 2 },
+      { keys: ['"'], meaning: '마디 위 글자', show: '| "Break" |', slots: 1 },
+      { keys: ['*'], meaning: '악센트 (코드 뒤)', show: 'C7*', slots: 1 },
+      { keys: ["'"], meaning: '브레스 (코드 앞)', show: "'C7", slots: 1 },
+      { keys: ['{'], meaning: '색 메모', show: '{teal: 색 메모}\n| , |', slots: 2 }
     ]
   },
   {
     title: '줄',
     rows: [
-      [['['], '섹션 이름 [Verse]'],
-      [['key:'], '섹션 뒤에 쓰면 거기서 키 바뀜'],
-      [['a)'], '송폼 파트 (줄 맨 앞)'],
-      [['?'], '확인 필요 표시'],
-      [['//'], '메모 (악보에 안 나옴)'],
-      [['---'], '여기서 쪽 넘김']
+      { keys: ['['], meaning: '섹션 이름', show: '[Verse]\n| , |', slots: 2 },
+      { keys: ['key:'], meaning: '섹션 뒤: 키 바뀜', show: '[B] key: G\n| , |', slots: 2 },
+      { keys: ['a)'], meaning: '송폼 파트 (줄 맨 앞)', show: 'a) | , |', slots: 2 },
+      { keys: ['"'], meaning: '섹션 뒤: 지시문', show: '[Intro] "드럼 4마디"\n| , |', slots: 2 },
+      { keys: ['?'], meaning: '확인 필요 표시', show: '?C7', slots: 1 },
+      { keys: ['//'], meaning: '메모 — 악보에 안 나옴' },
+      { keys: ['---'], meaning: '여기서 다음 쪽으로' }
     ]
   }
 ]
@@ -71,20 +81,33 @@ const GROUPS: Group[] = [
 /** The one example: what is typed, and the sheet it makes. */
 const EXAMPLE = '[Verse]\nC^7, A-7, D-7 G7, C^7.\n_ 가사는, 마디마다, 이렇게, 써요'
 
+/** Width of one bar in a small drawing, in sheet millimetres. */
+const PIC_BAR_MM = 22
+
 const keycap = (key: string): string =>
   `<span class="keycap"><span class="keycap-main">${escapeHtml(key)}</span></span>`
+
+function rowHtml(row: Row): string {
+  const keys = row.keys.map(keycap).join('')
+  const picture = row.show
+    ? `<span class="key-arrow">→</span>` +
+      `<span class="key-pic" style="--pic-w:${(row.slots ?? 1) * PIC_BAR_MM + (row.show.includes(')') ? 15 : 6)}mm">` +
+      snippetHtml(`key: C\n${row.show}`, DEFAULT_THEME, row.slots ?? 1) +
+      `</span>`
+    : ''
+  return (
+    `<div class="key-row${row.show ? '' : ' no-pic'}">` +
+    `<span class="key-keys">${keys}</span>${picture}` +
+    `<span class="key-meaning">${escapeHtml(row.meaning)}</span></div>`
+  )
+}
 
 function bodyHtml(): string {
   const groups = GROUPS.map(
     (g) =>
-      `<section class="key-group"><h3>${escapeHtml(g.title)}</h3><dl>` +
-      g.rows
-        .map(
-          ([keys, meaning]) =>
-            `<dt>${keys.map(keycap).join('')}</dt><dd>${escapeHtml(meaning)}</dd>`
-        )
-        .join('') +
-      `</dl></section>`
+      `<section class="key-group"><h3>${escapeHtml(g.title)}</h3>` +
+      g.rows.map(rowHtml).join('') +
+      `</section>`
   ).join('')
   const example =
     `<section class="key-example"><h3>이렇게 치면</h3>` +

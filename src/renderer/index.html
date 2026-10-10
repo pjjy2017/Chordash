@@ -73,31 +73,7 @@
             원본에 적용
           </button>
           <button type="button" id="transpose-cancel" class="text-button" hidden>취소</button>
-          <div class="segmented" role="group" aria-label="표기 바꾸기">
-            <button
-              type="button"
-              id="to-degrees"
-              title="코드 이름을 도수로 (선택한 줄만, 선택이 없으면 전체)"
-            >
-              123
-            </button>
-            <button
-              type="button"
-              id="to-notes"
-              title="도수를 코드 이름으로 (선택한 줄만, 선택이 없으면 전체)"
-            >
-              CDE
-            </button>
-          </div>
           <span id="spelling-reading" class="field-reading"></span>
-          <label
-            class="chip-toggle"
-            title="코드 풀이: 입력 중인 칸의 줄임말 코드를 어떻게 읽었는지 옆에 회색으로 보여 줘요 (bb^ → B♭maj7)"
-          >
-            <input id="hints" type="checkbox" checked />
-            <span class="icon" data-icon="bulb"></span>
-            <span class="chip-label">코드 풀이</span>
-          </label>
           <!-- Touch screens only: the app's own chord keys instead of the phone keyboard. -->
           <label
             class="chip-toggle touch-only"
@@ -107,15 +83,33 @@
             <span class="icon" data-icon="keyboard"></span>
             <span class="chip-label">코드 키보드</span>
           </label>
-          <!-- Print settings (1.6): size, spacing, 8-bar rows, one page, booklet. -->
+          <!-- Things to do with the song (1.6.1: out of the ⋯ menu). -->
           <button
             type="button"
             class="chip-toggle"
-            data-command="printSettings"
-            title="출력 설정: 글자 크기, 줄 간격, 8마디씩 한 줄, 한 장에 맞추기, 책자"
+            data-command="setlist"
+            title="셋리스트: 여러 곡을 순서대로 묶어 PDF·공연 모드로"
           >
-            <span class="icon" data-icon="adjustments-horizontal"></span>
-            <span class="chip-label">출력</span>
+            <span class="icon" data-icon="playlist"></span>
+            <span class="chip-label">셋리스트</span>
+          </button>
+          <button
+            type="button"
+            class="chip-toggle"
+            data-command="share"
+            title="링크로 공유: 곡을 담은 chordash.app 링크"
+          >
+            <span class="icon" data-icon="share"></span>
+            <span class="chip-label">링크 공유</span>
+          </button>
+          <button
+            type="button"
+            class="chip-toggle"
+            data-command="stage"
+            title="공연 모드: 화면 가득 악보, 누르거나 페달로 쪽 넘김 (F5)"
+          >
+            <span class="icon" data-icon="presentation"></span>
+            <span class="chip-label">공연 모드</span>
           </button>
         </div>
         <span class="spacer"></span>
@@ -159,30 +153,51 @@
               >
             </button>
             <button role="menuitem" data-command="template">
-              <span class="icon" data-icon="copy"></span>새 곡 틀…
-            </button>
-            <button role="menuitem" data-command="stage">
-              <span class="icon" data-icon="presentation"></span>공연 모드<kbd>F5</kbd>
-            </button>
-            <button role="menuitem" data-command="share">
-              <span class="icon" data-icon="share"></span>링크로 공유
-            </button>
-            <button role="menuitem" data-command="replace">
-              <span class="icon" data-icon="replace"></span>코드 바꾸기…<kbd>Ctrl+H</kbd>
+              <span class="icon" data-icon="copy"></span>틀로 새 곡 만들기…
             </button>
             <button role="menuitem" data-command="paste" data-unless="libraryDialog">
-              <span class="icon" data-icon="clipboard-text"></span>글 붙여넣기…
+              <span class="icon" data-icon="clipboard-text"></span>복사한 악보 붙여넣기…
             </button>
             <hr />
-            <button role="menuitem" data-command="setlist">
-              <span class="icon" data-icon="playlist"></span>셋리스트…
+            <button role="menuitem" data-command="replace">
+              <span class="icon" data-icon="replace"></span>특정 코드 일괄 바꾸기…<kbd>Ctrl+H</kbd>
+            </button>
+            <button
+              role="menuitem"
+              data-command="toDegrees"
+              title="코드 이름을 도수로 (선택한 줄만, 선택이 없으면 전체)"
+            >
+              <span class="menu-mark">123</span>코드 이름을 도수로
+            </button>
+            <button
+              role="menuitem"
+              data-command="toNotes"
+              title="도수를 코드 이름으로 (선택한 줄만, 선택이 없으면 전체)"
+            >
+              <span class="menu-mark">CDE</span>도수를 코드 이름으로
+            </button>
+            <button
+              role="menuitemcheckbox"
+              id="hints-item"
+              data-command="toggleHints"
+              aria-checked="true"
+              title="입력 중인 칸의 줄임말 코드를 어떻게 읽었는지 그 위에 작게 보여 줘요 (bb^ → B♭maj7)"
+            >
+              <span class="icon" data-icon="bulb"></span>입력 중 코드 풀이 보기<span
+                class="menu-check"
+                >✓</span
+              >
+            </button>
+            <hr />
+            <button role="menuitem" data-command="printSettings">
+              <span class="icon" data-icon="adjustments-horizontal"></span>악보·PDF 출력 설정…
             </button>
             <hr />
             <button role="menuitem" data-command="help">
               <span class="icon" data-icon="keyboard"></span>입력법<kbd>F1</kbd>
             </button>
             <button role="menuitem" data-command="settings" data-needs="ai">
-              <span class="icon" data-icon="settings"></span>설정 (AI 키, 모델)
+              <span class="icon" data-icon="settings"></span>AI 설정 (키, 모델)
             </button>
             <a
               role="menuitem"
@@ -260,11 +275,11 @@
         </button>
       </nav>
     </div>
-    <!-- "글 붙여넣기": a chart copied from the web, converted to Chordash (1.4: files come in
+    <!-- "복사한 악보 붙여넣기": a chart copied from the web, converted to Chordash (1.4: files come in
          through "열기"). -->
     <dialog id="import-dialog" class="import-dialog">
       <form method="dialog">
-        <h2>글 붙여넣기</h2>
+        <h2>복사한 악보 붙여넣기</h2>
         <p>
           웹에서 복사한 코드 악보(가사 위에 코드), 마디선 텍스트(| C | Am |), ChordPro를 Chordash
           문법으로 바꿔요. 확실하지 않은 곳에는 <b>?</b> 표시가 붙어요.

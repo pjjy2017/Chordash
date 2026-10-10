@@ -1,5 +1,5 @@
-// Two small dialogs (1.5): "코드 바꾸기" — one chord replaced everywhere (or on the selected
-// lines) — and "새 곡 틀" — a new song from this one or from a common form.
+// Two small dialogs (1.5): "특정 코드 일괄 바꾸기" — one chord replaced everywhere (or on the selected
+// lines) — and "틀로 새 곡 만들기" — a new song from this one or from a common form.
 
 import {
   applyChange,
@@ -44,7 +44,7 @@ const button = (text: string, className = ''): HTMLButtonElement => {
   return b
 }
 
-/** "코드 바꾸기": live count while typing, then one undoable change. */
+/** "특정 코드 일괄 바꾸기": live count while typing, then one undoable change. */
 export function openChordReplace(editor: ChordEditor): void {
   const { from, to } = editor.selection()
   const lines = editor.view.state.doc
@@ -52,7 +52,7 @@ export function openChordReplace(editor: ChordEditor): void {
     from === to ? null : { from: lines.lineAt(from).number, to: lines.lineAt(to).number }
   const where = range ? `${range.from}~${range.to}줄에서` : '곡 전체에서'
   const { dialog, body, actions } = dialogShell(
-    '코드 바꾸기',
+    '특정 코드 일괄 바꾸기',
     `${where} 바꿔요. Dm7과 D-7처럼 뜻이 같은 코드, 그 키의 도수 코드도 함께 찾아요.`
   )
   const field = (label: string): HTMLInputElement => {
@@ -144,7 +144,7 @@ export function openChordReplace(editor: ChordEditor): void {
   ;(find.value ? replacement : find).focus()
 }
 
-/** "새 곡 틀": picks a starting text; the caller opens it as a new, unsaved song. */
+/** "틀로 새 곡 만들기": picks a starting text; the caller opens it as a new, unsaved song. */
 export function chooseTemplate(currentText: string): Promise<string | null> {
   const title = readHeaderLine(currentText, 'title')
   const choices: { label: string; note: string; text: () => string }[] = [
@@ -170,7 +170,7 @@ export function chooseTemplate(currentText: string): Promise<string | null> {
   ]
   return new Promise((resolve) => {
     const { dialog, body, actions } = dialogShell(
-      '새 곡 틀',
+      '틀로 새 곡 만들기',
       '고른 틀로 저장 안 된 새 곡을 만들어요.'
     )
     let picked: string | null = null
