@@ -12,6 +12,17 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CLAUDE.md,README.md}'
   - '!{.env,.env.*,.npmrc}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # The Android app and the website are built from the same folder; the desktop app needs
+  # neither (1.6.1: the installer used to carry the whole android/ build, 49 MB).
+  - '!{android,ios,dist-web,scripts}/**'
+  - '!{capacitor.config.ts,vite.web.config.ts,vite.pdfjs.ts,*.zip}'
+  # Developer files inside the libraries the app runs with: source maps, type definitions, notes.
+  - '!**/node_modules/**/*.{map,d.ts,d.mts,d.cts,md,markdown}'
+  - '!**/node_modules/**/{test,tests,__tests__,docs,example,examples}/**'
+# Chromium's interface translations: Korean and English only (1.6.1, about 43 MB less).
+electronLanguages:
+  - ko
+  - en-US
 asarUnpack:
   - resources/**
 win:

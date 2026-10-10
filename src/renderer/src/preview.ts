@@ -63,7 +63,34 @@ type BarlineKind = 'plain' | 'final' | 'repeat-start' | 'repeat-end' | 'none'
  * Each bar draws its left barline, plus its right one when it is the last bar or the right side
  * is special (final, repeat end). A bar after a final or repeat end leaves its left side to it.
  */
-function barHtml(bar: Bar, index: number, bars: Bar[], line: number, theme: Theme): string {
+/** Chord text size on the page (preview.css `.chord`). */
+const CHORD_MM = 6.2
+/** Room a bar keeps for its padding and barlines. */
+const BAR_SPARE_MM = 5
+/** Long chords never shrink below this share of the normal size. */
+const MIN_FIT = 0.5
+
+/** About how wide the drawn chords are, in em — narrow and small signs counted as less. */
+function chordsWidthEm(html: string): number {
+  const marks = /<span class="(?:breath|accent)"[^>]*>[^<]*<\/span>/g
+  const supers = /<sup>([^<]*)<\/sup>/g
+  const withoutMarks = html.replace(marks, '')
+  // Superscripts are drawn smaller.
+  let em = 0
+  for (const m of withoutMarks.matchAll(supers)) em += m[1].length * 0.36
+  const text = withoutMarks.replace(supers, '').replace(/<[^>]+>/g, '')
+  for (const ch of text) em += /[1il()/.\s]/.test(ch) ? 0.34 : /[♭♯]/.test(ch) ? 0.5 : 0.62
+  return em
+}
+
+function barHtml(
+  bar: Bar,
+  index: number,
+  bars: Bar[],
+  line: number,
+  theme: Theme,
+  widthMm: number
+): string {
   const previous = index > 0 ? bars[index - 1] : null
   const left: BarlineKind = bar.repeatStart
     ? 'repeat-start'
@@ -83,7 +110,12 @@ function barHtml(bar: Bar, index: number, bars: Bar[], line: number, theme: Them
   const chords = bar.chords.map((c) => chordHtml(c, theme)).join('')
   // Where the bar is typed, so a click on the sheet can go there (1.5).
   const at = `data-line="${line}" data-from="${bar.from}" data-to="${bar.to}"`
-  return `<div class="bar" data-left="${left}" data-right="${right}" ${at}>${dots}${chords}</div>`
+  // Chords longer than their bar shrink to fit it, instead of running over the next barline.
+  const needed = (chordsWidthEm(chords) + 0.3 * bar.chords.length) * CHORD_MM
+  const room = widthMm - BAR_SPARE_MM
+  const fit = needed > room ? Math.max(MIN_FIT, room / needed) : 1
+  const style = fit < 1 ? ` style="--fit:${fit.toFixed(3)}"` : ''
+  return `<div class="bar" data-left="${left}" data-right="${right}" ${at}${style}>${dots}${chords}</div>`
 }
 
 /** A song-form part (`a)` → A) in a square box. */
@@ -103,7 +135,8 @@ function aboveHtml(block: RowBlock): string {
   return `<div class="${kind}" style="--slots:${slots}">${ending}${cells}</div>`
 }
 
-function blockHtml(block: PageBlock, theme: Theme): string {
+/** `contentMm`: the width rows are laid out in (page minus side margins). */
+function blockHtml(block: PageBlock, theme: Theme, contentMm: number): string {
   if (block.type === 'label') {
     const directive = block.directive
       ? ` <span class="label-directive">${escapeHtml(block.directive)}</span>`
@@ -134,7 +167,9 @@ function blockHtml(block: PageBlock, theme: Theme): string {
         : ''
   // Joined rows (print settings) keep each bar's own line for the sheet ↔ editor link.
   const bars = line.bars
-    .map((b, i, all) => barHtml(b, i, all, line.barLines?.[i] ?? line.line, theme))
+    .map((b, i, all) =>
+      barHtml(b, i, all, line.barLines?.[i] ?? line.line, theme, contentMm / block.slots)
+    )
     .join('')
   return (
     `<div class="row" style="height:${block.height}mm">` +
@@ -176,6 +211,8 @@ function metricVars(m: LayoutMetrics): string {
 const pageNumberHtml = (n: number | null): string =>
   n === null ? '' : `<div class="page-number">${n}</div>`
 
+const contentWidth = (m: LayoutMetrics): number => m.pageWidth - 2 * m.marginX
+
 /** Two pages side by side on landscape A4: each page drawn at 1/√2. */
 const BOOKLET_ZOOM = Math.SQRT1_2
 
@@ -190,6 +227,7 @@ function songPages(
   booklet: boolean
 ): string[] {
   const zoom = song.scale * (booklet ? BOOKLET_ZOOM : 1)
+  const content = contentWidth(song.metrics)
   const style = `${metricVars(song.metrics)};zoom:${zoom}`
   return song.model.pages.map(
     (page, i) =>
@@ -197,7 +235,7 @@ function songPages(
       `<header class="${page.number === 1 ? 'title' : 'heading'}">${escapeHtml(page.heading)}` +
       (page.key ? `<span class="song-key">Key ${withAccidentals(page.key)}</span>` : '') +
       `</header>` +
-      `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme)).join('')}</div>` +
+      `<div class="blocks">${page.blocks.map((b) => blockHtml(b, theme, content)).join('')}</div>` +
       pageNumberHtml(firstNumber === null ? null : firstNumber + i) +
       `</section>`
   )
@@ -227,7 +265,7 @@ export function snippetHtml(text: string, theme: Theme, slots = 2): string {
   const blocks = layout(parse(text).document, metrics).pages.flatMap((p) => p.blocks)
   return (
     `<div class="pages snippet theme-${theme.id}" style="${metricVars(theme.metrics)}">` +
-    `<div class="blocks">${blocks.map((b) => blockHtml(b, theme)).join('')}</div></div>`
+    `<div class="blocks">${blocks.map((b) => blockHtml(b, theme, contentWidth(metrics))).join('')}</div></div>`
   )
 }
 
@@ -298,7 +336,7 @@ export async function buildPrintHtml(
   title: string,
   booklet = false
 ): Promise<string> {
-  const fonts = await embeddedFontCss()
+  const fonts = await embeddedFontCss(pagesHtml)
   // A booklet prints on landscape paper.
   const paper = booklet ? '\n@page { size: A4 landscape; margin: 0; }' : ''
   return (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parse } from './document'
-import { DEFAULT_PRINT, joinRows, MIN_SCALE, printLayout, scaledMetrics } from './print'
+import { DEFAULT_PRINT, joinRows, MIN_SCALE, PART_ROOM, printLayout, scaledMetrics } from './print'
 import { DEFAULT_THEME } from './theme'
 
 const base = DEFAULT_THEME.metrics
@@ -21,6 +21,11 @@ describe('scaledMetrics', () => {
     expect(m.pageWidth).toBe(base.pageWidth * 2)
     expect(m.marginX * 0.5).toBe(base.marginX)
     expect(m.rowHeight).toBe(base.rowHeight)
+  })
+
+  it('keeps room for part boxes in the margin when the text is big', () => {
+    expect(scaledMetrics(base, 1.5, 1).marginX).toBe(PART_ROOM)
+    expect(scaledMetrics(base, 1, 1).marginX).toBe(base.marginX)
   })
 
   it('spaces rows and section gaps', () => {

@@ -1,5 +1,6 @@
 // Every character a chord chart can show must exist in one of the bundled fonts (ROADMAP Phase 4).
 import { openSync, type Font } from 'fontkit'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -34,5 +35,26 @@ describe('bundled fonts', () => {
         c
       ).toBe(true)
     }
+  })
+})
+
+describe('Pretendard subsets', () => {
+  // The app loads Pretendard in small pieces by character range (fonts.ts); together they must
+  // still cover what the full font is used for.
+  const css = readFileSync(
+    resolve(modules, 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'),
+    'utf8'
+  )
+  const spans = [...css.matchAll(/unicode-range:\s*([^;}]+)/g)].flatMap((m) =>
+    m[1].split(',').map((part) => {
+      const [from, to] = part.trim().replace(/^U\+/i, '').split('-')
+      return [parseInt(from, 16), parseInt(to ?? from, 16)]
+    })
+  )
+  const covered = (c: string): boolean =>
+    spans.some(([from, to]) => c.codePointAt(0)! >= from && c.codePointAt(0)! <= to)
+
+  it('cover Korean, jamo and △', () => {
+    for (const c of '가힣뷁똠방각하ㄱㅎㅏ△') expect(covered(c), c).toBe(true)
   })
 })

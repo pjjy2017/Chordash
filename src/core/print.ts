@@ -29,6 +29,9 @@ export const DEFAULT_PRINT: PrintOptions = {
   booklet: false
 }
 
+/** Width a part box needs in the left margin, in layout millimetres (preview.css `.part`). */
+export const PART_ROOM = 9.5
+
 export const MIN_SCALE = 0.45
 export const MAX_SCALE = 1.5
 /** Bars in a joined row. */
@@ -43,7 +46,8 @@ export function scaledMetrics(m: LayoutMetrics, scale: number, spacing: number):
     // Margins stay the same on paper.
     marginTop: m.marginTop / scale,
     marginBottom: m.marginBottom / scale,
-    marginX: m.marginX / scale,
+    // …but always room for the part boxes drawn in the left margin (`a)` → A).
+    marginX: Math.max(m.marginX / scale, PART_ROOM),
     rowHeight: m.rowHeight * spacing,
     sectionGap: m.sectionGap * spacing
   }

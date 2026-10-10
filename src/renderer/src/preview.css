@@ -326,7 +326,8 @@ body {
   min-width: max-content;
   padding-right: 0.3em;
   white-space: nowrap;
-  font-size: 6.2mm;
+  /* --fit: a bar whose chords would run over its barline draws them smaller (preview.ts). */
+  font-size: calc(6.2mm * var(--fit, 1));
   letter-spacing: -0.02em;
 }
 
