@@ -165,7 +165,8 @@ export function createWebPlatform(): Platform {
       libraryDialog: true
     },
 
-    ...libraryMethods([local, driveStore], TEXT_CHARTS),
+    // PDFs too: ones that hold words are read without the AI (1.7).
+    ...libraryMethods([local, driveStore], { ...TEXT_CHARTS, 'application/pdf': ['.pdf'] }),
     account: driveAccount(local),
 
     async exportPdf(html) {

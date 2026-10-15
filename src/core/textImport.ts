@@ -38,6 +38,8 @@ export function normalizeChord(token: string): string | null {
   if (/^n\.?c\.?$/i.test(token)) return 'nc'
   let t = token
     .replace(/♭/g, 'b')
+    // The minus sign of printed charts (C−7), as typed: C-7.
+    .replace(/−/g, '-')
     .replace(/♯/g, '#')
     .replace(/[△Δ]/g, '^')
     .replace(/°/g, 'o')

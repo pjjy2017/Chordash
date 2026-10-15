@@ -2,6 +2,7 @@
 // PDFs are drawn page by page with pdf.js; photos are scaled down. Everything happens in the
 // page itself, so the Android version can do the same in its web view.
 
+import type { PdfTextItem } from '../../core'
 import type { ChartImage, ImportedFile } from '../../platform'
 
 export interface ChartPages {
@@ -71,7 +72,11 @@ async function imagePages(file: ImportedFile): Promise<ChartPages> {
   return { pages: [pageFrom(canvas)], total: 1 }
 }
 
-async function pdfPages(file: ImportedFile, maxPages: number): Promise<ChartPages> {
+/** Opens a PDF with pdf.js; `use` reads from it, and the document is closed afterwards. */
+async function withPdf<T>(
+  file: ImportedFile,
+  use: (pdf: import('pdfjs-dist').PDFDocumentProxy) => Promise<T>
+): Promise<T> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
   const { default: workerUrl } = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -92,6 +97,14 @@ async function pdfPages(file: ImportedFile, maxPages: number): Promise<ChartPage
     } catch {
       throw new Error('PDF를 열 수 없어요. 암호가 걸렸거나 손상된 파일인지 확인해 주세요.')
     }
+    return await use(pdf)
+  } finally {
+    await task.destroy()
+  }
+}
+
+async function pdfPages(file: ImportedFile, maxPages: number): Promise<ChartPages> {
+  return withPdf(file, async (pdf) => {
     const pages: ChartPage[] = []
     for (let n = 1; n <= Math.min(pdf.numPages, maxPages); n++) {
       const page = await pdf.getPage(n)
@@ -103,9 +116,36 @@ async function pdfPages(file: ImportedFile, maxPages: number): Promise<ChartPage
       page.cleanup()
     }
     return { pages, total: pdf.numPages }
-  } finally {
-    await task.destroy()
-  }
+  })
+}
+
+/**
+ * The words a PDF holds, page by page, with where each piece sits (1.7). Empty pages for a scan.
+ * Read with pdf.js, the same as the page pictures.
+ */
+export function pdfTextItems(file: ImportedFile): Promise<PdfTextItem[][]> {
+  return withPdf(file, async (pdf) => {
+    const pages: PdfTextItem[][] = []
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n)
+      const content = await page.getTextContent()
+      const items: PdfTextItem[] = []
+      for (const item of content.items) {
+        if (!('str' in item) || item.str === '') continue
+        const [, , c, d, x, y] = item.transform as number[]
+        items.push({
+          str: item.str,
+          x,
+          y,
+          width: item.width,
+          height: item.height || Math.hypot(c, d)
+        })
+      }
+      pages.push(items)
+      page.cleanup()
+    }
+    return pages
+  })
 }
 
 /** All pages of the file (PDFs: at most `maxPages`), as JPEG page images. */

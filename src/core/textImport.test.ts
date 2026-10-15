@@ -42,7 +42,8 @@ describe('normalizeChord', () => {
     ['C△7', 'C^7'],
     ['B♭maj7', 'Bbmaj7'],
     ['N.C.', 'nc'],
-    ['G/B', 'G/B']
+    ['G/B', 'G/B'],
+    ['B♭−7', 'Bb-7']
   ])('%s → %s', (input, expected) => expect(normalizeChord(input)).toBe(expected))
   it.each(['the', 'Love', 'A-ha!', '가사', '7'])('%s is not a chord', (word) =>
     expect(normalizeChord(word)).toBeNull()

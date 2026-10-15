@@ -18,6 +18,7 @@ import {
   type TextEncodingName,
   DEFAULT_THEME,
   formatNote,
+  pdfPagesToText,
   printLayout,
   readShareLink,
   shareLink,
@@ -39,7 +40,7 @@ import {
   DONATE_URL
 } from '../../core'
 import { platform, type FileRef, type ImportedFile } from '../../platform'
-import { chartPages, isChartFile, type ChartPage } from './chartPages'
+import { chartPages, isChartFile, isPdf, pdfTextItems, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
 import { installChordKeyboard } from './chordKeyboard'
@@ -332,6 +333,8 @@ const commands: Record<string, () => Promise<unknown>> = {
       return
     }
     const { picked } = opened
+    // A PDF that holds words (made by another app or site) reads without the AI (1.7).
+    if (isPdf(picked) && (await importPdfText(picked))) return
     if (isChartFile(picked)) return importChart(picked)
     const { text, encoding } = decodeText(picked.data)
     await runImport(text, picked.file.name, encoding)
@@ -598,10 +601,35 @@ aiDialog.addEventListener('close', () => {
   aiPages.replaceChildren()
 })
 
+/** The words of a text PDF through the text importer. false when it has none (a scan). */
+async function importPdfText(picked: ImportedFile): Promise<boolean> {
+  status.textContent = 'PDF에서 글자를 읽는 중…'
+  const text = pdfPagesToText(await pdfTextItems(picked))
+  status.textContent = ''
+  if (text.replace(/\s/g, '').length < 4) {
+    pdfProblem = '이 PDF에는 글자가 없어요(사진이나 스캔으로 만든 PDF).'
+    return false
+  }
+  // Words, but no chord chart in them (e.g. notation with only a title): the AI reads the pages.
+  if (importText(text, picked.file.name).format === 'unknown') {
+    pdfProblem = '이 PDF의 글자에서 코드 악보를 찾지 못했어요(오선 악보 등).'
+    return false
+  }
+  await runImport(text, picked.file.name, null)
+  return true
+}
+
+/** Why a PDF goes to the AI, for the message where there is none. */
+let pdfProblem = ''
+
 /** A photo or PDF of a chart: page images → the AI dialog. */
 async function importChart(picked: ImportedFile): Promise<void> {
   if (!platform.features.ai) {
-    window.alert('악보 사진·PDF는 데스크톱·안드로이드 앱에서 AI로 읽을 수 있어요.')
+    window.alert(
+      isPdf(picked)
+        ? `${pdfProblem} 데스크톱·안드로이드 앱에서 AI로 그림을 읽을 수 있어요.`
+        : '악보 사진은 데스크톱·안드로이드 앱에서 AI로 읽을 수 있어요.'
+    )
     return
   }
   aiJob = null
