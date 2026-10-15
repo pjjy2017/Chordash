@@ -119,11 +119,11 @@ export const SONG_TEMPLATES: SongTemplate[] = [
     label: 'AABA 32마디 (빈 마디)',
     text:
       'key: C\n' +
-      'a) a) b) a)\n\n' +
+      'a] a] b] a]\n\n' +
       ['A', 'A', 'B', 'A']
         .map((name, i) => {
           const end = i === 3 ? '.' : '|'
-          return `[${name}]\n${name.toLowerCase()}) | , , , |\n| , , , ${end}`
+          return `[${name}]\n${name.toLowerCase()}] | , , , |\n| , , , ${end}`
         })
         .join('\n\n') +
       '\n'

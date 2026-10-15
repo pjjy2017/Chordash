@@ -9,6 +9,7 @@ import {
   type ChordItem,
   type LayoutMetrics,
   type PageBlock,
+  type Part,
   type PrintLayout,
   type RowBlock,
   type Theme
@@ -119,7 +120,9 @@ function barHtml(
 }
 
 /** A song-form part (`a)` → A) in a square box. */
-export const partHtml = (label: string): string => `<span class="part">${escapeHtml(label)}</span>`
+/** A song-form part: `a]` in a square, `a)` in a circle. */
+export const partHtml = (part: Pick<Part, 'label' | 'shape'>): string =>
+  `<span class="part ${part.shape}">${escapeHtml(part.label)}</span>`
 
 /** Band above the bars: the ending bracket (`1.`) and texts over bars (`"Break"`). */
 function aboveHtml(block: RowBlock): string {
@@ -147,7 +150,7 @@ function blockHtml(block: PageBlock, theme: Theme, contentMm: number): string {
     return `<div class="label">${escapeHtml(block.name)}${directive}${key}</div>`
   }
   if (block.type === 'form') {
-    return `<div class="form">${block.parts.map((p) => partHtml(p.label)).join('')}</div>`
+    return `<div class="form">${block.parts.map(partHtml).join('')}</div>`
   }
   if (block.type === 'directive') {
     return `<div class="directive">${escapeHtml(block.text)}</div>`
@@ -176,7 +179,7 @@ function blockHtml(block: PageBlock, theme: Theme, contentMm: number): string {
     memos +
     (block.above ? aboveHtml(block) : '') +
     `<div class="bar-row">` +
-    (line.part ? partHtml(line.part.label) : '') +
+    (line.part ? partHtml(line.part) : '') +
     `<div class="bars" style="--slots:${block.slots}">${bars}</div>` +
     `</div>` +
     cue +

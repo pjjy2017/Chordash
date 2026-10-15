@@ -112,6 +112,11 @@ body {
   border-radius: 0.6mm;
 }
 
+/* `a)`: the letter in a circle (a pill for two letters, B2). */
+.part.circle {
+  border-radius: 3.2mm;
+}
+
 /* A row, top to bottom: colour memos, the "above" band, the bars, the lyric cue.
    Its total height comes from layout() (inline style). */
 .bar-row {

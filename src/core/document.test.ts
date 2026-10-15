@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { formatChord } from './chord'
-import { countUncertain, parse, type BarLine, type ChordDocument } from './document'
+import { countUncertain, parse, type BarLine, type ChordDocument, type Part } from './document'
 
 const barLines = (doc: ChordDocument): BarLine[] =>
   doc.sections.flatMap((s) => s.items.filter((i): i is BarLine => i.type === 'bars'))
@@ -294,8 +294,14 @@ describe('countUncertain', () => {
 describe('song-form parts', () => {
   it('reads a part marker at the start of a bar line', () => {
     const line = barLines(parse('a) Bb^7, A-7').document)[0]
-    expect(line.part).toEqual({ label: 'A', from: 0, to: 2 })
+    expect(line.part).toEqual({ label: 'A', shape: 'circle', from: 0, to: 2 })
     expect(chordNames(line)).toEqual([['B♭maj7'], ['Am7']])
+  })
+  it('a] is a square, a) a circle', () => {
+    const part = (t: string): Part | null => barLines(parse(t).document)[0].part
+    expect(part('a] C')).toEqual({ label: 'A', shape: 'square', from: 0, to: 2 })
+    expect(part('b2) C')?.shape).toBe('circle')
+    expect(part('ㄱ] C')?.shape).toBe('square')
   })
   it('uppercases Latin letters and keeps digits and Hangul', () => {
     const label = (t: string): string | undefined => barLines(parse(t).document)[0].part?.label
@@ -311,11 +317,17 @@ describe('song-form parts', () => {
     expect(line.bars).toHaveLength(2)
   })
   it('reads a line of parts only as the song form', () => {
-    const { document, diagnostics } = parse('a) a) b) a) ㄱ)')
+    const { document, diagnostics } = parse('a] a] b) a] ㄱ)')
     expect(diagnostics).toEqual([])
     expect(document.sections[0].items[0]).toMatchObject({
       type: 'form',
-      parts: [{ label: 'A' }, { label: 'A' }, { label: 'B' }, { label: 'A' }, { label: 'ㄱ' }]
+      parts: [
+        { label: 'A', shape: 'square' },
+        { label: 'A', shape: 'square' },
+        { label: 'B', shape: 'circle' },
+        { label: 'A', shape: 'square' },
+        { label: 'ㄱ', shape: 'circle' }
+      ]
     })
   })
   it('is not confused with chords', () => {
@@ -324,9 +336,11 @@ describe('song-form parts', () => {
   })
   it('rejects a part in the middle of a line', () => {
     expect(errors('C, a) D')).toEqual(['파트 표시는 줄 맨 앞에만 쓸 수 있어요'])
+    expect(errors('C, a] D')).toEqual(['파트 표시는 줄 맨 앞에만 쓸 수 있어요'])
   })
   it('marks parts for colouring', () => {
     expect(parse('a) C').spans.map((s) => s.kind)).toEqual(['part', 'chord'])
+    expect(parse('a] C').spans.map((s) => s.kind)).toEqual(['part', 'chord'])
   })
 })
 

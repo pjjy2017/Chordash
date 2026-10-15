@@ -77,10 +77,12 @@ export interface BarLine {
   joined?: boolean
 }
 
-/** A song-form part such as `a)`, `b2)`, `ㄱ4)`. */
+/** A song-form part such as `a]`, `b2)`, `ㄱ4)`. */
 export interface Part {
-  /** Shown in the box: Latin letters uppercased (`a)` → `A`, `b2)` → `B2`). */
+  /** Shown in the box: Latin letters uppercased (`a)` → `A`, `b2]` → `B2`). */
   label: string
+  /** `a]` → in a square, `a)` → in a circle. */
+  shape: 'square' | 'circle'
   /** 0-based column range of the typed marker, `)` included. */
   from: number
   to: number
@@ -156,7 +158,8 @@ export interface SyntaxSpan {
 
 const SECTION = /^\[([^\]]*)\]/
 /** Song-form part marker: one letter (or Hangul), optional digits, `)` — `a)`, `b2)`, `ㄱ4)`. */
-const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3])(\d*)\)$/
+/** `a]` square, `a)` circle: a letter (Latin or Korean), maybe a number. */
+const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3])(\d*)([)\]])$/
 const HEADER = /^(title|key|theme)\s*:\s*(.*)$/
 /** Lyric cue: `l: 첫 소절` or `lyric: 첫 소절` (same as `_ 첫 소절`). `>` is kept free. */
 const LYRIC = /^(?:l|lyric)\s*:\s*(.*)$/
@@ -302,7 +305,12 @@ class Parser {
   private parsePart(text: string, at: number): Part {
     const m = PART.exec(text)!
     this.mark('part', at, at + text.length)
-    return { label: m[1].toUpperCase() + m[2], from: at, to: at + text.length }
+    return {
+      label: m[1].toUpperCase() + m[2],
+      shape: m[3] === ']' ? 'square' : 'circle',
+      from: at,
+      to: at + text.length
+    }
   }
 
   private parseHeader(name: string, value: string, start: number, end: number): void {

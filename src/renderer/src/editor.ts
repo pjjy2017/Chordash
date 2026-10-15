@@ -130,15 +130,18 @@ class BarlineWidget extends WidgetType {
 }
 
 class PartWidget extends WidgetType {
-  constructor(readonly label: string) {
+  constructor(
+    readonly label: string,
+    readonly shape: Part['shape']
+  ) {
     super()
   }
   eq(other: PartWidget): boolean {
-    return other.label === this.label
+    return other.label === this.label && other.shape === this.shape
   }
   toDOM(): HTMLElement {
     const el = document.createElement('span')
-    el.className = 'cd-live-part'
+    el.className = `cd-live-part ${this.shape}`
     el.textContent = this.label
     return el
   }
@@ -221,12 +224,14 @@ function liveDecorations(state: EditorState): DecorationSet {
     state.selection.ranges.some((r) => r.to >= from && r.from <= to)
   const decorations: Range<Decoration>[] = []
 
-  /** A part marker (`a)`) is boxed once the cursor has left it. */
+  /** A part marker (`a]`, `a)`) is drawn in its square or circle once the cursor has left it. */
   const addPart = (lineNo: number, part: Part): void => {
     const from = offset(state.doc, lineNo, part.from)
     const to = offset(state.doc, lineNo, part.to)
     if (touching(from, to)) return
-    decorations.push(Decoration.replace({ widget: new PartWidget(part.label) }).range(from, to))
+    decorations.push(
+      Decoration.replace({ widget: new PartWidget(part.label, part.shape) }).range(from, to)
+    )
   }
 
   for (const section of doc.sections) {

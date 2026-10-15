@@ -21,7 +21,7 @@ key: F
 [Intro] "드럼 4마디"
 
 [Verse]
-a) Bb^7, A-7, Bb^7, F B7*
+a] Bb^7, A-7, Bb^7, F B7*
 _ 그대는 어디에
 Bb, A- D-, G-, Cs B7
 _ 내 맘을 두고
@@ -69,7 +69,7 @@ Rows: one line per row of the chart, keeping the chart's rows and bar counts.
 - Lyrics written under a row: the next line "_ <first few words>", at most about 15 characters (no commas). If the lyrics are written under each bar, split them with commas, one per bar: "_ 그대는, 어디에, , 있나요".
 - Plain text written above a whole row: the line before the row, "^ <text>".
 - A note in colored pen above a row: the line before the row, "{teal: 스캣}". Colors: teal red blue green orange purple gray (pick the nearest).
-- Song form letters in boxes (A, B, B2, 가…): start the row with "a) ", "b2) ". A line of only such letters is a form overview: "a) a) b) a)".
+- Song form letters (A, B, B2, 가…) at the start of a row: in a square box → "a] ", "b2] "; in a circle → "a) ", "b2) ". A line of only such letters is a form overview: "a] a] b] a]".
 - Anything else worth keeping that does not fit: a comment line "// …".
 - Ignore page numbers, page breaks and staff lines.
 

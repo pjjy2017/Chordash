@@ -69,7 +69,8 @@ const GROUPS: Group[] = [
     rows: [
       { keys: ['['], meaning: '섹션 이름', show: '[Verse]\n| , |', slots: 2 },
       { keys: ['key:'], meaning: '섹션 뒤: 키 바뀜', show: '[B] key: G\n| , |', slots: 2 },
-      { keys: ['a)'], meaning: '송폼 파트 (줄 맨 앞)', show: 'a) | , |', slots: 2 },
+      { keys: ['a]'], meaning: '파트: 네모 (줄 맨 앞)', show: 'a] | , |', slots: 2 },
+      { keys: ['a)'], meaning: '파트: 동그라미 (줄 맨 앞)', show: 'a) | , |', slots: 2 },
       { keys: ['"'], meaning: '섹션 뒤: 지시문', show: '[Intro] "드럼 4마디"\n| , |', slots: 2 },
       { keys: ['?'], meaning: '확인 필요 표시', show: '?C7', slots: 1 },
       { keys: ['//'], meaning: '메모 — 악보에 안 나옴' },

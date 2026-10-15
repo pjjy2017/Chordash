@@ -671,7 +671,7 @@ textarea {
   color: var(--bar-strong);
 }
 
-/* Song-form part (a) → A) boxed in the editor, like on the sheet. */
+/* Song-form part boxed in the editor, like on the sheet: a] square, a) circle. */
 .cd-live-part {
   display: inline-block;
   min-width: 1.3em;
@@ -2249,4 +2249,9 @@ button.chip-toggle:hover {
   font-size: 13px;
   font-weight: 400;
   color: var(--muted);
+}
+
+/* `a)`: the part letter in a circle (a pill for two letters), as on the sheet (1.7.2). */
+.cd-live-part.circle {
+  border-radius: 999px;
 }
