@@ -24,6 +24,10 @@ export function createElectronPlatform(): Platform {
       libraryDialog: false
     },
     openFile: () => bridge.openFile(),
+    droppedFile: (file) => {
+      const path = bridge.pathForFile(file)
+      return path ? { id: path, name: file.name } : null
+    },
     recentFiles: () => bridge.recentFiles(),
     openRecent: (file) => bridge.openRecent(file),
     saveFile: (file, text) => bridge.saveFile(file, text),

@@ -15,6 +15,8 @@ import type {
 
 export interface ElectronBridge {
   openFile(): Promise<OpenResult | null>
+  /** Where a dropped file is on disk ('' when it is not a disk file). */
+  pathForFile(file: File): string
   recentFiles(): Promise<FileRef[]>
   openRecent(file: FileRef): Promise<OpenResult | null>
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>

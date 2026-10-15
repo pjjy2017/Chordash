@@ -1,11 +1,12 @@
 // Exposes the Electron IPC bridge used by src/platform/electron. Nothing else is exposed
 // to the page: the renderer reaches the device only through the platform interface.
 
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { IPC, type ElectronBridge } from '../platform/electron/bridge'
 
 const bridge: ElectronBridge = {
   openFile: () => ipcRenderer.invoke(IPC.open),
+  pathForFile: (file) => webUtils.getPathForFile(file),
   recentFiles: () => ipcRenderer.invoke(IPC.recentFiles),
   openRecent: (file) => ipcRenderer.invoke(IPC.openRecent, file),
   saveFile: (file, text) => ipcRenderer.invoke(IPC.save, file, text),

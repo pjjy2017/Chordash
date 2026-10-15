@@ -39,7 +39,7 @@ import {
   APP_VERSION,
   DONATE_URL
 } from '../../core'
-import { platform, type FileRef, type ImportedFile } from '../../platform'
+import { platform, type FileRef, type ImportedFile, type OpenResult } from '../../platform'
 import { chartPages, isChartFile, isPdf, pdfTextItems, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
 import { installFonts } from './fonts'
@@ -326,18 +326,7 @@ const commands: Record<string, () => Promise<unknown>> = {
   // One "열기" for everything (1.4): songs open as they are; other charts are converted.
   open: async () => {
     const opened = await platform.openFile()
-    if (!opened) return
-    if (opened.kind === 'paste') return openPaste()
-    if (opened.kind === 'song') {
-      if (await confirmDiscard()) load(opened.text, opened.file)
-      return
-    }
-    const { picked } = opened
-    // A PDF that holds words (made by another app or site) reads without the AI (1.7).
-    if (isPdf(picked) && (await importPdfText(picked))) return
-    if (isChartFile(picked)) return importChart(picked)
-    const { text, encoding } = decodeText(picked.data)
-    await runImport(text, picked.file.name, encoding)
+    if (opened) await openResult(opened)
   },
   paste: async () => openPaste(),
   save,
@@ -365,6 +354,89 @@ const commands: Record<string, () => Promise<unknown>> = {
   help: openHelp,
   about: openAbout,
   setlist: () => openSetlist(() => ({ file, dirty: isDirty() }))
+}
+
+/** What "열기" (or a dropped file) brought: a song opens, anything else is converted. */
+async function openResult(opened: OpenResult): Promise<void> {
+  if (opened.kind === 'paste') return openPaste()
+  if (opened.kind === 'song') {
+    if (await confirmDiscard()) load(opened.text, opened.file)
+    return
+  }
+  const { picked } = opened
+  // A PDF that holds words (made by another app or site) reads without the AI (1.7).
+  if (isPdf(picked) && (await importPdfText(picked))) return
+  if (isChartFile(picked)) return importChart(picked)
+  const { text, encoding } = decodeText(picked.data)
+  await runImport(text, picked.file.name, encoding)
+}
+
+// --- drag and drop (1.7.1): a file dropped on the window opens like "열기" -------------------
+
+const dropHint = $<HTMLElement>('drop-hint')
+let dragDepth = 0
+let nextDrop = 1
+
+const carriesFiles = (e: DragEvent): boolean => e.dataTransfer?.types.includes('Files') ?? false
+
+window.addEventListener('dragenter', (e) => {
+  if (!carriesFiles(e)) return
+  dragDepth++
+  dropHint.hidden = false
+})
+window.addEventListener('dragleave', (e) => {
+  if (!carriesFiles(e)) return
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) dropHint.hidden = true
+})
+// Without this the window would show the file itself instead of letting the app take it.
+// Caught first (capture), so the editor does not paste a dropped file's text into the song.
+window.addEventListener(
+  'dragover',
+  (e) => {
+    if (!carriesFiles(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer!.dropEffect = 'copy'
+  },
+  true
+)
+window.addEventListener(
+  'drop',
+  (e) => {
+    if (!carriesFiles(e)) return
+    e.preventDefault()
+    e.stopPropagation()
+    dragDepth = 0
+    dropHint.hidden = true
+    const [dropped] = e.dataTransfer!.files
+    if (dropped) void openDropped(dropped).catch(fail)
+  },
+  true
+)
+
+async function openDropped(dropped: File): Promise<void> {
+  if (/\.setlist$/i.test(dropped.name)) {
+    window.alert('셋리스트 파일은 셋리스트 창의 "열기…"로 열어 주세요.')
+    return
+  }
+  // Desktop: a song stays tied to its file, so saving writes it back (and it joins 최근 파일).
+  const ref = platform.droppedFile?.(dropped)
+  if (ref && /\.chord$/i.test(dropped.name) && platform.openRecent) {
+    const opened = await platform.openRecent(ref)
+    if (opened) return openResult(opened)
+  }
+  const data = new Uint8Array(await dropped.arrayBuffer())
+  if (/\.chord$/i.test(dropped.name)) {
+    // Web and phones cannot write back to a dropped file: it opens as a new, unsaved song.
+    const { text } = decodeText(data)
+    if (await confirmDiscard()) load(text, null)
+    return
+  }
+  await openResult({
+    kind: 'import',
+    picked: { file: ref ?? { id: `drop:${nextDrop++}`, name: dropped.name }, data }
+  })
 }
 
 // --- import: text from other formats → a new document; the original stays viewable -------

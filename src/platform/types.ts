@@ -152,6 +152,8 @@ export interface Platform {
   features: PlatformFeatures
   /** Asks for a song — or any chart file to convert, or pasting. null when cancelled. */
   openFile(): Promise<OpenResult | null>
+  /** The file a dropped File is, when the platform can find it again (desktop: its path). */
+  droppedFile?(file: File): FileRef | null
   /** Songs opened or saved lately, newest first (desktop; elsewhere the library lists them). */
   recentFiles?(): Promise<FileRef[]>
   /** Opens a song from the recent list; null when it is not there any more. */

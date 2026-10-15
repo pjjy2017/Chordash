@@ -2215,3 +2215,38 @@ button.chip-toggle {
 button.chip-toggle:hover {
   background: var(--ink-soft);
 }
+
+/* --- Drop a file to open it (1.7.1) ------------------------------------------------------- */
+
+.drop-hint {
+  position: fixed;
+  inset: 10px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 3px dashed var(--teal);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.drop-hint[hidden] {
+  display: none;
+}
+
+.drop-hint > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.drop-hint small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
