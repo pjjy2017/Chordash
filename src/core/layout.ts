@@ -57,17 +57,28 @@ export interface PageModel {
 export const hasBelow = (line: BarLine): boolean =>
   line.cue !== null || line.bars.some((b) => b.lyric !== null)
 
-/** Row height, top to bottom: memos and ^ texts, the "above" band, the bars, the lyrics. */
+/** Texts drawn inside the row itself, just above the chords: `^` lines and `"Break"` (1.7.3). */
+export const textsInRow = (line: BarLine): boolean =>
+  line.ending === null &&
+  (line.bars.some((b) => b.texts.length > 0) || line.memos.some((m) => m.color === 'ink'))
+
+/**
+ * Row height, top to bottom: colour memos, the ending band, the bars. Lyrics (`_`) and `^`
+ * texts take no extra height (user decision 1.7.3): they sit in the space just under and over
+ * the chords. With a 1./2. ending the texts stay in the ending's band.
+ */
 function rowBlock(line: BarLine, m: LayoutMetrics): RowBlock {
-  const hasAbove = line.ending !== null || line.bars.some((b) => b.texts.length > 0)
+  const hasAbove = line.ending !== null
   const above = hasAbove ? m.aboveHeight : 0
+  // `^` lines over the whole row are drawn in the row when its bars have no texts of their own.
+  const inRow = textsInRow(line) && !line.bars.some((b) => b.texts.length > 0)
+  const memos = line.memos.filter((memo) => !(inRow && memo.color === 'ink')).length
   return {
     type: 'row',
     line,
     slots: Math.max(m.minBarsPerRow, line.bars.length),
     above,
-    height:
-      line.memos.length * m.memoHeight + above + m.rowHeight + (hasBelow(line) ? m.cueHeight : 0)
+    height: memos * m.memoHeight + above + m.rowHeight
   }
 }
 

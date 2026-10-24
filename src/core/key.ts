@@ -46,7 +46,13 @@ export function spellOnLetter(pitch: number, index: number): Note {
     i = (i + 6) % 7
     accidental = signedInterval(LETTER_PITCH[i], pitch)
   }
-  return { letter: LETTERS[i], accidental }
+  // C♭ F♭ E♯ B♯ are written as the plain neighbour: B E F C (user decision 1.7.3, e.g. 4 in G♭).
+  const letter = LETTERS[i]
+  if (accidental === -1 && (letter === 'C' || letter === 'F'))
+    return { letter: letter === 'C' ? 'B' : 'E', accidental: 0 }
+  if (accidental === 1 && (letter === 'E' || letter === 'B'))
+    return { letter: letter === 'E' ? 'F' : 'C', accidental: 0 }
+  return { letter, accidental }
 }
 
 /** Scale degree (1..7) of a key, raised/lowered by `accidental` semitones. */

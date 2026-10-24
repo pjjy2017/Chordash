@@ -14,10 +14,12 @@ import {
   FOLDER,
   libraryMethods,
   localStore,
+  shareBytes,
   shareFile,
-  TEXT_CHARTS
+  TEXT_CHARTS,
+  writeBytesToFolder
 } from '../library'
-import { printTip } from '../shared'
+import { printTip, toBase64 } from '../shared'
 import type { Platform, RecognizeResult } from '../types'
 import { androidUpdates } from './updates'
 
@@ -89,6 +91,21 @@ export function createAndroidPlatform(): Platform {
       { ...TEXT_CHARTS, ...CHART_IMAGES }
     ),
     updates: androidUpdates,
+
+    async saveExport(name, data) {
+      await writeBytesToFolder(name, toBase64(data))
+      return { id: `local:${name}`, name }
+    },
+
+    async shareFile(name, data, _mime, title) {
+      try {
+        await shareBytes(name, toBase64(data), title)
+        return 'shared'
+      } catch {
+        // Closed without choosing an app.
+        return 'cancelled'
+      }
+    },
     shareUrl: async (url, title) => {
       await Share.share({ title, url })
     },

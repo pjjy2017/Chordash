@@ -20,9 +20,45 @@ export function pickWithInput(type: PickerType, multiple: boolean): Promise<File
   })
 }
 
+/** Bytes as base64 (Capacitor's file plugin takes files that way). */
+export function toBase64(data: Uint8Array): string {
+  let binary = ''
+  for (let i = 0; i < data.length; i += 0x8000) {
+    binary += String.fromCharCode(...data.subarray(i, i + 0x8000))
+  }
+  return btoa(binary)
+}
+
+/**
+ * The browser's own share sheet where there is one for files (phones), else a download.
+ * Desktop browsers have no useful one, so they download.
+ */
+export async function shareOrDownload(
+  name: string,
+  data: Uint8Array,
+  mime: string,
+  title: string
+): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const file = new File([data as BlobPart], name, { type: mime })
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title })
+      return 'shared'
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
+    }
+  }
+  download(name, data, mime)
+  return 'downloaded'
+}
+
 /** Saves text to the browser's downloads. */
-export function download(name: string, text: string, type = 'text/plain;charset=utf-8'): void {
-  const url = URL.createObjectURL(new Blob([text], { type }))
+export function download(
+  name: string,
+  data: string | Uint8Array,
+  type = 'text/plain;charset=utf-8'
+): void {
+  const url = URL.createObjectURL(new Blob([data as BlobPart], { type }))
   const link = document.createElement('a')
   link.href = url
   link.download = name

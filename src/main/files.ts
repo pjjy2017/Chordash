@@ -3,6 +3,7 @@
 import { app, BrowserWindow, dialog, ipcMain, type WebContents } from 'electron'
 import { access, readFile, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
+import { suggestedFileName } from '../core/header'
 import { appTitle } from '../core/version'
 import { IPC } from '../platform/electron/bridge'
 import type { DiscardChoice, DocumentState, FileRef, OpenResult } from '../platform/types'
@@ -91,7 +92,7 @@ async function saveAs(
   text: string
 ): Promise<FileRef | null> {
   const result = await dialog.showSaveDialog(win, {
-    defaultPath: file?.id ?? '제목 없음.chord',
+    defaultPath: file?.id ?? suggestedFileName(text),
     filters: FILTERS
   })
   if (result.canceled || !result.filePath) return null

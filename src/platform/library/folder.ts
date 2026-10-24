@@ -109,6 +109,25 @@ export async function writeToFolder(name: string, text: string): Promise<void> {
   })
 }
 
+/** A made file (a JPG) into the folder, as bytes (1.7.3). */
+export async function writeBytesToFolder(name: string, base64: string): Promise<void> {
+  await prepare()
+  await Filesystem.writeFile({
+    path: `${FOLDER}/${name}`,
+    directory,
+    data: base64,
+    recursive: true
+  })
+}
+
+/** Android: a file to send, written to the app's cache and handed to the share sheet (1.7.3). */
+export async function shareBytes(name: string, base64: string, title: string): Promise<void> {
+  const path = `share/${name}`
+  await Filesystem.writeFile({ path, directory: Directory.Cache, data: base64, recursive: true })
+  const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache })
+  await Share.share({ title, files: [uri] })
+}
+
 /** Android: hands a file to another app (KakaoTalk, Drive, …). */
 export async function shareFile(name: string): Promise<void> {
   const { uri } = await Filesystem.getUri({ path: `${FOLDER}/${name}`, directory })

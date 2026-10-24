@@ -22,6 +22,9 @@ export interface ElectronBridge {
   saveFile(file: FileRef | null, text: string): Promise<FileRef | null>
   saveFileAs(file: FileRef | null, text: string): Promise<FileRef | null>
   exportPdf(html: string, suggestedName: string): Promise<FileRef | null>
+  saveExport(name: string, data: Uint8Array): Promise<FileRef | null>
+  shareFile(name: string, data: Uint8Array): Promise<boolean>
+  pdfBytes(html: string): Promise<Uint8Array>
   confirmDiscard(name: string): Promise<DiscardChoice>
   setDocumentState(state: DocumentState): void
   /** Main asks before closing a window with unsaved changes. */
@@ -48,6 +51,9 @@ export const IPC = {
   save: 'file:save',
   saveAs: 'file:saveAs',
   exportPdf: 'file:exportPdf',
+  saveExport: 'file:saveExport',
+  shareFile: 'file:share',
+  pdfBytes: 'file:pdfBytes',
   confirmDiscard: 'doc:confirmDiscard',
   documentState: 'doc:state',
   closeRequested: 'app:closeRequested',

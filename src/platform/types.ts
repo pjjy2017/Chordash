@@ -123,6 +123,9 @@ export interface OpenedSetlist {
 
 export type DiscardChoice = 'save' | 'discard' | 'cancel'
 
+/** What became of a shared file: handed over, shown in its folder, or downloaded. */
+export type ShareOutcome = 'shared' | 'shown' | 'downloaded' | 'cancelled'
+
 export interface DocumentState {
   /** Name to show, e.g. `Chordash.chord` or `제목 없음`. */
   name: string
@@ -158,6 +161,18 @@ export interface Platform {
   recentFiles?(): Promise<FileRef[]>
   /** Opens a song from the recent list; null when it is not there any more. */
   openRecent?(file: FileRef): Promise<OpenResult | null>
+  /**
+   * Saves a file the app made (a JPG): where the user chooses (desktop), to the downloads (web),
+   * or to Documents/Chordash (Android). Null when cancelled.
+   */
+  saveExport(name: string, data: Uint8Array, mime: string): Promise<FileRef | null>
+  /**
+   * Hands a file to another app (KakaoTalk, mail, messages): the share sheet on phones (and web
+   * where the browser has one); the desktop saves it and shows it in its folder to drag from.
+   */
+  shareFile(name: string, data: Uint8Array, mime: string, title: string): Promise<ShareOutcome>
+  /** A real PDF of a print document, as bytes (desktop); elsewhere PDFs are made of pictures. */
+  pdfBytes?(html: string): Promise<Uint8Array>
   /** Hands a link to the system share sheet (Android); elsewhere the link is copied. */
   shareUrl?(url: string, title: string): Promise<void>
   /** New versions from inside the app; the web version is always the newest and has none. */

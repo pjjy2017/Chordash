@@ -74,9 +74,9 @@ describe('layout', () => {
     expect(pages.map((p) => p.heading)).toEqual(['가을 연습곡', '가을 연습곡 2', '가을 연습곡 3'])
   })
 
-  it('counts lyric cues in the row height', () => {
+  it('lyric cues take no extra height (1.7.3)', () => {
     const [page] = pagesOf('| C |\nl: cue\n| D |')
-    expect(page.blocks.map((b) => b.height)).toEqual([15, 10])
+    expect(page.blocks.map((b) => b.height)).toEqual([10, 10])
   })
 
   it('gives short rows at least minBarsPerRow slots', () => {
@@ -126,12 +126,12 @@ describe('song-form parts on the page', () => {
 
 describe('Phase 6 heights', () => {
   const heights = (text: string): number[] => pagesOf(text)[0].blocks.map((b) => b.height)
-  it('adds a line per colour memo, a band for endings and texts over bars', () => {
-    // row 10, cue 5, memo 4 each, above 6
+  it('adds a line per colour memo and a band for endings; texts over bars sit in the row', () => {
+    // row 10, memo 4 each, above 6; lyrics and texts over bars add nothing (1.7.3)
     expect(heights('{teal: a}\n{red: b}\n| C |')).toEqual([18])
     expect(heights('1. C, D')).toEqual([16])
-    expect(heights('C, "Break" nc')).toEqual([16])
-    expect(heights('{teal: a}\n1. C\nl: cue')).toEqual([25])
+    expect(heights('C, "Break" nc')).toEqual([10])
+    expect(heights('{teal: a}\n1. C\nl: cue')).toEqual([20])
   })
   it('gives standalone directives their own block', () => {
     expect(pagesOf('[A]\n"드럼 4마디"\n| C |')[0].blocks.map((b) => b.type)).toEqual([
@@ -148,11 +148,13 @@ describe('rows with _ and ^ text (Phase 13)', () => {
     return block.height
   }
 
-  it('makes room for lyrics under bars and ^ text over the line', () => {
+  it('keeps the row height with lyrics under bars and ^ text over the line (1.7.3)', () => {
     expect(rowHeight('C, F')).toBe(10)
-    expect(rowHeight('C, F\n_ 가, 나')).toBe(15)
-    expect(rowHeight('C, F _ 그대는 어디에')).toBe(15)
-    expect(rowHeight('^ 따-닷\nC, F')).toBe(14)
-    expect(rowHeight('^ Break, Fill\nC, F')).toBe(16)
+    expect(rowHeight('C, F\n_ 가, 나')).toBe(10)
+    expect(rowHeight('C, F _ 그대는 어디에')).toBe(10)
+    expect(rowHeight('^ 따-닷\nC, F')).toBe(10)
+    expect(rowHeight('^ Break, Fill\nC, F')).toBe(10)
+    // With per-bar texts too, a ^ line over the whole row keeps its own memo line.
+    expect(rowHeight('^ 따-닷\nC, "Break" F')).toBe(14)
   })
 })

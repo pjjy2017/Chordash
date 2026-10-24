@@ -19,6 +19,7 @@ import {
   DEFAULT_THEME,
   formatNote,
   pdfPagesToText,
+  jpegsToPdf,
   printLayout,
   readShareLink,
   shareLink,
@@ -47,7 +48,7 @@ import { installChordKeyboard } from './chordKeyboard'
 import { installAccount } from './account'
 import { dropDraft, keepDraft, readDraft, type Draft } from './draft'
 import { installEditorZoom, zoomKey } from './editorZoom'
-import { showNotice } from './notice'
+import { hideNotice, showNotice } from './notice'
 import { chooseTemplate, openChordReplace } from './songDialogs'
 import { openPrintSettings, printOptions, printSettingsChanged } from './printSettings'
 import { openStage } from './stage'
@@ -56,6 +57,7 @@ import { openHelp } from './help'
 import exampleSong from '../../../examples/Chordash.chord?raw'
 import { installIcons } from './icons'
 import { buildPrintDocument, renderPages } from './preview'
+import { sheetPictures, stackedJpeg } from './sheetImage'
 import { modelName, openSettings, recognizeModel } from './settings'
 import { openSetlist } from './setlist'
 
@@ -100,7 +102,19 @@ function reportState(): void {
   docName.textContent = file ? file.name.replace(/\.chord$/i, '') : title || UNTITLED
   docName.classList.toggle('dirty', dirty)
   docName.title = dirty ? '저장하지 않은 변경 있음' : documentName()
+  // Saved as it is now: when, small. Gone again with the next change.
+  if (!saving) {
+    savedAtLabel.hidden = dirty || savedAt === null
+    if (savedAt) savedAtLabel.textContent = `저장됨 ${clock(savedAt)}`
+  }
 }
+
+const savedAtLabel = $<HTMLElement>('saved-at')
+/** When the song was last saved in this session; null after opening another. */
+let savedAt: Date | null = null
+let saving = false
+const clock = (d: Date): string =>
+  `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 
 const issueBadge = $<HTMLElement>('issue-badge')
 
@@ -192,6 +206,34 @@ function keepDraftSoon(): void {
     if (isDirty()) keepDraft(editor.getText(), savedText, file)
     else dropDraft()
   }, 1500)
+}
+
+// Leaving the page (refresh, closed tab): keep the copy now, not 1.5 s later (1.7.3).
+window.addEventListener('pagehide', () => {
+  window.clearTimeout(draftTimer)
+  if (isDirty()) keepDraft(editor.getText(), savedText, file)
+})
+
+/** The page was reloaded (F5, pull-to-refresh), not opened afresh. */
+const reloaded = (): boolean =>
+  (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)
+    ?.type === 'reload'
+
+/** After a refresh the song comes straight back; the bar offers to let it go instead. */
+function restoreDraft(draft: Draft): void {
+  load(draft.text, draft.file)
+  savedText = draft.saved
+  reportState()
+  keepDraftSoon()
+  showNotice('새로고침 전에 쓰던 곡을 그대로 되살렸어요.', [
+    {
+      label: '버리기',
+      run: () => {
+        forgetDraft()
+        load('', null)
+      }
+    }
+  ])
 }
 
 function forgetDraft(): void {
@@ -289,6 +331,7 @@ function load(text: string, newFile: FileRef | null, imported: ImportSource | nu
   transposeScope = null
   transposeField.value = ''
   file = newFile
+  savedAt = null
   savedText = imported ? '' : text
   showImportSource(imported)
   editor.setText(text)
@@ -298,10 +341,23 @@ function load(text: string, newFile: FileRef | null, imported: ImportSource | nu
 
 async function saveWith(write: typeof platform.saveFile): Promise<boolean> {
   const text = editor.getText()
-  const saved = await write(file, text)
-  if (!saved) return false
+  // Saving to Drive takes a moment: say so, then when it is done.
+  saving = true
+  savedAtLabel.textContent = '저장 중…'
+  savedAtLabel.hidden = false
+  let saved: FileRef | null
+  try {
+    saved = await write(file, text)
+  } finally {
+    saving = false
+  }
+  if (!saved) {
+    reportState()
+    return false
+  }
   file = saved
   savedText = text
+  savedAt = new Date()
   reportState()
   forgetDraft()
   return true
@@ -338,6 +394,7 @@ const commands: Record<string, () => Promise<unknown>> = {
   },
   replace: async () => openChordReplace(editor),
   share: shareSong,
+  exportJpg,
   toDegrees: async () => respell('degrees'),
   toNotes: async () => respell('notes'),
   toggleHints: async () => setHints(hintsItem.getAttribute('aria-checked') !== 'true'),
@@ -738,6 +795,94 @@ async function exportPdf(): Promise<void> {
   const saved = await platform.exportPdf(html, `${title}.pdf`)
   if (saved) status.textContent = `PDF 저장: ${saved.name}`
 }
+
+// --- JPG and sending (1.7.3) ---------------------------------------------------------------
+
+/** The song's name for files made from it. */
+const songName = (): string =>
+  editor.parsed().document.title || documentName().replace(/\.chord$/i, '') || UNTITLED
+
+/** The sheet as it prints now (print settings, transposition), as page HTML. */
+function printedPagesHtml(): string {
+  const song = printLayout(shownDocument(), DEFAULT_THEME.metrics, printOptions())
+  return renderPages(song, DEFAULT_THEME, printOptions().booklet)
+}
+
+/** "JPG": the sheet as one picture (pages one under the other), saved like a file. */
+async function exportJpg(): Promise<void> {
+  status.textContent = 'JPG 만드는 중…'
+  const jpeg = await stackedJpeg(await sheetPictures(printedPagesHtml()))
+  const saved = await platform.saveExport(`${songName()}.jpg`, jpeg, 'image/jpeg')
+  status.textContent = saved ? `JPG 저장: ${saved.name}` : ''
+}
+
+type ShareKind = 'link' | 'pdf' | 'jpg' | 'txt'
+
+/** Sends the song as a link, a PDF, a JPG or its text. */
+async function shareAs(kind: ShareKind): Promise<void> {
+  if (kind === 'link') return shareSong()
+  if (!editor.getText().trim()) return void showNotice('보낼 곡이 비어 있어요.', [])
+  const name = songName()
+  showNotice(`${kind.toUpperCase()} 만드는 중…`, [])
+  let data: Uint8Array
+  let mime: string
+  if (kind === 'txt') {
+    data = new TextEncoder().encode(editor.getText())
+    mime = 'text/plain'
+  } else if (kind === 'jpg') {
+    data = await stackedJpeg(await sheetPictures(printedPagesHtml()))
+    mime = 'image/jpeg'
+  } else {
+    // A real PDF where the app can make one (desktop); elsewhere one made of page pictures.
+    const song = printLayout(shownDocument(), DEFAULT_THEME.metrics, printOptions())
+    data = platform.pdfBytes
+      ? await platform.pdfBytes(
+          await buildPrintDocument(song, DEFAULT_THEME, name, printOptions().booklet)
+        )
+      : jpegsToPdf(await sheetPictures(printedPagesHtml()))
+    mime = 'application/pdf'
+  }
+  const outcome = await platform.shareFile(`${name}.${kind}`, data, mime, name)
+  if (outcome === 'shown')
+    showNotice(
+      `보낼 파일을 만들었어요(${name}.${kind}). 열린 폴더에서 카톡·메일 창으로 끌어다 놓으세요.`,
+      []
+    )
+  else if (outcome === 'downloaded')
+    showNotice(`${name}.${kind}을(를) 내려받았어요. 카톡·메일에 첨부해 보내세요.`, [])
+  else hideNotice()
+}
+
+const shareMenu = $<HTMLElement>('share-menu')
+const shareButton = $<HTMLButtonElement>('share-button')
+
+function closeShareMenu(): void {
+  shareMenu.hidden = true
+  shareButton.setAttribute('aria-expanded', 'false')
+}
+
+shareButton.addEventListener('click', (e) => {
+  e.stopPropagation()
+  const open = shareMenu.hidden
+  shareMenu.hidden = !open
+  shareButton.setAttribute('aria-expanded', String(open))
+  if (open) shareMenu.querySelector<HTMLElement>('[role=menuitem]')?.focus()
+})
+shareMenu.querySelectorAll<HTMLButtonElement>('[data-share]').forEach((item) => {
+  item.addEventListener('click', () => {
+    closeShareMenu()
+    shareAs(item.dataset.share as ShareKind).catch(fail)
+  })
+})
+document.addEventListener('click', (e) => {
+  if (!shareMenu.hidden && !shareMenu.contains(e.target as Node)) closeShareMenu()
+})
+shareMenu.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeShareMenu()
+    shareButton.focus()
+  }
+})
 
 // --- header fields (title / key / theme) mirror the header lines of the file ------------
 
@@ -1164,13 +1309,21 @@ try {
 // Read before anything is opened: opening must not replace the copy it offers back.
 const draft = readDraft()
 load(firstRun ? exampleSong : '', null)
-if (draft && draft.text !== editor.getText()) offerDraft(draft)
+if (draft && draft.text !== editor.getText()) {
+  if (reloaded()) restoreDraft(draft)
+  else offerDraft(draft)
+}
 installEditorZoom($('editor'))
 renderPreview()
 // A song link opened the app: that song, not the welcome. The first time otherwise, the key
 // sheet comes first (the example song is already behind it).
+/** Ready to type: the cursor blinks in the editor (1.7.3). Touch screens wait for a tap. */
+const focusEditor = (): void => {
+  if (matchMedia('(pointer: fine)').matches) editor.view.focus()
+}
 void openSharedLink()
-  .then((shared) => {
-    if (firstRun && !shared) void openHelp()
+  .then(async (shared) => {
+    if (firstRun && !shared) await openHelp()
+    focusEditor()
   })
   .catch(fail)

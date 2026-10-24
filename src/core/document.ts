@@ -26,6 +26,11 @@ export interface ChordItem {
   uncertain: boolean
   /** `nc`: no chord (N.C.) — the band rests. */
   noChord: boolean
+  /**
+   * Empty beats before this chord in its bar (1.7.3): each space past the first between two
+   * chords is one. `C  F G` = C on 1, nothing on 2, F on 3, G on 4.
+   */
+  restsBefore?: number
   spec: ChordSpec | null
   chord: Chord | null
   error: string | null
@@ -158,8 +163,8 @@ export interface SyntaxSpan {
 
 const SECTION = /^\[([^\]]*)\]/
 /** Song-form part marker: one letter (or Hangul), optional digits, `)` — `a)`, `b2)`, `ㄱ4)`. */
-/** `a]` square, `a)` circle: a letter (Latin or Korean), maybe a number. */
-const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3])(\d*)([)\]])$/
+/** `a]` square, `a)` circle: letters (Latin or Korean, any number — `인트로)`), maybe a number. */
+const PART = /^([A-Za-z\u3131-\u314E\uAC00-\uD7A3]+)(\d*)([)\]])$/
 const HEADER = /^(title|key|theme)\s*:\s*(.*)$/
 /** Lyric cue: `l: 첫 소절` or `lyric: 첫 소절` (same as `_ 첫 소절`). `>` is kept free. */
 const LYRIC = /^(?:l|lyric)\s*:\s*(.*)$/
@@ -306,7 +311,8 @@ class Parser {
     const m = PART.exec(text)!
     this.mark('part', at, at + text.length)
     return {
-      label: m[1].toUpperCase() + m[2],
+      // One letter is a part name (a → A); a word stays as typed (인트로, Intro).
+      label: (m[1].length === 1 ? m[1].toUpperCase() : m[1]) + m[2],
       shape: m[3] === ']' ? 'square' : 'circle',
       from: at,
       to: at + text.length
@@ -602,8 +608,11 @@ class Parser {
     const texts: string[] = []
     const token = /"[^"]*"?|\S+/g
     const content = raw.slice(from, to)
+    // Where the last chord ended: the spaces after it, up to the next chord, count beats.
+    let lastChordEnd: number | null = null
     for (let m = token.exec(content); m; m = token.exec(content)) {
       if (m[0].startsWith('"')) {
+        lastChordEnd = null
         // An unclosed quote was already reported while splitting the bars.
         if (m[0].length > 1 && m[0].endsWith('"')) {
           this.mark('directive', from + m.index, from + m.index + m[0].length)
@@ -611,7 +620,13 @@ class Parser {
         }
         continue
       }
-      chords.push(this.parseChordToken(m[0], from + m.index))
+      const chord = this.parseChordToken(m[0], from + m.index)
+      if (lastChordEnd !== null) {
+        const rests = m.index - lastChordEnd - 1
+        if (rests > 0) chord.restsBefore = rests
+      }
+      lastChordEnd = m.index + m[0].length
+      chords.push(chord)
     }
     return {
       chords,

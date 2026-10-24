@@ -22,7 +22,9 @@ export {
   localStore,
   readFromFolder,
   rememberStore,
+  shareBytes,
   shareFile,
+  writeBytesToFolder,
   writeToFolder
 } from './folder'
 export type { FolderFile, LibraryStore } from './folder'

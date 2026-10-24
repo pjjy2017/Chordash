@@ -33,6 +33,10 @@ export function createElectronPlatform(): Platform {
     saveFile: (file, text) => bridge.saveFile(file, text),
     saveFileAs: (file, text) => bridge.saveFileAs(file, text),
     exportPdf: (html, suggestedName) => bridge.exportPdf(html, suggestedName),
+    saveExport: (name, data) => bridge.saveExport(name, data),
+    // No share sheet on Windows: the file is saved and shown in its folder, ready to drag.
+    shareFile: async (name, data) => ((await bridge.shareFile(name, data)) ? 'shown' : 'cancelled'),
+    pdfBytes: (html) => bridge.pdfBytes(html),
     confirmDiscard: (name) => bridge.confirmDiscard(name),
     setDocumentState: (state) => bridge.setDocumentState(state),
     onBeforeClose: (handler) => {

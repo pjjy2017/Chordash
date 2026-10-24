@@ -204,6 +204,51 @@ const headerHidden = StateField.define<DecorationSet>({
   ]
 })
 
+/** Where typing starts: the line after the hidden title/key lines; null when there is none. */
+function bodyStart(state: EditorState): number | null {
+  const lines = headerLineNumbers(state.doc.toString())
+  if (lines.length === 0) return null
+  const last = state.doc.line(lines[lines.length - 1])
+  return last.number < state.doc.lines ? last.to + 1 : null
+}
+
+/**
+ * The cursor never stays above or inside the hidden title/key lines (1.7.3): typing the title
+ * and key first put those lines above an empty song's cursor, so the song went in above them.
+ */
+const belowHeader = EditorState.transactionFilter.of((tr) => {
+  if (!tr.selection && !tr.docChanged) return tr
+  const start = bodyStart(tr.state)
+  const { anchor, head } = tr.state.selection.main
+  if (start === null || (anchor >= start && head >= start)) return tr
+  return [
+    tr,
+    {
+      selection: { anchor: Math.max(anchor, start), head: Math.max(head, start) },
+      sequential: true
+    }
+  ]
+})
+
+/** Coming into the editor: below the title/key lines, adding a line for the song if needed. */
+function placeBelowHeader(view: EditorView): void {
+  const { state } = view
+  const lines = headerLineNumbers(state.doc.toString())
+  if (lines.length === 0) return
+  const last = state.doc.line(lines[lines.length - 1])
+  if (last.number === state.doc.lines) {
+    view.dispatch({ changes: { from: last.to, insert: '\n' }, selection: { anchor: last.to + 1 } })
+  } else if (state.selection.main.head < last.to + 1) {
+    view.dispatch({ selection: { anchor: last.to + 1 } })
+  }
+}
+
+const enterBelowHeader = EditorView.domEventHandlers({
+  focus: (_, view) => {
+    queueMicrotask(() => placeBelowHeader(view))
+  }
+})
+
 export const setHintsEnabled = StateEffect.define<boolean>()
 
 const hintsEnabled = StateField.define<boolean>({
@@ -378,6 +423,8 @@ export function createEditor(parent: HTMLElement, onChange: ChangeListener): Cho
   const inputModeAttr = (): Extension => EditorView.contentAttributes.of({ inputmode: inputMode })
   const updateListeners: (() => void)[] = []
   const extensions = (): Extension[] => [
+    belowHeader,
+    enterBelowHeader,
     // Hidden title/key lines don't count, so the first line you see is line 1.
     lineNumbers({
       formatNumber: (n, state) => String(n - hiddenBefore(state.doc, n))

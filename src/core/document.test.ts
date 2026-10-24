@@ -436,3 +436,21 @@ describe('text below (_) and above (^) a bar line (Phase 13)', () => {
     expect(warnings('C\n_ 가\n_ 나')).toEqual(['이 마디 줄에는 이미 가사가 있음'])
   })
 })
+
+describe('part names of more than one letter (1.7.3)', () => {
+  it('reads words as part names, kept as typed', () => {
+    const part = (t: string): Part | null => barLines(parse(t).document)[0].part
+    expect(part('인트로) C, F')).toMatchObject({ label: '인트로', shape: 'circle' })
+    expect(part('Intro] C')).toMatchObject({ label: 'Intro', shape: 'square' })
+    expect(part('verse2) C')).toMatchObject({ label: 'verse2' })
+    expect(part('a2) C')).toMatchObject({ label: 'A2' })
+  })
+  it('reads a form line of words', () => {
+    const { document, diagnostics } = parse('인트로) a] a] b] 아웃트로)')
+    expect(diagnostics).toEqual([])
+    expect(document.sections[0].items[0].type).toBe('form')
+  })
+  it('still tells chords from parts', () => {
+    expect(barLines(parse('C(b9), Bb').document)[0].part).toBeNull()
+  })
+})

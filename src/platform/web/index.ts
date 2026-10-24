@@ -25,7 +25,7 @@ import {
   writeToFolder,
   type LibraryStore
 } from '../library'
-import { download, pickWithInput, printTip, type PickerType } from '../shared'
+import { download, pickWithInput, printTip, shareOrDownload, type PickerType } from '../shared'
 import type { Account, Platform } from '../types'
 
 const BACKUP: PickerType = {
@@ -168,6 +168,13 @@ export function createWebPlatform(): Platform {
     // PDFs too: ones that hold words are read without the AI (1.7).
     ...libraryMethods([local, driveStore], { ...TEXT_CHARTS, 'application/pdf': ['.pdf'] }),
     account: driveAccount(local),
+
+    async saveExport(name, data, mime) {
+      download(name, data, mime)
+      return { id: `download:${name}`, name }
+    },
+
+    shareFile: (name, data, mime, title) => shareOrDownload(name, data, mime, title),
 
     async exportPdf(html) {
       printTip()

@@ -2255,3 +2255,68 @@ button.chip-toggle:hover {
 .cd-live-part.circle {
   border-radius: 999px;
 }
+
+/* "저장됨 14:32" beside the song name (1.7.3). */
+.saved-at {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.saved-at[hidden] {
+  display: none;
+}
+
+/* The title/key row stays one line on every screen (1.7.3): the title gives way first. */
+.header-fields {
+  flex-wrap: nowrap;
+}
+
+.field-title {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.field-key {
+  flex: none;
+}
+
+.field-label {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .header-fields {
+    gap: 6px 10px;
+  }
+
+  .field-key input {
+    width: 4.2em;
+  }
+
+  .field-reading {
+    font-size: 11px;
+  }
+}
+
+/* --- Send menu: link · PDF · JPG · TXT (1.7.3) ------------------------------------------- */
+
+.share-menu {
+  min-width: 340px;
+}
+
+.share-menu > button {
+  white-space: nowrap;
+}
+
+.share-menu .menu-mark {
+  width: 30px;
+  font-size: 10px;
+}
+
+.share-menu small {
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}

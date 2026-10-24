@@ -105,7 +105,11 @@ body {
   min-width: 6.4mm;
   height: 6.4mm;
   padding: 0 1mm;
-  font-size: 4mm;
+  /* --n: letters in the name. Long names (인트로, Intro) get smaller and tighter, so they stay
+     about as wide as the margin. */
+  font-size: min(4mm, calc(12mm / (var(--n, 1) * 0.95)));
+  letter-spacing: calc(-0.05em * min(1, max(0, var(--n, 1) - 2)));
+  white-space: nowrap;
   font-weight: 700;
   line-height: 1;
   border: 0.45mm solid #111;
@@ -585,4 +589,55 @@ body {
 
 .print .booklet .spread .page + .page {
   border-left: none;
+}
+
+/* --- Lyrics and ^ texts inside the row (1.7.3): the row keeps its height; the texts sit in
+   the space just over and under the chords. --- */
+
+.bar-row > .over,
+.bar-row > .lyrics,
+.bar-row > .cue {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 3mm;
+  line-height: 3mm;
+  pointer-events: none;
+}
+
+.bar-row > .over {
+  /* Just over the barlines, which start a little below the top of the row. */
+  top: -1.2mm;
+  display: grid;
+  grid-template-columns: repeat(var(--slots), 1fr);
+}
+
+.over-cell,
+.over-line {
+  min-width: 0;
+  padding-left: 2mm;
+  overflow: hidden;
+  font-size: 2.8mm;
+  font-style: italic;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bar-row > .over-line {
+  display: block;
+  padding-left: 1.5mm;
+  font-style: normal;
+  color: #333;
+}
+
+.bar-row > .lyrics,
+.bar-row > .cue {
+  /* Under the chords, clear of the next row (an ending bracket starts right below). */
+  bottom: -0.5mm;
+}
+
+.bar-row > .lyrics .lyric,
+.bar-row > .cue {
+  font-size: 2.8mm;
 }

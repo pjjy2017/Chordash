@@ -35,6 +35,7 @@ const GROUPS: Group[] = [
       { keys: [':.'], meaning: '반복 끝', show: '| , :.', slots: 2 },
       { keys: ['1.'], meaning: '1번 엔딩 (줄 맨 앞)', show: '1. | , :.', slots: 2 },
       { keys: ['␣'], meaning: '한 마디에 코드 둘', show: 'C F', slots: 1 },
+      { keys: ['␣', '␣'], meaning: '빈 박 (C␣␣F G = 2박 비움)', show: 'C  F G', slots: 1 },
       { keys: [',', ','], meaning: '빈 마디 (앞 코드 계속)', show: 'C, , F', slots: 3 },
       { keys: ['nc'], meaning: '코드 없음', show: 'nc', slots: 1 }
     ]
@@ -69,7 +70,12 @@ const GROUPS: Group[] = [
     rows: [
       { keys: ['['], meaning: '섹션 이름', show: '[Verse]\n| , |', slots: 2 },
       { keys: ['key:'], meaning: '섹션 뒤: 키 바뀜', show: '[B] key: G\n| , |', slots: 2 },
-      { keys: ['a]'], meaning: '파트: 네모 (줄 맨 앞)', show: 'a] | , |', slots: 2 },
+      {
+        keys: ['a]'],
+        meaning: '파트: 네모 (줄 맨 앞, 인트로] 처럼 단어도)',
+        show: 'a] | , |',
+        slots: 2
+      },
       { keys: ['a)'], meaning: '파트: 동그라미 (줄 맨 앞)', show: 'a) | , |', slots: 2 },
       { keys: ['"'], meaning: '섹션 뒤: 지시문', show: '[Intro] "드럼 4마디"\n| , |', slots: 2 },
       { keys: ['?'], meaning: '확인 필요 표시', show: '?C7', slots: 1 },

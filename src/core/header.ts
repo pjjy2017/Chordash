@@ -81,3 +81,15 @@ export function headerLineNumbers(text: string): number[] {
   for (let i = 0; i < end; i++) if (HEADER_LINE.test(lines[i])) numbers.push(i + 1)
   return numbers
 }
+
+/**
+ * The file name offered when a new song is first saved: its title (1.7.3), with the characters
+ * Windows cannot have in a file name turned into spaces.
+ */
+export function suggestedFileName(text: string, extension = '.chord'): string {
+  const title = (readHeaderLine(text, 'title') ?? '')
+    .replace(/[<>:"/\\|?*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return `${title || '제목 없음'}${extension}`
+}

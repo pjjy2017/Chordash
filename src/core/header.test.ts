@@ -4,7 +4,8 @@ import {
   headerEndLine,
   readHeaderLine,
   setHeaderLine,
-  headerLineNumbers
+  headerLineNumbers,
+  suggestedFileName
 } from './header'
 import { parse } from './document'
 
@@ -86,5 +87,19 @@ describe('headerLineNumbers', () => {
   it('ignores key: lines after the header', () => {
     expect(headerLineNumbers('C, F\nkey: G')).toEqual([])
     expect(headerLineNumbers('')).toEqual([])
+  })
+})
+
+describe('suggestedFileName', () => {
+  it('offers the title as the file name', () => {
+    expect(suggestedFileName('title: Autumn Leaves\nkey: G\nC')).toBe('Autumn Leaves.chord')
+  })
+  it('turns characters Windows cannot have into spaces', () => {
+    expect(suggestedFileName('title: AC/DC: Back?\nC')).toBe('AC DC Back.chord')
+    expect(suggestedFileName('title: A\\B "C"\nC')).toBe('A B C.chord')
+  })
+  it('falls back to 제목 없음', () => {
+    expect(suggestedFileName('C, F')).toBe('제목 없음.chord')
+    expect(suggestedFileName('title: \nC')).toBe('제목 없음.chord')
   })
 })

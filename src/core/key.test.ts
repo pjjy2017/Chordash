@@ -71,3 +71,20 @@ describe('parseKey', () => {
     expect(parseKey(name)).toBeNull()
   )
 })
+
+describe('plain neighbours instead of C♭ F♭ E♯ B♯ (1.7.3)', () => {
+  const name = (key: string, degree: number, accidental = 0): string =>
+    formatNote(degreeToNote(parseKey(key)!, degree, accidental))
+  it('writes 4 in G♭ as B, not C♭', () => {
+    expect(name('Gb', 4)).toBe('B')
+  })
+  it('writes 7 in F♯ as F, not E♯; 3 in C♯ as F', () => {
+    expect(name('F#', 7)).toBe('F')
+    expect(name('C#', 3)).toBe('F')
+  })
+  it('leaves other spellings as they are', () => {
+    expect(name('F', 4)).toBe('B♭')
+    expect(name('E', 4, 1)).toBe('A♯')
+    expect(name('Db', 4)).toBe('G♭')
+  })
+})

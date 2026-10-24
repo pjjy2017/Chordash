@@ -108,7 +108,10 @@ function barHtml(
   const dots =
     (bar.repeatStart ? '<span class="dots start"></span>' : '') +
     (bar.repeatEnd ? '<span class="dots end"></span>' : '')
-  const chords = bar.chords.map((c) => chordHtml(c, theme)).join('')
+  // An empty beat takes a chord's room with nothing in it.
+  const chords = bar.chords
+    .map((c) => '<span class="chord rest"></span>'.repeat(c.restsBefore ?? 0) + chordHtml(c, theme))
+    .join('')
   // Where the bar is typed, so a click on the sheet can go there (1.5).
   const at = `data-line="${line}" data-from="${bar.from}" data-to="${bar.to}"`
   // Chords longer than their bar shrink to fit it, instead of running over the next barline.
@@ -122,7 +125,7 @@ function barHtml(
 /** A song-form part (`a)` → A) in a square box. */
 /** A song-form part: `a]` in a square, `a)` in a circle. */
 export const partHtml = (part: Pick<Part, 'label' | 'shape'>): string =>
-  `<span class="part ${part.shape}">${escapeHtml(part.label)}</span>`
+  `<span class="part ${part.shape}" style="--n:${[...part.label].length}">${escapeHtml(part.label)}</span>`
 
 /** Band above the bars: the ending bracket (`1.`) and texts over bars (`"Break"`). */
 function aboveHtml(block: RowBlock): string {
@@ -156,10 +159,26 @@ function blockHtml(block: PageBlock, theme: Theme, contentMm: number): string {
     return `<div class="directive">${escapeHtml(block.text)}</div>`
   }
   const { line } = block
+  // Texts over the chords inside the row (1.7.3): per bar, or one `^` line over the row.
+  const barTexts = !block.above && line.bars.some((b) => b.texts.length > 0)
+  const inkInRow = !block.above && !barTexts && line.memos.some((m) => m.color === 'ink')
   const memos = line.memos
+    .filter((m) => !(inkInRow && m.color === 'ink'))
     .map((m) => `<div class="memo memo-${m.color}">${escapeHtml(m.text)}</div>`)
     .join('')
-  // Lyrics: one under the whole line, or one per bar laid out like the bars.
+  const over = barTexts
+    ? `<div class="over" style="--slots:${block.slots}">` +
+      line.bars
+        .map((b) => `<div class="over-cell">${b.texts.map(escapeHtml).join(' · ')}</div>`)
+        .join('') +
+      `</div>`
+    : inkInRow
+      ? `<div class="over over-line">${line.memos
+          .filter((m) => m.color === 'ink')
+          .map((m) => escapeHtml(m.text))
+          .join(' · ')}</div>`
+      : ''
+  // Lyrics just under the chords, inside the row: one for the line, or one per bar.
   const cue =
     line.cue !== null
       ? `<div class="cue">${escapeHtml(line.cue)}</div>`
@@ -181,8 +200,9 @@ function blockHtml(block: PageBlock, theme: Theme, contentMm: number): string {
     `<div class="bar-row">` +
     (line.part ? partHtml(line.part) : '') +
     `<div class="bars" style="--slots:${block.slots}">${bars}</div>` +
-    `</div>` +
+    over +
     cue +
+    `</div>` +
     `</div>`
   )
 }

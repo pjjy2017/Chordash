@@ -20,6 +20,8 @@
           <img class="brand-logo" src="./favicon.svg" alt="" />
           <span id="doc-name" class="doc-name">제목 없음</span>
           <span id="issue-badge" class="issue-badge" hidden></span>
+          <!-- "저장됨 14:32" once the song as it is now is saved; "저장 중…" meanwhile (1.7.3). -->
+          <span id="saved-at" class="saved-at" hidden></span>
         </div>
         <div class="tool-group group-file" role="group" aria-label="파일">
           <button
@@ -96,15 +98,6 @@
           <button
             type="button"
             class="chip-toggle"
-            data-command="share"
-            title="링크로 공유: 곡을 담은 chordash.app 링크"
-          >
-            <span class="icon" data-icon="share"></span>
-            <span class="chip-label">링크 공유</span>
-          </button>
-          <button
-            type="button"
-            class="chip-toggle"
             data-command="stage"
             title="공연 모드: 화면 가득 악보, 누르거나 페달로 쪽 넘김 (F5)"
           >
@@ -124,11 +117,51 @@
           <span class="icon" data-icon="layout-sidebar-right"></span>
         </button>
         <button class="primary-button" data-command="exportPdf" title="PDF로 내보내기 (Ctrl+P)">
-          <span class="icon" data-icon="file-type-pdf"></span><span>PDF</span>
+          PDF
+        </button>
+        <button
+          class="save-button"
+          data-command="exportJpg"
+          title="JPG 그림으로 저장 (쪽이 여럿이면 한 장에 이어서)"
+        >
+          JPG
         </button>
         <button class="save-button" data-command="save" title="저장 (Ctrl+S)" aria-label="저장">
           <span class="icon" data-icon="device-floppy"></span><span class="save-label">저장</span>
         </button>
+        <!-- Send the song (1.7.3): as a link, PDF, JPG or text, to KakaoTalk, mail, messages… -->
+        <div class="menu-wrap">
+          <button
+            id="share-button"
+            class="icon-button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="share-menu"
+            aria-label="보내기"
+            title="보내기: 링크 · PDF · JPG · TXT"
+          >
+            <span class="icon" data-icon="share"></span>
+          </button>
+          <div id="share-menu" class="menu share-menu" role="menu" hidden>
+            <div class="menu-title">보내기</div>
+            <button role="menuitem" data-share="link">
+              <span class="menu-mark">링크</span>링크<small
+                >받은 사람이 chordash.app에서 바로 열어요</small
+              >
+            </button>
+            <button role="menuitem" data-share="pdf">
+              <span class="menu-mark">PDF</span>PDF<small>그대로 인쇄할 수 있어요</small>
+            </button>
+            <button role="menuitem" data-share="jpg">
+              <span class="menu-mark">JPG</span>JPG 그림<small>휴대폰에서 바로 보여요</small>
+            </button>
+            <button role="menuitem" data-share="txt">
+              <span class="menu-mark">TXT</span>TXT 글<small
+                >Chordash로 다시 열 수 있는 곡 글</small
+              >
+            </button>
+          </div>
+        </div>
         <div class="menu-wrap">
           <button
             id="menu-button"
