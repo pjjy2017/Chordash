@@ -641,3 +641,43 @@ body {
 .bar-row > .cue {
   font-size: 2.8mm;
 }
+
+/* Stop time (1.8.1): 16 steps across the bar. Each chord or x stands at its step; the ruler
+   under them has a tick per step, longer on the beats. */
+.rhythm {
+  position: absolute;
+  inset: 0 2mm;
+}
+
+.rhythm .step {
+  position: absolute;
+  left: calc(var(--at) / 16 * 100%);
+  top: 50%;
+  transform: translateY(-58%);
+  white-space: nowrap;
+}
+
+.rhythm .chord {
+  font-size: 4.6mm;
+  padding: 0;
+}
+
+.rhythm .hit {
+  font-size: 4mm;
+  font-weight: 700;
+  padding-left: 0.2mm;
+}
+
+.rhythm .ticks {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1.2mm;
+  height: 1.6mm;
+  background:
+    repeating-linear-gradient(to right, currentColor 0 0.15mm, transparent 0.15mm calc(100% / 4)) 0
+      0 / 100% 100% no-repeat,
+    repeating-linear-gradient(to right, currentColor 0 0.1mm, transparent 0.1mm calc(100% / 16)) 0
+      100% / 100% 40% no-repeat;
+  opacity: 0.6;
+}

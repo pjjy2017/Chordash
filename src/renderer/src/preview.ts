@@ -108,18 +108,38 @@ function barHtml(
   const dots =
     (bar.repeatStart ? '<span class="dots start"></span>' : '') +
     (bar.repeatEnd ? '<span class="dots end"></span>' : '')
+  // Where the bar is typed, so a click on the sheet can go there (1.5).
+  const at = `data-line="${line}" data-from="${bar.from}" data-to="${bar.to}"`
+  if (bar.rhythm) {
+    return `<div class="bar has-rhythm" data-left="${left}" data-right="${right}" ${at}>${dots}${rhythmHtml(bar, theme)}</div>`
+  }
   // An empty beat takes a chord's room with nothing in it.
   const chords = bar.chords
     .map((c) => '<span class="chord rest"></span>'.repeat(c.restsBefore ?? 0) + chordHtml(c, theme))
     .join('')
-  // Where the bar is typed, so a click on the sheet can go there (1.5).
-  const at = `data-line="${line}" data-from="${bar.from}" data-to="${bar.to}"`
   // Chords longer than their bar shrink to fit it, instead of running over the next barline.
   const needed = (chordsWidthEm(chords) + 0.3 * bar.chords.length) * CHORD_MM
   const room = widthMm - BAR_SPARE_MM
   const fit = needed > room ? Math.max(MIN_FIT, room / needed) : 1
   const style = fit < 1 ? ` style="--fit:${fit.toFixed(3)}"` : ''
   return `<div class="bar" data-left="${left}" data-right="${right}" ${at}${style}>${dots}${chords}</div>`
+}
+
+/**
+ * Stop time (1.8.1): a ruler of 16 ticks (longer on the beats) along the bottom of the bar, and
+ * each chord or x standing over its tick.
+ */
+function rhythmHtml(bar: Bar, theme: Theme): string {
+  const hits = bar
+    .rhythm!.flat()
+    .map((step, i) => {
+      if (step === 'rest') return ''
+      const body =
+        step === 'hit' ? '<span class="hit">x</span>' : chordHtml(bar.chords[step], theme)
+      return `<span class="step" style="--at:${i}">${body}</span>`
+    })
+    .join('')
+  return `<span class="rhythm">${hits}<span class="ticks"></span></span>`
 }
 
 /** A song-form part (`a)` → A) in a square box. */

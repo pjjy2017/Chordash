@@ -7,6 +7,7 @@ import {
   DEFAULT_THEME,
   formatKey,
   intervalBetween,
+  fileNameFor,
   printLayout,
   parse,
   parseKey,
@@ -268,7 +269,7 @@ async function exportPdf(): Promise<void> {
     title,
     printOptions().booklet
   )
-  const saved = await platform.exportPdf(html, `${title}.pdf`)
+  const saved = await platform.exportPdf(html, fileNameFor(title, '.pdf'))
   if (saved) say(`PDF 저장: ${saved.name} (${songs.length}곡, ${plan.total}쪽)`)
 }
 

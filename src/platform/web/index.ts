@@ -34,7 +34,7 @@ const BACKUP: PickerType = {
 }
 
 /** Prints a standalone HTML document from a hidden frame. */
-async function printHtml(html: string): Promise<void> {
+async function printHtml(html: string, name: string): Promise<void> {
   const frame = document.createElement('iframe')
   frame.setAttribute('aria-hidden', 'true')
   frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
@@ -46,7 +46,15 @@ async function printHtml(html: string): Promise<void> {
   // Embedded fonts must be ready, or the PDF would use fallback fonts.
   await view.document.fonts.ready
   view.focus()
+  // The browser names the PDF after the tab's title, so it shows the song title while printing.
+  const title = document.title
+  const restore = (): void => {
+    document.title = title
+  }
+  document.title = name.replace(/\.pdf$/i, '')
+  view.addEventListener('afterprint', restore, { once: true })
   view.print()
+  setTimeout(restore, 60_000)
   // Some browsers return from print() before the dialog closes.
   setTimeout(() => frame.remove(), 60_000)
 }
@@ -176,9 +184,9 @@ export function createWebPlatform(): Platform {
 
     shareFile: (name, data, mime, title) => shareOrDownload(name, data, mime, title),
 
-    async exportPdf(html) {
+    async exportPdf(html, suggestedName) {
       printTip()
-      await printHtml(html)
+      await printHtml(html, suggestedName)
       return null
     },
 

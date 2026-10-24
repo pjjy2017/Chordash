@@ -87,9 +87,14 @@ export function headerLineNumbers(text: string): number[] {
  * Windows cannot have in a file name turned into spaces.
  */
 export function suggestedFileName(text: string, extension = '.chord'): string {
-  const title = (readHeaderLine(text, 'title') ?? '')
+  return fileNameFor(readHeaderLine(text, 'title') ?? '', extension)
+}
+
+/** A title as a file name (1.8.1): characters Windows cannot have become spaces. */
+export function fileNameFor(title: string, extension: string): string {
+  const name = title
     .replace(/[<>:"/\\|?*]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  return `${title || '제목 없음'}${extension}`
+  return `${name || '제목 없음'}${extension}`
 }

@@ -38,11 +38,13 @@ import {
   type LineRange,
   type ChordDocument,
   APP_VERSION,
-  DONATE_URL
+  DONATE_URL,
+  fileNameFor
 } from '../../core'
 import { platform, type FileRef, type ImportedFile, type OpenResult } from '../../platform'
 import { chartPages, isChartFile, isPdf, pdfTextItems, type ChartPage } from './chartPages'
 import { createEditor } from './editor'
+import { initStopTime } from './stopTime'
 import { installFonts } from './fonts'
 import { installChordKeyboard } from './chordKeyboard'
 import { installAccount } from './account'
@@ -322,6 +324,7 @@ function markCursorBar(): void {
 }
 
 editor.onUpdate(markCursorBar)
+initStopTime(editor, $<HTMLButtonElement>('stop-toggle'), $('stop-panel'))
 
 // --- file commands -----------------------------------------------------------
 
@@ -792,7 +795,7 @@ async function exportPdf(): Promise<void> {
   const theme = DEFAULT_THEME
   const song = printLayout(shownDocument(), theme.metrics, printOptions())
   const html = await buildPrintDocument(song, theme, title, printOptions().booklet)
-  const saved = await platform.exportPdf(html, `${title}.pdf`)
+  const saved = await platform.exportPdf(html, fileNameFor(title, '.pdf'))
   if (saved) status.textContent = `PDF 저장: ${saved.name}`
 }
 

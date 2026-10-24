@@ -2256,9 +2256,10 @@ button.chip-toggle:hover {
   border-radius: 999px;
 }
 
-/* "저장됨 14:32" beside the song name (1.7.3). */
+/* "저장됨 14:32" on the save button, after its label (1.7.3; moved there in 1.8.1). */
 .saved-at {
   font-size: 11px;
+  font-weight: 400;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -2317,6 +2318,145 @@ button.chip-toggle:hover {
 .share-menu small {
   margin-left: auto;
   padding-left: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Stop time (1.8.1): the toggle beside the key, and the 16-box panel above the editor. */
+.stop-toggle {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stop-toggle[aria-pressed='true'] {
+  color: var(--on-ink);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.stop-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink-soft);
+}
+
+.stop-panel[hidden] {
+  display: none;
+}
+
+.stop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stop-where {
+  flex: 1;
+  min-width: 0;
+}
+
+.stop-head button,
+.stop-tools button {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+/* One beat: 4 boxes. */
+.stop-beat {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.stop-cell {
+  min-width: 0;
+  height: 34px;
+  padding: 0;
+  font: 600 12px/1 inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.stop-cell:first-child {
+  border-left: 0;
+}
+
+/* An empty box shows a faint dot. */
+.stop-cell:empty::after {
+  content: '·';
+  color: var(--muted);
+}
+
+.stop-cell.hit {
+  font-size: 15px;
+}
+
+.stop-cell.has-chord {
+  color: var(--teal);
+}
+
+.stop-cell.selected {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.stop-cell:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.stop-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.stop-chord {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.stop-tip {
+  margin: 0;
   font-size: 11px;
   color: var(--muted);
 }

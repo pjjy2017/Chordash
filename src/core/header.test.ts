@@ -101,5 +101,6 @@ describe('suggestedFileName', () => {
   it('falls back to 제목 없음', () => {
     expect(suggestedFileName('C, F')).toBe('제목 없음.chord')
     expect(suggestedFileName('title: \nC')).toBe('제목 없음.chord')
+    expect(suggestedFileName('title: AC/DC\nC', '.pdf')).toBe('AC DC.pdf')
   })
 })

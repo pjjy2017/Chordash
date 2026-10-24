@@ -50,7 +50,12 @@ export interface Bar {
   /** 0-based column range of the bar's content (between its barlines). */
   from: number
   to: number
+  /** Stop time (1.8.1): the bar in 16th-note steps, beat by beat — see `RhythmStep`. */
+  rhythm?: RhythmStep[][]
 }
+
+/** One 16th-note step: nothing, a hit (chord as before), or a hit on `chords[n]` of the bar. */
+export type RhythmStep = 'rest' | 'hit' | number
 
 export const MEMO_COLORS = ['teal', 'red', 'blue', 'green', 'orange', 'purple', 'gray'] as const
 export type MemoColor = (typeof MEMO_COLORS)[number]
@@ -458,6 +463,11 @@ class Parser {
           i = stop
         } else i = close + 1
         continue
+      } else if (c === '<' && depth === 0) {
+        // Stop time (`<C7... ..x.>`): its dots are steps, not barlines.
+        const close = raw.indexOf('>', i + 1)
+        i = close < 0 || close >= stop ? stop : close + 1
+        continue
       } else if (c === '(') depth++
       else if (c === ')') depth = Math.max(0, depth - 1)
       else if (depth > 0) {
@@ -517,6 +527,11 @@ class Parser {
       const c = raw[i]
       if (c === '"') {
         const close = raw.indexOf('"', i + 1)
+        if (close < 0) break
+        i = close
+      } else if (c === '<' && depth === 0) {
+        // A stop-time bar's steps are not texts.
+        const close = raw.indexOf('>', i + 1)
         if (close < 0) break
         i = close
       } else if (c === '(') depth++
@@ -606,11 +621,37 @@ class Parser {
   ): Bar {
     const chords: ChordItem[] = []
     const texts: string[] = []
-    const token = /"[^"]*"?|\S+/g
+    const token = /"[^"]*"?|<[^>]*>?|\S+/g
     const content = raw.slice(from, to)
+    let rhythm: RhythmStep[][] | undefined
     // Where the last chord ended: the spaces after it, up to the next chord, count beats.
     let lastChordEnd: number | null = null
     for (let m = token.exec(content); m; m = token.exec(content)) {
+      if (m[0].startsWith('<')) {
+        // Stop time: the bar in 16th-note steps (1.8.1).
+        if (rhythm || chords.length) {
+          this.report(
+            'error',
+            from + m.index,
+            from + m.index + m[0].length,
+            '스톱타임 < > 는 마디에 하나만, 코드 없이 써요'
+          )
+          continue
+        }
+        rhythm = this.parseRhythm(m[0], from + m.index, chords)
+        continue
+      }
+      if (rhythm) {
+        if (!m[0].startsWith('"'))
+          this.report(
+            'error',
+            from + m.index,
+            from + m.index + m[0].length,
+            '스톱타임 마디의 코드는 < > 안에 써요'
+          )
+        else texts.push(m[0].slice(1, -1).trim())
+        continue
+      }
       if (m[0].startsWith('"')) {
         lastChordEnd = null
         // An unclosed quote was already reported while splitting the bars.
@@ -636,8 +677,54 @@ class Parser {
       repeatEnd: right === 'repeatEnd',
       final: right === 'final',
       from,
-      to
+      to,
+      ...(rhythm ? { rhythm } : {})
     }
+  }
+
+  /**
+   * `<1e, 5a, 15b>`: the bar is 16 steps (16th notes); each item is a step number and what is
+   * played there — a chord name (a lower-case root is fine) or `x` (a hit, chord as before). A
+   * number alone is a hit too. Chords go into the bar's chords in time order, so transposing and
+   * the other tools still see them. The result is 4 beats of 4 steps.
+   */
+  private parseRhythm(text: string, at: number, chords: ChordItem[]): RhythmStep[][] {
+    if (!text.endsWith('>') || text.length < 2) {
+      this.report('error', at, at + text.length, '닫는 > 가 없음')
+    }
+    this.mark('mark', at, at + 1)
+    if (text.endsWith('>')) this.mark('mark', at + text.length - 1, at + text.length)
+    const inner = text.slice(1, text.endsWith('>') ? -1 : undefined)
+    const steps: RhythmStep[] = Array(16).fill('rest')
+    const items: { step: number; what: string; pos: number }[] = []
+    for (const item of inner.matchAll(/[^,\s]+/g)) {
+      const pos = at + 1 + item.index
+      const m = /^(\d+)(.*)$/.exec(item[0])
+      const step = m ? Number(m[1]) : NaN
+      if (!m || step < 1 || step > 16) {
+        this.report('error', pos, pos + item[0].length, '1~16 칸 번호 다음에 코드나 x 를 써요')
+        continue
+      }
+      this.mark('mark', pos, pos + m[1].length)
+      if (items.some((i) => i.step === step)) {
+        this.report('warning', pos, pos + item[0].length, `${step}번 칸이 두 번 있어요`)
+        continue
+      }
+      items.push({ step, what: m[2], pos: pos + m[1].length })
+    }
+    items.sort((a, b) => a.step - b.step)
+    for (const { step, what, pos } of items) {
+      if (what === '' || what === 'x' || what === 'X') {
+        if (what) this.mark('mark', pos, pos + 1)
+        steps[step - 1] = 'hit'
+      } else {
+        const name = /^[a-g]/.test(what) ? what[0].toUpperCase() + what.slice(1) : what
+        chords.push(this.parseChordToken(name, pos))
+        steps[step - 1] = chords.length - 1
+      }
+    }
+    if (!inner.trim()) this.report('warning', at, at + text.length, '스톱타임이 비어 있음')
+    return [0, 4, 8, 12].map((s) => steps.slice(s, s + 4))
   }
 
   private parseChordToken(text: string, at: number): ChordItem {

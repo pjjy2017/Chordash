@@ -20,8 +20,6 @@
           <img class="brand-logo" src="./favicon.svg" alt="" />
           <span id="doc-name" class="doc-name">제목 없음</span>
           <span id="issue-badge" class="issue-badge" hidden></span>
-          <!-- "저장됨 14:32" once the song as it is now is saved; "저장 중…" meanwhile (1.7.3). -->
-          <span id="saved-at" class="saved-at" hidden></span>
         </div>
         <div class="tool-group group-file" role="group" aria-label="파일">
           <button
@@ -128,6 +126,8 @@
         </button>
         <button class="save-button" data-command="save" title="저장 (Ctrl+S)" aria-label="저장">
           <span class="icon" data-icon="device-floppy"></span><span class="save-label">저장</span>
+          <!-- "저장됨 14:32" once the song as it is now is saved; "저장 중…" meanwhile (1.7.3). -->
+          <span id="saved-at" class="saved-at" hidden></span>
         </button>
         <!-- Send the song (1.7.3): as a link, PDF, JPG or text, to KakaoTalk, mail, messages… -->
         <div class="menu-wrap">
@@ -284,6 +284,40 @@
               <!-- How the typed key was read, e.g. "C 단조"; red when it can't be read. -->
               <span id="field-key-reading" class="field-reading"></span>
             </label>
+            <button
+              id="stop-toggle"
+              type="button"
+              class="stop-toggle"
+              aria-pressed="false"
+              title="커서가 있는 마디를 16칸으로 나눠 박을 찍어요 (스톱타임·킥)"
+            >
+              스톱타임
+            </button>
+          </div>
+          <!-- Stop time (1.8.1): the bar under the cursor as 16 boxes; stopTime.ts. -->
+          <div id="stop-panel" class="stop-panel" hidden>
+            <div class="stop-head">
+              <span class="stop-where"></span>
+              <button type="button" data-stop="plain" title="박 표시를 빼고 코드만 남겨요">
+                보통 마디로
+              </button>
+              <button type="button" data-stop="close" aria-label="닫기" title="닫기">×</button>
+            </div>
+            <div class="stop-grid"></div>
+            <div class="stop-tools">
+              <input
+                class="stop-chord"
+                type="text"
+                placeholder="고른 칸의 코드 (예: C7) + Enter"
+                spellcheck="false"
+                autocomplete="off"
+              />
+              <button type="button" data-stop="x" title="코드 없이 치는 자리">x</button>
+              <button type="button" data-stop="erase">지우기</button>
+            </div>
+            <p class="stop-tip">
+              칸을 고르고 x 또는 코드 이름을 입력해요. 고른 칸을 다시 누르면 x ↔ 빈칸.
+            </p>
           </div>
           <div id="editor" class="editor-host"></div>
         </section>

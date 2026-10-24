@@ -37,7 +37,13 @@ const GROUPS: Group[] = [
       { keys: ['␣'], meaning: '한 마디에 코드 둘', show: 'C F', slots: 1 },
       { keys: ['␣', '␣'], meaning: '빈 박 (C␣␣F G = 2박 비움)', show: 'C  F G', slots: 1 },
       { keys: [',', ','], meaning: '빈 마디 (앞 코드 계속)', show: 'C, , F', slots: 3 },
-      { keys: ['nc'], meaning: '코드 없음', show: 'nc', slots: 1 }
+      { keys: ['nc'], meaning: '코드 없음', show: 'nc', slots: 1 },
+      {
+        keys: ['<', '>'],
+        meaning: '스톱타임: 16칸 중 그 칸에 (x = 코드 없이)',
+        show: '<1C7, 7x, 11x, 13F7>',
+        slots: 1
+      }
     ]
   },
   {
